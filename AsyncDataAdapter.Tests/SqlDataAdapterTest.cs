@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Data;
-using System.Data.SqlClient;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
 using NUnit.Framework;
 
 namespace AsyncDataAdapter.Tests
@@ -9,7 +9,7 @@ namespace AsyncDataAdapter.Tests
     [TestFixture]
     public class SqlDataAdapterTest
     {
-        // private const string ConnectionString = @"server=.\sqlexpress;database=TestDb;Trusted_Connection=Yes";
+        //private const string ConnectionString = @"server=.\sqlexpress;database=TestDb;Trusted_Connection=Yes";
         private const string ConnectionString = @"server=.\SQL2017;database=TestDb;Trusted_Connection=Yes";
 
         [Test]
@@ -54,7 +54,7 @@ namespace AsyncDataAdapter.Tests
                     c.CommandType = CommandType.StoredProcedure;
                     c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                    using (var a = new System.Data.SqlClient.SqlDataAdapter(c))
+                    using (var a = new Microsoft.Data.SqlClient.SqlDataAdapter(c))
                     {
                         var dt = new DataTable();
                         var r = a.Fill(dt);
@@ -113,7 +113,7 @@ namespace AsyncDataAdapter.Tests
                     c.CommandType = CommandType.StoredProcedure;
                     c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                    using (var a = new System.Data.SqlClient.SqlDataAdapter(c))
+                    using (var a = new Microsoft.Data.SqlClient.SqlDataAdapter(c))
                     {
                         var ds = new DataSet();
                         var r = a.Fill(ds);
@@ -196,7 +196,7 @@ namespace AsyncDataAdapter.Tests
                     c.Parameters.Add("@Number2", SqlDbType.Int).Value = 300000;
                     c.Parameters.Add("@Number3", SqlDbType.Int).Value = 500000;
 
-                    using (var a = new System.Data.SqlClient.SqlDataAdapter(c))
+                    using (var a = new Microsoft.Data.SqlClient.SqlDataAdapter(c))
                     {
                         var ds = new DataSet();
                         var r = a.Fill(ds);

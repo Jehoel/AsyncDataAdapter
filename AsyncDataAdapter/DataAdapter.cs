@@ -376,7 +376,7 @@ namespace AsyncDataAdapter
             base.Dispose(disposing); // notify base classes
         }
 
-        virtual public async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType)
+        virtual public Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType)
         { // V1.0.3300
             throw ADP.NotSupported();
         }
@@ -490,7 +490,7 @@ namespace AsyncDataAdapter
             return value; // null if datatable had no results
         }
 
-        virtual public async Task<int> FillAsync(DataSet dataSet)
+        virtual public Task<int> FillAsync(DataSet dataSet)
         { // V1.0.3300
             throw ADP.NotSupported();
         }
@@ -903,7 +903,7 @@ namespace AsyncDataAdapter
             }
         }
 
-        virtual public async Task<int> UpdateAsync(DataSet dataSet)
+        virtual public Task<int> UpdateAsync(DataSet dataSet)
         { // V1.0.3300
             throw ADP.NotSupported();
         }
