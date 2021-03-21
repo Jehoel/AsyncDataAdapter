@@ -9,8 +9,8 @@ namespace AsyncDataAdapter.Tests
     [TestFixture]
     public class SqlDataAdapterTest
     {
-        //private const string ConnectionString = @"server=.\sqlexpress;database=TestDb;Trusted_Connection=Yes";
-        private const string ConnectionString = @"server=.\SQL2017;database=TestDb;Trusted_Connection=Yes";
+        //private const string ConnectionString = @"server=.\sqlexpress;database=AsyncDataReaderTest;Trusted_Connection=Yes";
+        private const string ConnectionString = @"server=.\SQL2017;database=AsyncDataReaderTest;Trusted_Connection=Yes";
 
         [Test]
         public async Task FillAsyncDataTable()
