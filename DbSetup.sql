@@ -95,16 +95,22 @@ FROM
 			(
 				SELECT
 					(
-						   ones.n +
-					  10 * tens.n +
-					 100 * hundreds.n +
-					1000 * thousands.n
+							  1 * ones.n +
+							 10 * tens.n +
+							100 * hundreds.n +
+						   1000 * thousands.n + 
+						  10000 * ten_thousands.n + 
+						 100000 * hun_thousands.n + 
+						1000000 * millions.n
 					) AS n
 				FROM
 					( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) ones(n),
 					( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) tens(n),
 					( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) hundreds(n),
-					( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) thousands(n)
+					( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) thousands(n),
+					( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) ten_thousands(n),
+					( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) hun_thousands(n),
+					( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) millions(n)
 			) AS t
 		WHERE
 			t.n < 1000000
