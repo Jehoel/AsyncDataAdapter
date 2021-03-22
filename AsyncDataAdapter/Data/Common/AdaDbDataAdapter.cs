@@ -26,8 +26,6 @@ namespace AsyncDataAdapter
         internal static readonly object ParameterValueNonNullValue = 0;
         internal static readonly object ParameterValueNullValue = 1;
 
-        private DbCommand _deleteCommand, _insertCommand, _selectCommand, _updateCommand;
-
         private CommandBehavior _fillCommandBehavior;
 
         private struct BatchCommandInfo
@@ -50,18 +48,6 @@ namespace AsyncDataAdapter
             this.CloneFrom(adapter);
         }
 
-        public DbCommand DeleteCommand
-        { // V1.2.3300
-            get
-            {
-                return _deleteCommand;
-            }
-            set
-            {
-                _deleteCommand = value;
-            }
-        }
-
         protected internal CommandBehavior FillCommandBehavior
         {
             get
@@ -79,59 +65,28 @@ namespace AsyncDataAdapter
             }
         }
 
-        public DbCommand InsertCommand
-        { // V1.2.3300
-            get
-            {
-                return _insertCommand;
-            }
-            set
-            {
-                _insertCommand = value;
-            }
-        }
+        public DbCommand DeleteCommand { get; set; }
 
-        public DbCommand SelectCommand
-        { // V1.2.3300
-            get
-            {
-                return _selectCommand;
-            }
-            set
-            {
-                _selectCommand = value;
-            }
-        }
+        public DbCommand InsertCommand { get; set; }
+
+        public DbCommand SelectCommand { get; set; }
+
+        public DbCommand UpdateCommand { get; set; }
 
         [
         DefaultValue(1),
         CategoryAttribute("Settings"),
         DescriptionAttribute("Update batch size"),
         ]
-        virtual public int UpdateBatchSize
+        public virtual int UpdateBatchSize
         {
-            get
-            {
-                return 1;
-            }
+            get => 1;
             set
             {
-                if (1 != value)
+                if(value != 1)
                 {
-                    throw new NotSupportedException();
+                    throw new NotSupportedException(message: nameof(this.UpdateBatchSize) + " can only be set to a value of 1.");
                 }
-            }
-        }
-
-        public DbCommand UpdateCommand
-        { // V1.2.3300
-            get
-            {
-                return _updateCommand;
-            }
-            set
-            {
-                _updateCommand = value;
             }
         }
 
@@ -159,15 +114,6 @@ namespace AsyncDataAdapter
                 return MissingSchemaAction.Error;
             }
         }
-
-        /// <summary>Called to add a single command to the batch of commands that need to be executed as a batch, when batch updates are requested.  It must return an identifier that can be used to identify the command to GetBatchedParameter later.</summary>
-        protected abstract int AddToBatch(DbCommand command);
-
-        /// <summary>Called when batch updates are requested to clear out the contents of the batch, whether or not it's been executed.</summary>
-        protected abstract void ClearBatch();
-
-        /// <summary>Called to execute the batched update command, returns the number of rows affected, just as ExecuteNonQuery would.</summary>
-        protected abstract Task<int> ExecuteBatchAsync( CancellationToken cancellationToken );
 
         object ICloneable.Clone()
         {
@@ -221,6 +167,8 @@ namespace AsyncDataAdapter
             base.Dispose(disposing); // notify base classes
         }
 
+        #region FillSchema
+
         public async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType, CancellationToken cancellationToken )
         {
             DbCommand selectCmd = this.SelectCommand;
@@ -258,28 +206,26 @@ namespace AsyncDataAdapter
 
         protected virtual async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType, DbCommand command, CommandBehavior behavior, CancellationToken cancellationToken )
         {
+            if (null == dataTable)
             {
-                if (null == dataTable)
-                {
-                    throw new ArgumentNullException(nameof(dataTable));
-                }
-                if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType))
-                {
-                    throw ADP.InvalidSchemaType(schemaType);
-                }
-                if (null == command)
-                {
-                    throw ADP.MissingSelectCommand("FillSchema");
-                }
-                string srcTableName = dataTable.TableName;
-                int index = IndexOfDataSetTable(srcTableName);
-                if (-1 != index)
-                {
-                    srcTableName = this.TableMappings[index].SourceTable;
-                }
-
-                return (DataTable) await this.FillSchemaInternalAsync( null, dataTable, schemaType, command, srcTableName, behavior | CommandBehavior.SingleResult, cancellationToken ).ConfigureAwait(false);
+                throw new ArgumentNullException(nameof(dataTable));
             }
+            if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType))
+            {
+                throw ADP.InvalidSchemaType(schemaType);
+            }
+            if (null == command)
+            {
+                throw ADP.MissingSelectCommand("FillSchema");
+            }
+            string srcTableName = dataTable.TableName;
+            int index = IndexOfDataSetTable(srcTableName);
+            if (-1 != index)
+            {
+                srcTableName = this.TableMappings[index].SourceTable;
+            }
+
+            return (DataTable) await this.FillSchemaInternalAsync( null, dataTable, schemaType, command, srcTableName, behavior | CommandBehavior.SingleResult, cancellationToken ).ConfigureAwait(false);
         }
 
         private async Task<object> FillSchemaInternalAsync(DataSet dataset, DataTable datatable, SchemaType schemaType, DbCommand command, string srcTable, CommandBehavior behavior, CancellationToken cancellationToken )
@@ -321,6 +267,10 @@ namespace AsyncDataAdapter
             }
             return dataTables;
         }
+
+        #endregion
+
+        #region FillAsync
 
         public override async Task<int> FillAsync( DataSet dataSet, CancellationToken cancellationToken = default )
         {
@@ -377,64 +327,45 @@ namespace AsyncDataAdapter
 
         public async Task<int> FillAsync(DataTable dataTable, CancellationToken cancellationToken = default )
         {
-            {
-                // delegate to Fill8
-                DataTable[] dataTables = new DataTable[1] { dataTable };
-                DbCommand selectCmd = this.SelectCommand;
-                CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await FillAsync(dataTables, 0, 0, selectCmd, cmdBehavior, cancellationToken ).ConfigureAwait(false);
-            }
+            // delegate to Fill8
+            DataTable[] dataTables = new DataTable[1] { dataTable };
+            DbCommand selectCmd = this.SelectCommand;
+            CommandBehavior cmdBehavior = FillCommandBehavior;
+            return await FillAsync(dataTables, 0, 0, selectCmd, cmdBehavior, cancellationToken ).ConfigureAwait(false);
         }
 
 //      public async Task<int> FillAsync(int startRecord, int maxRecords, params DataTable[] dataTables)
         public async Task<int> FillAsync(int startRecord, int maxRecords, CancellationToken cancellationToken, params DataTable[] dataTables)
-        { // V1.2.3300
-            {
-                // delegate to Fill8
-                DbCommand selectCmd = this.SelectCommand;
-                CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await FillAsync(dataTables, startRecord, maxRecords, selectCmd, cmdBehavior, cancellationToken ).ConfigureAwait(false);
-            }
+        {
+            // delegate to Fill8
+            DbCommand selectCmd = this.SelectCommand;
+            CommandBehavior cmdBehavior = FillCommandBehavior;
+            return await FillAsync(dataTables, startRecord, maxRecords, selectCmd, cmdBehavior, cancellationToken ).ConfigureAwait(false);
         }
 
         protected virtual async Task<int> FillAsync(DataTable dataTable, DbCommand command, CommandBehavior behavior, CancellationToken cancellationToken = default )
         {
-            {
-                // delegate to Fill8
-                DataTable[] dataTables = new DataTable[1] { dataTable };
-                return await FillAsync(dataTables, 0, 0, command, behavior, cancellationToken ).ConfigureAwait(false);
-            }
+            // delegate to Fill8
+            DataTable[] dataTables = new DataTable[1] { dataTable };
+            return await FillAsync(dataTables, 0, 0, command, behavior, cancellationToken ).ConfigureAwait(false);
         }
 
         protected virtual async Task<int> FillAsync(DataTable[] dataTables, int startRecord, int maxRecords, DbCommand command, CommandBehavior behavior, CancellationToken cancellationToken = default )
-        { // V1.2.3300
+        {
+            if ((null == dataTables) || (0 == dataTables.Length) || (null == dataTables[0])) throw ADP.FillRequires("dataTable");
+            if (startRecord < 0) throw ADP.InvalidStartRecord("startRecord", startRecord);
+            if (maxRecords < 0) throw ADP.InvalidMaxRecords("maxRecords", maxRecords);
+            if ((1 < dataTables.Length) && ((0 != startRecord) || (0 != maxRecords))) throw ADP.OnlyOneTableForStartRecordOrMaxRecords();
+            if (null == command) throw ADP.MissingSelectCommand("Fill");
+            
+            //
+
+            if (1 == dataTables.Length)
             {
-                if ((null == dataTables) || (0 == dataTables.Length) || (null == dataTables[0]))
-                {
-                    throw ADP.FillRequires("dataTable");
-                }
-                if (startRecord < 0)
-                {
-                    throw ADP.InvalidStartRecord("startRecord", startRecord);
-                }
-                if (maxRecords < 0)
-                {
-                    throw ADP.InvalidMaxRecords("maxRecords", maxRecords);
-                }
-                if ((1 < dataTables.Length) && ((0 != startRecord) || (0 != maxRecords)))
-                {
-                    throw ADP.OnlyOneTableForStartRecordOrMaxRecords();
-                }
-                if (null == command)
-                {
-                    throw ADP.MissingSelectCommand("Fill");
-                }
-                if (1 == dataTables.Length)
-                {
-                    behavior |= CommandBehavior.SingleResult;
-                }
-                return await FillInternalAsync(null, dataTables, startRecord, maxRecords, null, command, behavior, cancellationToken ).ConfigureAwait(false);
+                behavior |= CommandBehavior.SingleResult;
             }
+
+            return await this.FillInternalAsync(null, dataTables, startRecord, maxRecords, null, command, behavior, cancellationToken ).ConfigureAwait(false);
         }
 
         private async Task<int> FillInternalAsync( DataSet dataset, DataTable[] datatables, int startRecord, int maxRecords, string srcTable, DbCommand command, CommandBehavior behavior, CancellationToken cancellationToken )
@@ -487,6 +418,22 @@ namespace AsyncDataAdapter
             return rowsAddedToDataSet;
         }
 
+        #endregion
+
+        #region Batching
+
+        /// <summary>Called to add a single command to the batch of commands that need to be executed as a batch, when batch updates are requested.  It must return an identifier that can be used to identify the command to GetBatchedParameter later.</summary>
+        protected abstract int AddToBatch(DbCommand command);
+
+        /// <summary>Called when batch updates are requested to clear out the contents of the batch, whether or not it's been executed.</summary>
+        protected abstract void ClearBatch();
+
+        /// <summary>Called to execute the batched update command, returns the number of rows affected, just as ExecuteNonQuery would.</summary>
+        protected abstract Task<int> ExecuteBatchAsync( CancellationToken cancellationToken );
+
+        /// <summary>Called when batch updates are requested to cleanup after a batch update has been completed.</summary>
+        protected abstract void TerminateBatching();
+
         protected virtual IDataParameter GetBatchedParameter(int commandIdentifier, int parameterIndex)
         {
             // Called to retrieve a parameter from a specific bached command, the
@@ -511,8 +458,20 @@ namespace AsyncDataAdapter
             return true;
         }
 
+        protected virtual void InitializeBatching()
+        {
+            // Called when batch updates are requested to prepare for processing
+            // of a batch of commands.
+
+           throw new NotSupportedException();
+        }
+
+        #endregion
+
+       
+
         [EditorBrowsableAttribute(EditorBrowsableState.Advanced)] // MDAC 69508
-        override public IDataParameter[] GetFillParameters()
+        public override IDataParameter[] GetFillParameters()
         {
             IDataParameter[] value = null;
             DbCommand select = this.SelectCommand;
@@ -535,28 +494,23 @@ namespace AsyncDataAdapter
         internal DataTableMapping GetTableMapping(DataTable dataTable)
         {
             DataTableMapping tableMapping = null;
-            int index = IndexOfDataSetTable(dataTable.TableName);
+            int index = this.IndexOfDataSetTable(dataTable.TableName);
             if (-1 != index)
             {
-                tableMapping = TableMappings[index];
+                tableMapping = this.TableMappings[index];
             }
+
             if (null == tableMapping)
             {
-                if (MissingMappingAction.Error == MissingMappingAction)
+                if (this.MissingMappingAction == MissingMappingAction.Error)
                 {
                     throw ADP.MissingTableMappingDestination(dataTable.TableName);
                 }
+
                 tableMapping = new DataTableMapping(dataTable.TableName, dataTable.TableName);
             }
+
             return tableMapping;
-        }
-
-        protected virtual void InitializeBatching()
-        {
-            // Called when batch updates are requested to prepare for processing
-            // of a batch of commands.
-
-           throw new NotSupportedException();
         }
 
         protected virtual void OnRowUpdated(RowUpdatedEventArgs value)
@@ -654,8 +608,7 @@ namespace AsyncDataAdapter
             }
         }
 
-        /// <summary>Called when batch updates are requested to cleanup after a batch update has been completed.</summary>
-        protected abstract void TerminateBatching();
+        #region UpdateAsync
 
         public override Task<int> UpdateAsync(DataSet dataSet, CancellationToken cancellationToken = default)
         {
@@ -1408,7 +1361,7 @@ namespace AsyncDataAdapter
         private int UpdatedRowStatus(RowUpdatedEventArgs rowUpdatedEvent, BatchCommandInfo[] batchCommands, int commandCount)
         {
             Debug.Assert(null != rowUpdatedEvent, "null rowUpdatedEvent");
-            int cumulativeDataRowsAffected = 0;
+            int cumulativeDataRowsAffected;
             switch (rowUpdatedEvent.Status)
             {
                 case UpdateStatus.Continue:
@@ -1423,7 +1376,8 @@ namespace AsyncDataAdapter
                     break; // foreach DataRow without accepting changes on this row (but user may haved accepted chagnes for us)
                 default:
                     throw ADP.InvalidUpdateStatus(rowUpdatedEvent.Status);
-            } // switch RowUpdatedEventArgs.Status
+            }
+
             return cumulativeDataRowsAffected;
         }
 
@@ -1551,6 +1505,8 @@ namespace AsyncDataAdapter
             }
         }
 
+        #endregion
+
         #region GetConnection
 
         private static DbConnection GetConnection1(AdaDbDataAdapter adapter)
@@ -1620,6 +1576,8 @@ namespace AsyncDataAdapter
             }
         }
 
+        #region Connections
+
         /// <summary></summary>
         /// <remarks><see cref="QuietOpenAsync"/> needs to appear in the try {} finally { QuietClose } block otherwise a possibility exists that an exception may be thrown, i.e. <see cref="ThreadAbortException"/> where we would Open the connection and not close it</remarks>
         /// <returns></returns>
@@ -1647,5 +1605,7 @@ namespace AsyncDataAdapter
                 connection.Close();
             }
         }
+
+        #endregion
     }
 }
