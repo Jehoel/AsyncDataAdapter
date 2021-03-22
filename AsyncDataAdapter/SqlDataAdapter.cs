@@ -118,12 +118,11 @@ namespace AsyncDataAdapter
             }
             set
             {
-                if (0 > value)
+                if (0 > value) // i.e. `value < 0`
                 { // WebData 98157
-                    throw ADP.ArgumentOutOfRange("UpdateBatchSize");
+                    throw new ArgumentOutOfRangeException(paramName: nameof(value), actualValue: value, message: nameof(this.UpdateBatchSize) + " value must be >= 0." );
                 }
                 _updateBatchSize = value;
-                // TODO:    Bid.Trace("<sc.SqlDataAdapter.set_UpdateBatchSize|API> %d#, %d\n", ObjectID, value);
             }
         }
 

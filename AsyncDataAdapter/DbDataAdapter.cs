@@ -177,7 +177,7 @@ namespace AsyncDataAdapter
             {
                 if (1 != value)
                 {
-                    throw ADP.NotSupported();
+                    throw new NotSupportedException();
                 }
             }
         }
@@ -242,7 +242,7 @@ namespace AsyncDataAdapter
             // must return an identifier that can be used to identify the command
             // to GetBatchedParameter later.
 
-            throw ADP.NotSupported();
+           throw new NotSupportedException();
         }
 
         virtual protected void ClearBatch()
@@ -250,7 +250,7 @@ namespace AsyncDataAdapter
             // Called when batch updates are requested to clear out the contents
             // of the batch, whether or not it's been executed.
 
-            throw ADP.NotSupported();
+           throw new NotSupportedException();
         }
 
         object ICloneable.Clone()
@@ -306,7 +306,7 @@ namespace AsyncDataAdapter
             // Called to execute the batched update command, returns the number
             // of rows affected, just as ExecuteNonQuery would.
 
-            throw ADP.NotSupported();
+           throw new NotSupportedException();
         }
 
         public async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType)
@@ -345,7 +345,7 @@ namespace AsyncDataAdapter
             {
                 if (null == dataSet)
                 {
-                    throw ADP.ArgumentNull("dataSet");
+                    throw new ArgumentNullException(nameof(dataSet));
                 }
                 if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType))
                 {
@@ -368,7 +368,7 @@ namespace AsyncDataAdapter
             {
                 if (null == dataTable)
                 {
-                    throw ADP.ArgumentNull("dataTable");
+                    throw new ArgumentNullException(nameof(dataTable));
                 }
                 if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType))
                 {
@@ -620,7 +620,7 @@ namespace AsyncDataAdapter
             // first argument is the value that was returned by AddToBatch when it
             // was called for the command.
 
-            throw ADP.NotSupported();
+           throw new NotSupportedException();
         }
 
         virtual protected bool GetBatchedRecordsAffected(int commandIdentifier, out int recordsAffected, out Exception error)
@@ -683,7 +683,7 @@ namespace AsyncDataAdapter
             // Called when batch updates are requested to prepare for processing
             // of a batch of commands.
 
-            throw ADP.NotSupported();
+           throw new NotSupportedException();
         }
 
         virtual protected void OnRowUpdated(RowUpdatedEventArgs value)
@@ -787,7 +787,7 @@ namespace AsyncDataAdapter
             // Called when batch updates are requested to cleanup after a batch
             // update has been completed.
 
-            throw ADP.NotSupported();
+           throw new NotSupportedException();
         }
 
         override public async Task<int> UpdateAsync(DataSet dataSet)
@@ -804,7 +804,7 @@ namespace AsyncDataAdapter
                 int rowsAffected = 0;
                 if (null == dataRows)
                 {
-                    throw ADP.ArgumentNull("dataRows");
+                    throw new ArgumentNullException(nameof(dataRows));
                 }
                 else if (0 != dataRows.Length)
                 {
@@ -815,7 +815,7 @@ namespace AsyncDataAdapter
                         {
                             if (null != dataTable)
                             {
-                                throw ADP.UpdateMismatchRowTable(i);
+                                throw new ArgumentException(string.Format("DataRow[{0}] is from a different DataTable than DataRow[0].", i));
                             }
                             dataTable = dataRows[i].Table;
                         }
@@ -833,10 +833,7 @@ namespace AsyncDataAdapter
         public async Task<int> UpdateAsync(DataTable dataTable)
         { // V1.0.3300
             {
-                if (null == dataTable)
-                {
-                    throw ADP.UpdateRequiresDataTable("dataTable");
-                }
+                if (dataTable is null) throw new ArgumentNullException(nameof(dataTable));
 
                 DataTableMapping tableMapping = null;
                 int index = IndexOfDataSetTable(dataTable.TableName);
@@ -859,17 +856,9 @@ namespace AsyncDataAdapter
         public async Task<int> UpdateAsync(DataSet dataSet, string srcTable)
         { // V1.0.3300
             {
-                if (null == dataSet)
-                {
-                    throw ADP.UpdateRequiresNonNullDataSet("dataSet");
-                }
-                if (ADP.IsEmpty(srcTable))
-                {
-                    throw ADP.UpdateRequiresSourceTableName("srcTable");
-                }
-#if DEBUG
-                //ADP.TraceDataSet("Update <" + srcTable + ">", dataSet);
-#endif
+                if (dataSet is null) throw new ArgumentNullException(nameof(dataSet));
+                if (srcTable is null) throw new ArgumentNullException(nameof(srcTable));
+                if (string.IsNullOrEmpty(srcTable)) throw new ArgumentException(message: "Update: expected a non-empty SourceTable name.", paramName: nameof(srcTable));
 
                 int rowsAffected = 0;
 
@@ -888,7 +877,7 @@ namespace AsyncDataAdapter
                 else if (!HasTableMappings() || (-1 == TableMappings.IndexOf(tableMapping)))
                 {
                     //throw error since the user didn't explicitly map this tableName to Ignore.
-                    throw ADP.UpdateRequiresSourceTable(srcTable); // MDAC 72681
+                    throw new InvalidOperationException(string.Format("Update unable to find TableMapping['{0}'] or DataTable '{0}'.", srcTable));
                 }
                 return rowsAffected;
             }
@@ -1084,7 +1073,7 @@ namespace AsyncDataAdapter
                                         else
                                         {
                                             // do not allow the expectation that returned results will be used
-                                            errors = ADP.ResultsNotAllowedDuringBatch();
+                                            errors = new InvalidOperationException("When batching, the command's UpdatedRowSource property value of UpdateRowSource.FirstReturnedRecord or UpdateRowSource.Both is invalid.");
                                         }
                                     }
                                     else
@@ -1593,7 +1582,7 @@ namespace AsyncDataAdapter
             if (null == errors)
             {
                 // user changed status to ErrorsOccured without supplying an exception message
-                errors = ADP.RowUpdatedErrors();
+                errors = new DataException("RowUpdatedEvent: Errors occurred; no additional is information available.");
                 rowUpdatedEvent.Errors = errors;
             }
 
@@ -1664,7 +1653,7 @@ namespace AsyncDataAdapter
             if (null == errors)
             {
                 // user changed status to ErrorsOccured without supplying an exception message
-                errors = ADP.RowUpdatingErrors();
+                errors = new DataException("RowUpdatingEvent: Errors occurred; no additional is information available.");
                 rowUpdatedEvent.Errors = errors;
             }
             string message = errors.Message;
@@ -1734,7 +1723,7 @@ namespace AsyncDataAdapter
                 case StatementType.Delete: return DataRowVersion.Original; // ignores parameter.SourceVersion
                 case StatementType.Select:
                 case StatementType.Batch:
-                    throw ADP.UnwantedStatementType(statementType);
+                    throw new ArgumentException(message: string.Format("Unwanted statement type {0}", statementType.ToString()), paramName: nameof(statementType));
                 default:
                     throw ADP.InvalidStatementType(statementType);
             }

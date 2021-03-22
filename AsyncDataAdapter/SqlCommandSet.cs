@@ -59,9 +59,9 @@ namespace AsyncDataAdapter
             get
             {
                 SqlCommand command = _batchCommand;
-                if (null == command)
+                if (command is null)
                 {
-                    throw ADP.ObjectDisposed(this);
+                    throw new ObjectDisposedException(objectName: this.GetType().Name);
                 }
                 return command;
             }
@@ -82,7 +82,7 @@ namespace AsyncDataAdapter
                 List<LocalCommand> commandList = _commandList;
                 if (null == commandList)
                 {
-                    throw ADP.ObjectDisposed(this);
+                    throw new ObjectDisposedException(objectName: this.GetType().Name);
                 }
                 return commandList;
             }
@@ -342,15 +342,6 @@ namespace AsyncDataAdapter
         internal int GetParameterCount(int commandIndex)
         {
             return CommandList[commandIndex].Parameters.Count;
-        }
-
-        private void ValidateCommandBehavior(string method, CommandBehavior behavior)
-        {
-            if (0 != (behavior & ~(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection)))
-            {
-                ADP.ValidateCommandBehavior(behavior);
-                throw ADP.NotSupportedCommandBehavior(behavior & ~(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection), method);
-            }
         }
     }
 }

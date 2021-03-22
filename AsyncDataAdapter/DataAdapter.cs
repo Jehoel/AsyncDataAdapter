@@ -377,7 +377,7 @@ namespace AsyncDataAdapter
 
         virtual public Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType)
         { // V1.0.3300
-            throw ADP.NotSupported();
+            throw new NotSupportedException();
         }
 
         virtual protected async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, string srcTable, DbDataReader dataReader)
@@ -385,7 +385,7 @@ namespace AsyncDataAdapter
             {
                 if (null == dataSet)
                 {
-                    throw ADP.ArgumentNull("dataSet");
+                    throw new ArgumentNullException(nameof(dataSet));
                 }
                 if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType))
                 {
@@ -410,7 +410,7 @@ namespace AsyncDataAdapter
             {
                 if (null == dataTable)
                 {
-                    throw ADP.ArgumentNull("dataTable");
+                    throw new ArgumentNullException(nameof(dataTable));
                 }
                 if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType))
                 {
@@ -477,7 +477,7 @@ namespace AsyncDataAdapter
 
         virtual public Task<int> FillAsync(DataSet dataSet)
         { // V1.0.3300
-            throw ADP.NotSupported();
+            throw new NotSupportedException();
         }
 
         virtual protected async Task<int> FillAsync(DataSet dataSet, string srcTable, IDataReader dataReader, int startRecord, int maxRecords)
@@ -521,9 +521,12 @@ namespace AsyncDataAdapter
 
         virtual protected async Task<int> FillAsync(DataTable[] dataTables, IDataReader dataReader, int startRecord, int maxRecords)
         { // V1.2.3300
+
+            if (dataTables is null) throw new ArgumentNullException(paramName: nameof(dataTables));
+            if (0 == dataTables.Length) throw new ArgumentException(string.Format("Argument is empty: {0}", nameof(dataTables)), paramName: nameof(dataTables));
+
             {
-                ADP.CheckArgumentLength(dataTables, "tables");
-                if ((null == dataTables) || (0 == dataTables.Length) || (null == dataTables[0]))
+                if (null == dataTables[0])
                 {
                     throw ADP.FillRequires("dataTable");
                 }
@@ -533,7 +536,7 @@ namespace AsyncDataAdapter
                 }
                 if ((1 < dataTables.Length) && ((0 != startRecord) || (0 != maxRecords)))
                 {
-                    throw ADP.NotSupported(); // FillChildren is not supported with FillPage
+                    throw new NotSupportedException(); // FillChildren is not supported with FillPage
                 }
 
                 int result = 0;
@@ -872,7 +875,7 @@ namespace AsyncDataAdapter
 
         virtual public Task<int> UpdateAsync(DataSet dataSet)
         { // V1.0.3300
-            throw ADP.NotSupported();
+            throw new NotSupportedException();
         }
 
         // used by FillSchema which returns an array of datatables added to the dataset
