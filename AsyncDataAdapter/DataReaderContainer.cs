@@ -68,7 +68,7 @@ namespace AsyncDataAdapter
         internal async Task<bool> NextResultAsync()
         {
             _fieldCount = 0;
-            if (await _dataReader.NextResultAsync())
+            if (await _dataReader.NextResultAsync().ConfigureAwait(false))
             {
                 _fieldCount = VisibleFieldCount;
                 return true;
@@ -77,7 +77,7 @@ namespace AsyncDataAdapter
         }
         internal async Task<bool> ReadAsync()
         {
-            return await _dataReader.ReadAsync();
+            return await _dataReader.ReadAsync().ConfigureAwait(false);
         }
 
         private sealed class ProviderSpecificDataReader : DataReaderContainer

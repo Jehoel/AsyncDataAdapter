@@ -404,7 +404,7 @@ namespace AsyncDataAdapter
                     throw ADP.FillRequires("dataReader");
                 }
                 // user must Close/Dispose of the dataReader
-                object value = await FillSchemaFromReaderAsync(dataSet, null, schemaType, srcTable, dataReader);
+                object value = await FillSchemaFromReaderAsync(dataSet, null, schemaType, srcTable, dataReader).ConfigureAwait(false);
                 return (DataTable[])value;
             }
             finally
@@ -433,7 +433,7 @@ namespace AsyncDataAdapter
                 }
                 // user must Close/Dispose of the dataReader
                 // user will have to call NextResult to access remaining results
-                object value = await FillSchemaFromReaderAsync(null, dataTable, schemaType, null, dataReader);
+                object value = await FillSchemaFromReaderAsync(null, dataTable, schemaType, null, dataReader).ConfigureAwait(false);
                 return (DataTable)value;
             }
             finally
@@ -480,7 +480,7 @@ namespace AsyncDataAdapter
                         dataTables = DataAdapter.AddDataTableToArray(dataTables, mapping.DataTable);
                     }
                 }
-            } while (await dataReader.NextResultAsync()); // FillSchema does not capture errors for FillError event
+            } while (await dataReader.NextResultAsync().ConfigureAwait(false)); // FillSchema does not capture errors for FillError event
 
             object value = dataTables;
             if ((null == value) && (null == datatable))
@@ -527,7 +527,7 @@ namespace AsyncDataAdapter
                 }
                 // user must Close/Dispose of the dataReader
                 DataReaderContainer readerHandler = DataReaderContainer.Create(dataReader, ReturnProviderSpecificTypes);
-                return await FillFromReaderAsync(dataSet, null, srcTable, readerHandler, startRecord, maxRecords, null, null);
+                return await FillFromReaderAsync(dataSet, null, srcTable, readerHandler, startRecord, maxRecords, null, null).ConfigureAwait(false);
             }
             finally
             {
@@ -538,7 +538,7 @@ namespace AsyncDataAdapter
         virtual protected async Task<int> FillAsync(DataTable dataTable, IDataReader dataReader)
         { // V1.2.3300, DbDataADapter V1.0.3300
             DataTable[] dataTables = new DataTable[] { dataTable };
-            return await FillAsync(dataTables, dataReader, 0, 0);
+            return await FillAsync(dataTables, dataReader, 0, 0).ConfigureAwait(false);
         }
 
         virtual protected async Task<int> FillAsync(DataTable[] dataTables, IDataReader dataReader, int startRecord, int maxRecords)
@@ -591,7 +591,7 @@ namespace AsyncDataAdapter
                                 bool lastFillNextResult;
                                 do
                                 {
-                                    lastFillNextResult = await FillNextResultAsync(readerHandler);
+                                    lastFillNextResult = await FillNextResultAsync(readerHandler).ConfigureAwait(false);
                                 }
                                 while (lastFillNextResult && readerHandler.FieldCount <= 0);
                                 if (!lastFillNextResult)
@@ -604,13 +604,13 @@ namespace AsyncDataAdapter
                                 continue;
                             }
                         }
-                        if ((0 < i) && !await FillNextResultAsync(readerHandler))
+                        if ((0 < i) && !await FillNextResultAsync(readerHandler).ConfigureAwait(false))
                         {
                             break;
                         }
                         // user must Close/Dispose of the dataReader
                         // user will have to call NextResult to access remaining results
-                        int count = await FillFromReaderAsync(null, dataTables[i], null, readerHandler, startRecord, maxRecords, null, null);
+                        int count = await FillFromReaderAsync(null, dataTables[i], null, readerHandler, startRecord, maxRecords, null, null).ConfigureAwait(false);
                         if (0 == i)
                         {
                             result = count;
@@ -672,11 +672,11 @@ namespace AsyncDataAdapter
                     // startRecord and maxRecords only apply to the first resultset
                     if ((1 == schemaCount) && ((0 < startRecord) || (0 < maxRecords)))
                     {
-                        rowsAddedToDataSet = await FillLoadDataRowChunkAsync(mapping, startRecord, maxRecords);
+                        rowsAddedToDataSet = await FillLoadDataRowChunkAsync(mapping, startRecord, maxRecords).ConfigureAwait(false);
                     }
                     else
                     {
-                        int count = await FillLoadDataRowAsync(mapping);
+                        int count = await FillLoadDataRowAsync(mapping).ConfigureAwait(false);
 
                         if (1 == schemaCount)
                         { // MDAC 71347
@@ -694,7 +694,7 @@ namespace AsyncDataAdapter
                 {
                     break; // do not read remaining results in single DataTable case
                 }
-            } while (await FillNextResultAsync(dataReader));
+            } while (await FillNextResultAsync(dataReader).ConfigureAwait(false));
 
             return rowsAddedToDataSet;
         }
@@ -705,7 +705,7 @@ namespace AsyncDataAdapter
 
             while (0 < startRecord)
             {
-                if (!await dataReader.ReadAsync())
+                if (!await dataReader.ReadAsync().ConfigureAwait(false))
                 {
                     // there are no more rows on first resultset
                     return 0;
@@ -716,13 +716,13 @@ namespace AsyncDataAdapter
             int rowsAddedToDataSet = 0;
             if (0 < maxRecords)
             {
-                while ((rowsAddedToDataSet < maxRecords) && await dataReader.ReadAsync())
+                while ((rowsAddedToDataSet < maxRecords) && await dataReader.ReadAsync().ConfigureAwait(false))
                 {
                     if (_hasFillErrorHandler)
                     {
                         try
                         {
-                            await mapping.LoadDataRowWithClear();
+                            await mapping.LoadDataRowWithClear().ConfigureAwait(false);
                             rowsAddedToDataSet++;
                         }
                         catch (Exception e)
@@ -738,7 +738,7 @@ namespace AsyncDataAdapter
                     }
                     else
                     {
-                        await mapping.LoadDataRow();
+                        await mapping.LoadDataRow().ConfigureAwait(false);
                         rowsAddedToDataSet++;
                     }
                 }
@@ -746,7 +746,7 @@ namespace AsyncDataAdapter
             }
             else
             {
-                rowsAddedToDataSet = await FillLoadDataRowAsync(mapping);
+                rowsAddedToDataSet = await FillLoadDataRowAsync(mapping).ConfigureAwait(false);
             }
             return rowsAddedToDataSet;
         }
@@ -757,13 +757,13 @@ namespace AsyncDataAdapter
             DataReaderContainer dataReader = mapping.DataReader;
             if (_hasFillErrorHandler)
             {
-                while (await dataReader.ReadAsync())
+                while (await dataReader.ReadAsync().ConfigureAwait(false))
                 { // read remaining rows of first and subsequent resultsets
                     try
                     {
                         // only try-catch if a FillErrorEventHandler is registered so that
                         // in the default case we get the full callstack from users
-                        await mapping.LoadDataRowWithClear();
+                        await mapping.LoadDataRowWithClear().ConfigureAwait(false);
                         rowsAddedToDataSet++;
                     }
                     catch (Exception e)
@@ -780,9 +780,9 @@ namespace AsyncDataAdapter
             }
             else
             {
-                while (await dataReader.ReadAsync())
+                while (await dataReader.ReadAsync().ConfigureAwait(false))
                 { // read remaining rows of first and subsequent resultset
-                    await mapping.LoadDataRow();
+                    await mapping.LoadDataRow().ConfigureAwait(false);
                     rowsAddedToDataSet++;
                 }
             }
@@ -838,7 +838,7 @@ namespace AsyncDataAdapter
                 {
                     // only try-catch if a FillErrorEventHandler is registered so that
                     // in the default case we get the full callstack from users
-                    result = await dataReader.NextResultAsync();
+                    result = await dataReader.NextResultAsync().ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -853,7 +853,7 @@ namespace AsyncDataAdapter
             }
             else
             {
-                result = await dataReader.NextResultAsync();
+                result = await dataReader.NextResultAsync().ConfigureAwait(false);
             }
             return result;
         }
@@ -947,7 +947,7 @@ namespace AsyncDataAdapter
 
         internal async Task<int> FillFromReaderAsync(DataTable[] dataTables, IDataReader dataReader, int startRecord, int maxRecords)
         {
-            return await FillAsync(dataTables, dataReader, startRecord, maxRecords);
+            return await FillAsync(dataTables, dataReader, startRecord, maxRecords).ConfigureAwait(false);
         }
     }
 }

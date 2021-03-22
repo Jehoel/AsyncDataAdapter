@@ -405,7 +405,7 @@ namespace AsyncDataAdapter
             {
                 _readerDataValues[i] = null;
             }
-            await LoadDataRow();
+            await LoadDataRow().ConfigureAwait(false);
         }
 
         internal async Task LoadDataRow()
@@ -435,7 +435,7 @@ namespace AsyncDataAdapter
                 }
                 if ((null != _chapterMap) && (null != _dataSet))
                 {
-                    await LoadDataRowChaptersAsync(dataRow); // MDAC 70772
+                    await LoadDataRowChaptersAsync(dataRow).ConfigureAwait(false); // MDAC 70772
                 }
             }
             finally
@@ -500,7 +500,8 @@ namespace AsyncDataAdapter
                                 string chapterTableName = _tableMapping.SourceTable + _fieldNames[i]; // MDAC 70908
 
                                 DataReaderContainer readerHandler = DataReaderContainer.Create(nestedReader, _dataReader.ReturnProviderSpecificTypes);
-                                datarowadded += await _adapter.FillFromReaderAsync(_dataSet, null, chapterTableName, readerHandler, 0, 0, parentChapterColumn, parentChapterValue);
+                                var fillFromReaderResult = await _adapter.FillFromReaderAsync(_dataSet, null, chapterTableName, readerHandler, 0, 0, parentChapterColumn, parentChapterValue).ConfigureAwait(false);
+                                datarowadded += fillFromReaderResult;
                             }
                         }
                     }
