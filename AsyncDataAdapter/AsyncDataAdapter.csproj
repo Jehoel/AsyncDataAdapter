@@ -4,25 +4,38 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>AsyncDataAdapter.snk</AssemblyOriginatorKeyFile>
-    <DelaySign>false</DelaySign>
-    <PackageProjectUrl></PackageProjectUrl>
-    <RepositoryUrl>https://github.com/voloda/AsyncDataAdapter</RepositoryUrl>
-    <PackageLicenseUrl>https://github.com/voloda/AsyncDataAdapter/blob/master/LICENSE</PackageLicenseUrl>
-    <Copyright>Copyright (c) 2009-2018, Vladimir Kloz &lt;vladimir.kloz@gmail.com&gt;</Copyright>
-    <Version>2.0.0</Version>
-    <Authors>Vladimir Kloz</Authors>
+    <AssemblyOriginatorKeyFile>StrongName.snk.pfx</AssemblyOriginatorKeyFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <NoWarn>1591</NoWarn>
+
+    <!-- BEGIN NuGet: -->
+    <PackageId>Jehoel.AsyncDataAdapter</PackageId>
+    <RepositoryUrl>https://github.com/Jehoel/AsyncDataAdapter/</RepositoryUrl>
+    <PackageLicenseUrl>https://github.com/Jehoel/AsyncDataAdapter/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/Jehoel/AsyncDataAdapter/</PackageProjectUrl>
+    <Copyright>Microsoft Corporation, Vladimir Kloz &lt;vladimir.kloz@gmail.com&gt;; Jeremy Kruer; Dai Rees;</Copyright>
+    <Version>3.0.0</Version>
+    <Authors>Vladimir Kloz; Jeremy Kruer; Dai Rees;</Authors>
     <Company />
-    <Description>AsyncDataAdapter is implementation of SqlDataAdapter with supports async/await.</Description>
-    <PackageTags>DataAdapter DbDataAdapter SqlDataAdapter</PackageTags>
+    <Description>Jehoel.AsyncDataAdapter builds on Vladimir Kloz' original AsyncDataAdapter package, with support for .NET Standard 2.0, and numerous other improvements. The original implementation is based on Microsoft's MIT-licensed implementation of DataReader, DbDataReader, and SqlDataReader.</Description>
+    <PackageTags>DataAdapter DbDataAdapter SqlDataAdapter AsyncDataAdapter AdaDataAdapter FillAsync</PackageTags>
+    <PackageReleaseNotes>Historical releases:
+1.0 - 1.0.25.1 - See https://www.nuget.org/packages/AsyncDataAdapter/ and https://github.com/voloda/AsyncDataAdapter
+2.0 - &lt;3.0 -See https://github.com/jkruer01/AsyncDataAdapter
+3.0 -https://github.com/Jehoel/AsyncDataAdapter/
+
+3.0 - Completed async support: uses `ConfigureAwait(false)` internally, ensuring no synchronous operations are invoked. Code clean-up. Renaming types with an `Ada` prefix to avoid conflicts with original System.Data types. Project and output NuGet package now targets .NET Standard 2.0 and Microsoft.Data.SqlClient instead of .NET Framework.</PackageReleaseNotes>
+    <!-- END NuGet -->
+    
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>../bin</OutputPath>
+    <OutputPath>bin\Release</OutputPath>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>../bin</OutputPath>
+    <OutputPath>bin\Debug</OutputPath>
   </PropertyGroup>
 
   <ItemGroup>
