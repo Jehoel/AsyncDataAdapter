@@ -21,7 +21,7 @@ namespace AsyncDataAdapter.SqlClient
 
             try
             {
-                Object instance = SqlCommandSetReflection.CreateInstance();
+                Object instance = SqlCommandSetReflection.CreateSqlCommandSet();
                 return new SqlCommandSetWrapper( instance );
             }
             catch( TypeLoadException tlEx )

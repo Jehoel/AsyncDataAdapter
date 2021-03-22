@@ -223,7 +223,7 @@ namespace AsyncDataAdapter.SqlClient
         {
             Debug.Assert(null != _commandSet && (0 < _commandSet.CommandCount), "no commands");
             // TODO:    Bid.CorrelationTrace("<sc.SqlDataAdapter.ExecuteBatch|Info|Correlation> ObjectID%d#, ActivityID %ls\n", ObjectID);
-            return _commandSet.ExecuteNonQueryAsync();
+            return _commandSet.ExecuteNonQueryAsync( cancellationToken );
         }
 
         protected override IDataParameter GetBatchedParameter(int commandIdentifier, int parameterIndex)

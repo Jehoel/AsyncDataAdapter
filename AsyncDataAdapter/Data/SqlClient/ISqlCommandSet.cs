@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Data.SqlClient;
@@ -19,14 +21,21 @@ namespace AsyncDataAdapter.SqlClient
 
         void Clear();
 
-        int ExecuteNonQuery();
-
-        Task<int> ExecuteNonQueryAsync();
-
         int GetParameterCount(int commandIndex);
 
         SqlParameter GetParameter(int commandIndex, int parameterIndex);
 
         bool GetBatchedAffected(int commandIdentifier, out int recordsAffected, out Exception error);
+
+        #region Private
+
+        /// <summary>Actual element type is <c>Microsoft.Data.SqlClient.SqlCommandSet.LocalCommand</c>.</summary>
+        IList CommandList { get; }
+
+        SqlCommand BatchCommand { get; }
+
+        #endregion
+
+        Task<int> ExecuteNonQueryAsync( CancellationToken cancellationToken );
     }
 }

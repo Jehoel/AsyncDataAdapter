@@ -5,6 +5,8 @@ namespace AsyncDataAdapter
 {
     internal static class Reflection
 	{
+        #region MethodInfo
+
         public static MethodInfo GetStaticMethod<T>( string name, params Type[] paramTypes )
 		{
             return GetNonPublicMethod(type: typeof(T), name: name, bindingAttr: BindingFlags.Static, paramTypes: paramTypes);
@@ -46,6 +48,10 @@ namespace AsyncDataAdapter
 			}
 		}
 
+        #endregion
+
+        #region PropertyInfo
+
         public static MethodInfo GetInstancePropertyGetter<T>( string name, Type propertyType )
 		{
             return GetInstancePropertyGetter(typeof(T), name, propertyType);
@@ -66,6 +72,11 @@ namespace AsyncDataAdapter
                 return propertyGetterInfo;
             }
 		}
+
+        public static MethodInfo GetInstancePropertySetter<T>(string name, Type propertyType)
+		{
+            return GetInstancePropertySetter(typeof(T), name, propertyType);
+        }
 
         public static MethodInfo GetInstancePropertySetter(Type type, string name, Type propertyType)
 		{
@@ -104,6 +115,31 @@ namespace AsyncDataAdapter
                 return propertyInfo;
             }
         }
+
+        #endregion
+
+        #region FieldInfo
+
+        public static FieldInfo GetInstanceFieldInfo<T>( string name, Type fieldType )
+        {
+            return GetInstanceFieldInfo( typeof(T), name, fieldType );
+        }
+
+        public static FieldInfo GetInstanceFieldInfo( Type type, string name, Type fieldType )
+        {
+            FieldInfo fieldInfo = type.GetField( name, BindingFlags.NonPublic | BindingFlags.Instance );
+            if (fieldInfo is null)
+			{
+				string msg = string.Format("Couldn't find field {0} in type {1}.", name, type.AssemblyQualifiedName);
+				throw new InvalidOperationException(msg);
+			}
+            else
+            {
+                return fieldInfo;
+            }
+        }
+
+        #endregion
 
         #region MethodInfo Invoke Wrappers
 
@@ -157,6 +193,56 @@ namespace AsyncDataAdapter
                 throw new InvalidOperationException(msg);
             }
         }
+
+        #endregion
+
+        #region FieldInfo
+
+        public static T GetValueDisallowNull<T>(this FieldInfo fieldInfo, object @this)
+        {
+            Object value = fieldInfo.GetValue(obj: @this);
+            if( value is T typed )
+            {
+                return typed;
+            }
+            else
+            {
+                if (value is null)
+                {
+                    string msg = string.Format("Expected {0}.{1} to hold a {2} value, but encountered a null reference instead.", fieldInfo.DeclaringType.FullName, fieldInfo.Name, typeof(T).AssemblyQualifiedName);
+                    throw new InvalidOperationException(msg);
+                }
+                else
+                {
+                    string msg = string.Format("Expected {0}.{1} to hold a {2} value, but encountered a {3} reference instead.", fieldInfo.DeclaringType.FullName, fieldInfo.Name, typeof(T).AssemblyQualifiedName, value.GetType().AssemblyQualifiedName);
+                    throw new InvalidOperationException(msg);
+                }
+            }
+        }
+
+        public static T GetValueAllowNull<T>(this FieldInfo fieldInfo, object @this)
+            where T : class
+        {
+            Object value = fieldInfo.GetValue(obj: @this);
+            if( value is T typed )
+            {
+                return typed;
+            }
+            else if( value is null )
+            {
+                return null;
+            }
+            else
+            {
+                string msg = string.Format("Expected {0}.{1} to hold a {2} value, but encountered a {3} reference instead.", fieldInfo.DeclaringType.FullName, fieldInfo.Name, typeof(T).AssemblyQualifiedName, value.GetType().AssemblyQualifiedName);
+                throw new InvalidOperationException(msg);
+            }
+        }
+
+//      public static void SetValue<T>(this FieldInfo fieldInfo, object @this, T newValue)
+//      {
+//          fieldInfo.SetValue(obj: @this, value: newValue);
+//      }
 
         #endregion
     }

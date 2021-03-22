@@ -1,6 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using AsyncDataAdapter.Internal;
@@ -9,6 +8,8 @@ using Microsoft.Data.SqlClient;
 
 namespace AsyncDataAdapter.SqlClient
 {
+    using IList = System.Collections.IList;
+
     /// <summary>Implements <see cref="ISqlCommandSet"/> by using reflection to use the original and underlying <c>Microsoft.Data.SqlClient.SqlCommandSet</c>.</summary>
     public class SqlCommandSetWrapper : ISqlCommandSet
     {
@@ -31,6 +32,7 @@ namespace AsyncDataAdapter.SqlClient
             get => SqlCommandSetReflection._Transaction_Get.InvokeAllowNull<SqlTransaction>(this.instance);
             set => SqlCommandSetReflection._Transaction_Set.InvokeVoid(this.instance, value);
         }
+
         public int CommandTimeout
         {
             get => SqlCommandSetReflection._CommandTimeout_Get.InvokeDisallowNull<int>(this.instance);
@@ -42,6 +44,16 @@ namespace AsyncDataAdapter.SqlClient
             get => SqlCommandSetReflection._CommandCount_Get.InvokeDisallowNull<int>(this.instance);
         }
 
+        public SqlCommand BatchCommand
+        {
+            get => SqlCommandSetReflection._BatchCommand_Get.InvokeDisallowNull<SqlCommand>(this.instance);
+        }
+
+        public System.Collections.IList CommandList
+        {
+            get => SqlCommandSetReflection._CommandList_Get.InvokeDisallowNull<System.Collections.IList>(this.instance);
+        }
+
         public void Append(SqlCommand cmd)
         {
             SqlCommandSetReflection._Append_SqlCommand.InvokeVoid(this.instance, cmd);
@@ -50,11 +62,6 @@ namespace AsyncDataAdapter.SqlClient
         public void Clear()
         {
             SqlCommandSetReflection._Clear.InvokeVoid(this.instance);
-        }
-
-        public int ExecuteNonQuery()
-        {
-            return SqlCommandSetReflection._ExecuteNonQuery.InvokeDisallowNull<int>(this.instance);
         }
 
         public int GetParameterCount(int commandIndex)
@@ -92,9 +99,26 @@ namespace AsyncDataAdapter.SqlClient
 
         //
 
-        public Task<int> ExecuteNonQueryAsync()
+        public async Task<int> ExecuteNonQueryAsync( CancellationToken cancellationToken )
         {
-            throw new NotImplementedException();
+            SqlCommandWrapper batchCommand = new SqlCommandWrapper( this.BatchCommand );
+
+            IList commandList = this.CommandList;
+
+	        batchCommand.BatchRPCMode = true;
+		    batchCommand.ClearBatchCommand();
+		    batchCommand.Parameters.Clear();
+
+		    for (Int32 cmdIdx = 0; cmdIdx < commandList.Count; cmdIdx++)
+		    {
+                Object localCommandObj = commandList[cmdIdx];
+                LocalCommandWrapper cmd = new LocalCommandWrapper( localCommandObj );
+
+			    batchCommand.AddBatchCommand( cmd.CommandText, cmd.Parameters, cmd.CmdType, cmd.ColumnEncryptionSetting );
+		    }
+		    
+            Int32 result = await batchCommand.ExecuteBatchRPCCommandAsync( cancellationToken ).ConfigureAwait(false);
+            return result;
         }
     }
 }
