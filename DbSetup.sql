@@ -7,13 +7,13 @@ BEGIN
 END
 GO
 
-CREATE TABLE Tab1
-(
-	Id INT NOT NULL IDENTITY(1,1),
-	Txt NTEXT,
+CREATE TABLE Tab1 (
+	Id        INT NOT NULL,
+	Txt       NTEXT,
 	StartDate DATETIME NOT NULL,
-	DecVal DECIMAL(10, 3),
-	FltVal FLOAT,
+	DecVal    DECIMAL(10, 3),
+	FltVal    FLOAT,
+
 	PRIMARY KEY(Id)
 )
 GO
@@ -25,10 +25,10 @@ END
 GO
 
 CREATE PROCEDURE GetFast
-@Number AS INT
+	@Number AS INT
 AS
 BEGIN
-SELECT * FROM Tab1 WHERE Id > @Number ORDER BY Id
+	SELECT * FROM Tab1 WHERE Id > @Number ORDER BY Id
 END
 GO
 
@@ -40,56 +40,87 @@ END
 GO
 
 CREATE PROCEDURE GetMulti
-@Number1 AS INT,
-@Number2 AS INT,
-@Number3 AS INT
+	@Number1 AS INT,
+	@Number2 AS INT,
+	@Number3 AS INT
 AS
 BEGIN
-SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number1 ORDER BY Id
+	SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number1 ORDER BY Id
 
-WAITFOR DELAY '00:00:15'
+	WAITFOR DELAY '00:00:01'
 
-SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number2 ORDER BY Id
+	SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number2 ORDER BY Id
 
-WAITFOR DELAY '00:00:15'
+	WAITFOR DELAY '00:00:01'
 
-SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number3 ORDER BY Id
+	SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number3 ORDER BY Id
 
-WAITFOR DELAY '00:00:15'
+	WAITFOR DELAY '00:00:01'
 
-SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number3 ORDER BY Id
+	SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number3 ORDER BY Id
 
-WAITFOR DELAY '00:00:15'
+	WAITFOR DELAY '00:00:01'
 
-SELECT TOP 0 * FROM Tab1 ORDER BY Id
+	SELECT TOP 0 * FROM Tab1 ORDER BY Id
 
-WAITFOR DELAY '00:00:15'
+	WAITFOR DELAY '00:00:01'
 
-SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number3 ORDER BY Id
+	SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number3 ORDER BY Id
 
-WAITFOR DELAY '00:00:15'
+	WAITFOR DELAY '00:00:01'
 
-SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number3 ORDER BY Id
+	SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number3 ORDER BY Id
 
-WAITFOR DELAY '00:00:15'
+	WAITFOR DELAY '00:00:01'
 
-SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number3 ORDER BY Id
+	SELECT TOP 50000 * FROM Tab1 WHERE Id > @Number3 ORDER BY Id
 END
 GO
 
-
-SET NOCOUNT ON
-
-DECLARE @i INT = 1000000
-DECLARE @d DECIMAL(10,3) = 2.0
-DECLARE @f float = 1.0
-
-WHILE @i > 0
+CREATE PROCEDURE dbo.ResetTab1
+AS
 BEGIN
-	INSERT INTO Tab1(Txt, StartDate, DecVal, FltVal)	
-		VALUES ('aaaaa', '2016-10-28', @d, @f)
-	SET @d = @d + .1
-	SET @f = @f + .1
-	SET @i = @i -1
+
+    SET NOCOUNT ON
+
+    TRUNCATE TABLE dbo.Tab1;
+
+    INSERT INTO dbo.Tab1( Id, Txt, StartDate, DecVal, FltVal )
+    SELECT
+	    r.n + 1             AS Id,
+	    'aaaaa'             AS Txt,
+	    '2016-10-28'        AS StartDate,
+	    2.0 + ( CONVERT( decimal(10,3), r.n ) * 0.1 ) AS DecVal,
+	    1.0 + ( CONVERT( float        , r.n ) * 0.1 ) AS FltVal
+    FROM
+	    (
+		    SELECT
+			    t.n AS n
+		    FROM
+			    (
+				    SELECT
+					    (
+							      1 * ones.n +
+							     10 * tens.n +
+							    100 * hundreds.n +
+						       1000 * thousands.n + 
+						      10000 * ten_thousands.n + 
+						     100000 * hun_thousands.n + 
+						    1000000 * millions.n
+					    ) AS n
+				    FROM
+					    ( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) ones(n),
+					    ( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) tens(n),
+					    ( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) hundreds(n),
+					    ( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) thousands(n),
+					    ( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) ten_thousands(n),
+					    ( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) hun_thousands(n),
+					    ( VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9) ) millions(n)
+			    ) AS t
+		    WHERE
+			    t.n < 1000000
+	    ) AS r;
+
+    RETURN 0;
+
 END
-GO

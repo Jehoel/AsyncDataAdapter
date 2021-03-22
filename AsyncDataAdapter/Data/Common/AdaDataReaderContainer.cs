@@ -1,52 +1,37 @@
-﻿//------------------------------------------------------------------------------
-// <copyright file="DataReaderContainer.cs" company="Microsoft">
-//      Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
-// <owner current="true" primary="true">[....]</owner>
-//------------------------------------------------------------------------------
-
+using System;
+using System.Data;
+using System.Data.Common;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace AsyncDataAdapter
+namespace AsyncDataAdapter.Internal
 {
-
-    using System;
-    using System.Data;
-    using System.Data.Common;
-    using System.Diagnostics;
-
-    internal abstract class DataReaderContainer
+    public abstract class AdaDataReaderContainer
     {
+        public static AdaDataReaderContainer Create(DbDataReader dbDataReader, bool useProviderSpecificDataReader)
+        {
+            if (dbDataReader is null) throw new ArgumentNullException(nameof(dbDataReader));
+
+            if (useProviderSpecificDataReader)
+            {
+                return new ProviderSpecificDataReader( dbDataReader );
+            }
+            else
+            {
+                return new CommonLanguageSubsetDataReader( dbDataReader );
+            }
+        }
 
         protected readonly DbDataReader _dataReader;
         protected int _fieldCount;
 
-        static internal DataReaderContainer Create(IDataReader dataReader, bool returnProviderSpecificTypes)
+        protected AdaDataReaderContainer(DbDataReader dataReader)
         {
-            if (returnProviderSpecificTypes)
-            {
-                DbDataReader providerSpecificDataReader = (dataReader as DbDataReader);
-                if (null != providerSpecificDataReader)
-                {
-                    return new ProviderSpecificDataReader(dataReader, providerSpecificDataReader);
-                }
-            }
-            return new CommonLanguageSubsetDataReader(dataReader);
+            this._dataReader = dataReader ?? throw new ArgumentNullException(nameof(dataReader));
         }
 
-        protected DataReaderContainer(IDataReader dataReader)
-        {
-            Debug.Assert(null != dataReader, "null dataReader");
-            _dataReader = (DbDataReader)dataReader;
-        }
-
-        internal int FieldCount
-        {
-            get
-            {
-                return _fieldCount;
-            }
-        }
+        internal int FieldCount => this._fieldCount;
 
         internal abstract bool ReturnProviderSpecificTypes { get; }
         protected abstract int VisibleFieldCount { get; }
@@ -65,30 +50,34 @@ namespace AsyncDataAdapter
         {
             return _dataReader.GetSchemaTable();
         }
-        internal async Task<bool> NextResultAsync()
+
+        internal async Task<bool> NextResultAsync( CancellationToken cancellationToken )
         {
-            _fieldCount = 0;
-            if (await _dataReader.NextResultAsync())
+            this._fieldCount = 0;
+            if (await this._dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false))
             {
-                _fieldCount = VisibleFieldCount;
+                this._fieldCount = this.VisibleFieldCount;
                 return true;
             }
             return false;
         }
-        internal async Task<bool> ReadAsync()
+
+        internal Task<bool> ReadAsync( CancellationToken cancellationToken )
         {
-            return await _dataReader.ReadAsync();
+            return this._dataReader.ReadAsync( cancellationToken );
         }
 
-        private sealed class ProviderSpecificDataReader : DataReaderContainer
+        /// <summary>Will return values as, for example, <see cref="System.Data.SqlTypes.SqlDouble"/> instead of <see cref="System.Double"/>.</summary>
+        private sealed class ProviderSpecificDataReader : AdaDataReaderContainer
         {
             private DbDataReader _providerSpecificDataReader;
 
-            internal ProviderSpecificDataReader(IDataReader dataReader, DbDataReader dbDataReader) : base(dataReader)
+            internal ProviderSpecificDataReader( DbDataReader dbDataReader )
+                : base( dbDataReader )
             {
-                Debug.Assert(null != dataReader, "null dbDataReader");
+                Debug.Assert(null != dbDataReader, "null dbDataReader");
                 _providerSpecificDataReader = dbDataReader;
-                _fieldCount = VisibleFieldCount;
+                _fieldCount = this.VisibleFieldCount;
             }
 
             internal override bool ReturnProviderSpecificTypes
@@ -124,12 +113,13 @@ namespace AsyncDataAdapter
             }
         }
 
-        private sealed class CommonLanguageSubsetDataReader : DataReaderContainer
+        /// <summary>Will return values as, for example, <see cref="System.Double"/> instead of <see cref="System.Data.SqlTypes.SqlDouble"/>.</summary>
+        private sealed class CommonLanguageSubsetDataReader : AdaDataReaderContainer
         {
-
-            internal CommonLanguageSubsetDataReader(IDataReader dataReader) : base(dataReader)
+            internal CommonLanguageSubsetDataReader(DbDataReader dbDataReader)
+                : base(dbDataReader)
             {
-                _fieldCount = VisibleFieldCount;
+                _fieldCount = this.VisibleFieldCount;
             }
 
             internal override bool ReturnProviderSpecificTypes

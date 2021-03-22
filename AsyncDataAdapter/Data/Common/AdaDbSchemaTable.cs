@@ -1,24 +1,10 @@
-﻿//------------------------------------------------------------------------------
-// <copyright file="DBSchemaTable.cs" company="Microsoft">
-//      Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
-// <owner current="true" primary="true">[....]</owner>
-// <owner current="true" primary="false">[....]</owner>
-//------------------------------------------------------------------------------
-
+using System.Data;
 using System.Data.Common;
 
-namespace AsyncDataAdapter
+namespace AsyncDataAdapter.Internal
 {
-
-    using System;
-    using System.Data;
-    using System.Data.ProviderBase;
-    using System.Diagnostics;
-
-    sealed internal class DbSchemaTable
+    public sealed class AdaDbSchemaTable
     {
-
         private enum ColumnEnum
         {
             ColumnName,
@@ -65,7 +51,7 @@ namespace AsyncDataAdapter
             SchemaTableOptionalColumn.IsHidden,
             SchemaTableColumn.IsLong,
             SchemaTableOptionalColumn.IsReadOnly,
-            DbSchemaRow.SchemaMappingUnsortedIndex,
+            AdaDbSchemaRow.SchemaMappingUnsortedIndex,
         };
 
         internal DataTable dataTable;
@@ -73,7 +59,7 @@ namespace AsyncDataAdapter
         private DataColumn[] columnCache = new DataColumn[DBCOLUMN_NAME.Length];
         private bool _returnProviderSpecificTypes;
 
-        internal DbSchemaTable(DataTable dataTable, bool returnProviderSpecificTypes)
+        internal AdaDbSchemaTable(DataTable dataTable, bool returnProviderSpecificTypes)
         {
             this.dataTable = dataTable;
             this.columns = dataTable.Columns;
