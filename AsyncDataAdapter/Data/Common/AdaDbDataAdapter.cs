@@ -50,22 +50,6 @@ namespace AsyncDataAdapter
             this.CloneFrom(adapter);
         }
 
-        //[
-        //Browsable(false),
-        //DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden),
-        //]
-        //public DbCommand DeleteCommand
-        //{ // V1.2.3300
-        //    get
-        //    {
-        //        return (DbCommand)(this.DeleteCommand);
-        //    }
-        //    set
-        //    {
-        //        this.DeleteCommand = value;
-        //    }
-        //}
-
         public DbCommand DeleteCommand
         { // V1.2.3300
             get
@@ -79,10 +63,9 @@ namespace AsyncDataAdapter
         }
 
         protected internal CommandBehavior FillCommandBehavior
-        { // V1.2.3300, MDAC 87511
+        {
             get
             {
-                //Bid.Trace("<comm.DbDataAdapter.get_FillCommandBehavior|API> %d#\n", ObjectID);
                 return (_fillCommandBehavior | CommandBehavior.SequentialAccess);
             }
             set
@@ -96,22 +79,6 @@ namespace AsyncDataAdapter
             }
         }
 
-        //[
-        //Browsable(false),
-        //DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden),
-        //]
-        //public DbCommand InsertCommand
-        //{ // V1.2.3300
-        //    get
-        //    {
-        //        return (DbCommand)(this.InsertCommand);
-        //    }
-        //    set
-        //    {
-        //        this.InsertCommand = value;
-        //    }
-        //}
-
         public DbCommand InsertCommand
         { // V1.2.3300
             get
@@ -123,22 +90,6 @@ namespace AsyncDataAdapter
                 _insertCommand = value;
             }
         }
-
-        //[
-        //Browsable(false),
-        //DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden),
-        //]
-        //public DbCommand SelectCommand
-        //{ // V1.2.3300
-        //    get
-        //    {
-        //        return (DbCommand)(this.SelectCommand);
-        //    }
-        //    set
-        //    {
-        //        this.SelectCommand = value;
-        //    }
-        //}
 
         public DbCommand SelectCommand
         { // V1.2.3300
@@ -172,22 +123,6 @@ namespace AsyncDataAdapter
             }
         }
 
-        //[
-        //Browsable(false),
-        //DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden),
-        //]
-        //public DbCommand UpdateCommand
-        //{ // V1.2.3300
-        //    get
-        //    {
-        //        return (DbCommand)(this.UpdateCommand);
-        //    }
-        //    set
-        //    {
-        //        this.UpdateCommand = value;
-        //    }
-        //}
-
         public DbCommand UpdateCommand
         { // V1.2.3300
             get
@@ -200,28 +135,28 @@ namespace AsyncDataAdapter
             }
         }
 
-        private System.Data.MissingMappingAction UpdateMappingAction
+        private MissingMappingAction UpdateMappingAction
         {
             get
             {
-                if (System.Data.MissingMappingAction.Passthrough == MissingMappingAction)
+                if (MissingMappingAction.Passthrough == this.MissingMappingAction)
                 {
-                    return System.Data.MissingMappingAction.Passthrough;
+                    return MissingMappingAction.Passthrough;
                 }
-                return System.Data.MissingMappingAction.Error;
+                return MissingMappingAction.Error;
             }
         }
 
-        private System.Data.MissingSchemaAction UpdateSchemaAction
+        private MissingSchemaAction UpdateSchemaAction
         {
             get
             {
-                System.Data.MissingSchemaAction action = MissingSchemaAction;
-                if ((System.Data.MissingSchemaAction.Add == action) || (System.Data.MissingSchemaAction.AddWithKey == action))
+                MissingSchemaAction action = MissingSchemaAction;
+                if ((MissingSchemaAction.Add == action) || (MissingSchemaAction.AddWithKey == action))
                 {
-                    return System.Data.MissingSchemaAction.Ignore;
+                    return MissingSchemaAction.Ignore;
                 }
-                return System.Data.MissingSchemaAction.Error;
+                return MissingSchemaAction.Error;
             }
         }
 
@@ -288,56 +223,37 @@ namespace AsyncDataAdapter
 
         public async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType, CancellationToken cancellationToken )
         {
-            {
-                DbCommand selectCmd = this.SelectCommand;
-                CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await FillSchemaAsync(dataTable, schemaType, selectCmd, cmdBehavior, cancellationToken ).ConfigureAwait(false); // MDAC 67666
-            }
+            DbCommand selectCmd = this.SelectCommand;
+            CommandBehavior cmdBehavior = FillCommandBehavior;
+            return await FillSchemaAsync(dataTable, schemaType, selectCmd, cmdBehavior, cancellationToken ).ConfigureAwait(false); // MDAC 67666
         }
 
         public override async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, CancellationToken cancellationToken )
         {
+            DbCommand command = this.SelectCommand;
+            if (DesignMode && ((null == command) || (null == command.Connection) || string.IsNullOrEmpty(command.CommandText)))
             {
-                DbCommand command = this.SelectCommand;
-                if (DesignMode && ((null == command) || (null == command.Connection) || string.IsNullOrEmpty(command.CommandText)))
-                {
-                    return new DataTable[0]; // design-time support
-                }
-                CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await this.FillSchemaAsync(dataSet, schemaType, command, AdaDbDataAdapter.DefaultSourceTableName, cmdBehavior, cancellationToken ).ConfigureAwait(false);
+                return new DataTable[0]; // design-time support
             }
+            CommandBehavior cmdBehavior = FillCommandBehavior;
+            return await this.FillSchemaAsync(dataSet, schemaType, command, AdaDbDataAdapter.DefaultSourceTableName, cmdBehavior, cancellationToken ).ConfigureAwait(false);
         }
 
         public async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, string srcTable, CancellationToken cancellationToken )
         {
-            {
-                DbCommand selectCmd = this.SelectCommand;
-                CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await this.FillSchemaAsync(dataSet, schemaType, selectCmd, srcTable, cmdBehavior, cancellationToken ).ConfigureAwait(false);
-            }
+            DbCommand selectCmd = this.SelectCommand;
+            CommandBehavior cmdBehavior = FillCommandBehavior;
+            return await this.FillSchemaAsync(dataSet, schemaType, selectCmd, srcTable, cmdBehavior, cancellationToken ).ConfigureAwait(false);
         }
 
         protected virtual async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, DbCommand command, string srcTable, CommandBehavior behavior, CancellationToken cancellationToken )
         {
-            {
-                if (null == dataSet)
-                {
-                    throw new ArgumentNullException(nameof(dataSet));
-                }
-                if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType))
-                {
-                    throw ADP.InvalidSchemaType(schemaType);
-                }
-                if (string.IsNullOrEmpty(srcTable))
-                {
-                    throw ADP.FillSchemaRequiresSourceTableName("srcTable");
-                }
-                if (null == command)
-                {
-                    throw ADP.MissingSelectCommand(method: "FillSchema");
-                }
-                return (DataTable[]) await this.FillSchemaInternalAsync(dataSet, null, schemaType, command, srcTable, behavior, cancellationToken ).ConfigureAwait(false);
-            }
+            if (null == dataSet) throw new ArgumentNullException(nameof(dataSet));
+            if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType)) throw ADP.InvalidSchemaType(schemaType);
+            if (string.IsNullOrEmpty(srcTable)) throw ADP.FillSchemaRequiresSourceTableName("srcTable");
+            if (null == command) throw ADP.MissingSelectCommand(method: "FillSchema");
+
+            return (DataTable[]) await this.FillSchemaInternalAsync(dataSet, null, schemaType, command, srcTable, behavior, cancellationToken ).ConfigureAwait(false);
         }
 
         protected virtual async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType, DbCommand command, CommandBehavior behavior, CancellationToken cancellationToken )
@@ -372,7 +288,7 @@ namespace AsyncDataAdapter
             bool restoreNullConnection = (null == command.Connection);
             try
             {
-                DbConnection activeConnection = AdaDbDataAdapter.GetConnection3(this, command, "FillSchema");
+                DbConnection activeConnection = AdaDbDataAdapter.GetConnection3(command, "FillSchema");
                 ConnectionState originalState = ConnectionState.Open;
 
                 try
@@ -527,7 +443,7 @@ namespace AsyncDataAdapter
             bool restoreNullConnection = (null == command.Connection);
             try
             {
-                DbConnection activeConnection = AdaDbDataAdapter.GetConnection3(this, command, "Fill");
+                DbConnection activeConnection = AdaDbDataAdapter.GetConnection3(command, "Fill");
                 ConnectionState originalState = ConnectionState.Open;
 
                 // the default is MissingSchemaAction.Add, the user must explicitly
@@ -626,7 +542,7 @@ namespace AsyncDataAdapter
             }
             if (null == tableMapping)
             {
-                if (System.Data.MissingMappingAction.Error == MissingMappingAction)
+                if (MissingMappingAction.Error == MissingMappingAction)
                 {
                     throw ADP.MissingTableMappingDestination(dataTable.TableName);
                 }
@@ -804,32 +720,29 @@ namespace AsyncDataAdapter
 
         public async Task<int> UpdateAsync(DataSet dataSet, string srcTable, CancellationToken cancellationToken)
         {
+            if (dataSet is null) throw new ArgumentNullException(nameof(dataSet));
+            if (srcTable is null) throw new ArgumentNullException(nameof(srcTable));
+            if (string.IsNullOrEmpty(srcTable)) throw new ArgumentException(message: "Update: expected a non-empty SourceTable name.", paramName: nameof(srcTable));
+
+            int rowsAffected = 0;
+
+            DataTableMapping tableMapping = GetTableMappingBySchemaAction(srcTable, srcTable, this.UpdateMappingAction);
+            Debug.Assert(null != tableMapping, "null TableMapping when MissingMappingAction.Error");
+
+            // the ad-hoc scenario of no dataTable just returns
+            // ad-hoc scenario is defined as MissingSchemaAction.Add or MissingSchemaAction.Ignore
+            MissingSchemaAction schemaAction = UpdateSchemaAction;
+            DataTable dataTable = tableMapping.GetDataTableBySchemaAction(dataSet, schemaAction);
+            if (null != dataTable)
             {
-                if (dataSet is null) throw new ArgumentNullException(nameof(dataSet));
-                if (srcTable is null) throw new ArgumentNullException(nameof(srcTable));
-                if (string.IsNullOrEmpty(srcTable)) throw new ArgumentException(message: "Update: expected a non-empty SourceTable name.", paramName: nameof(srcTable));
-
-                int rowsAffected = 0;
-
-                System.Data.MissingMappingAction missingMapping = UpdateMappingAction;
-                DataTableMapping tableMapping = GetTableMappingBySchemaAction(srcTable, srcTable, UpdateMappingAction);
-                Debug.Assert(null != tableMapping, "null TableMapping when MissingMappingAction.Error");
-
-                // the ad-hoc scenario of no dataTable just returns
-                // ad-hoc scenario is defined as MissingSchemaAction.Add or MissingSchemaAction.Ignore
-                System.Data.MissingSchemaAction schemaAction = UpdateSchemaAction;
-                DataTable dataTable = tableMapping.GetDataTableBySchemaAction(dataSet, schemaAction);
-                if (null != dataTable)
-                {
-                    rowsAffected = await this.UpdateFromDataTableAsync(dataTable, tableMapping, cancellationToken ).ConfigureAwait(false);
-                }
-                else if (!HasTableMappings() || (-1 == TableMappings.IndexOf(tableMapping)))
-                {
-                    //throw error since the user didn't explicitly map this tableName to Ignore.
-                    throw new InvalidOperationException(string.Format("Update unable to find TableMapping['{0}'] or DataTable '{0}'.", srcTable));
-                }
-                return rowsAffected;
+                rowsAffected = await this.UpdateFromDataTableAsync(dataTable, tableMapping, cancellationToken ).ConfigureAwait(false);
             }
+            else if (!HasTableMappings() || (-1 == TableMappings.IndexOf(tableMapping)))
+            {
+                //throw error since the user didn't explicitly map this tableName to Ignore.
+                throw new InvalidOperationException(string.Format("Update unable to find TableMapping['{0}'] or DataTable '{0}'.", srcTable));
+            }
+            return rowsAffected;
         }
 
         protected virtual async Task<int> UpdateAsync(DataRow[] dataRows, DataTableMapping tableMapping, CancellationToken cancellationToken)
@@ -1092,7 +1005,7 @@ namespace AsyncDataAdapter
                                 }
                                 else if (null != dataCommand)
                                 {
-                                    DbConnection connection = AdaDbDataAdapter.GetConnection4(this, dataCommand, statementType, isCommandFromRowUpdating);
+                                    DbConnection connection = AdaDbDataAdapter.GetConnection4(dataCommand, statementType, isCommandFromRowUpdating);
                                     ConnectionState state = await this.UpdateConnectionOpenAsync( connection, statementType, connections, connectionStates, useSelectConnectionState, cancellationToken ).ConfigureAwait(false);
                                     if (ConnectionState.Open == state)
                                     {
@@ -1499,7 +1412,7 @@ namespace AsyncDataAdapter
             switch (rowUpdatedEvent.Status)
             {
                 case UpdateStatus.Continue:
-                    cumulativeDataRowsAffected = UpdatedRowStatusContinue(rowUpdatedEvent, batchCommands, commandCount);
+                    cumulativeDataRowsAffected = UpdatedRowStatusContinue(batchCommands, commandCount);
                     break; // return to foreach DataRow
                 case UpdateStatus.ErrorsOccurred:
                     cumulativeDataRowsAffected = UpdatedRowStatusErrors(rowUpdatedEvent, batchCommands, commandCount);
@@ -1514,7 +1427,7 @@ namespace AsyncDataAdapter
             return cumulativeDataRowsAffected;
         }
 
-        private int UpdatedRowStatusContinue(RowUpdatedEventArgs rowUpdatedEvent, BatchCommandInfo[] batchCommands, int commandCount)
+        private int UpdatedRowStatusContinue(BatchCommandInfo[] batchCommands, int commandCount)
         {
             Debug.Assert(null != batchCommands, "null batchCommands?");
             int cumulativeDataRowsAffected = 0;
@@ -1591,7 +1504,7 @@ namespace AsyncDataAdapter
             }
             else
             {
-                affected = UpdatedRowStatusContinue(rowUpdatedEvent, batchCommands, commandCount);
+                affected = UpdatedRowStatusContinue( batchCommands, commandCount );
             }
             if (!ContinueUpdateOnError)
             { // MDAC 66900
@@ -1667,7 +1580,7 @@ namespace AsyncDataAdapter
             return connection;
         }
 
-        private static DbConnection GetConnection3(AdaDbDataAdapter adapter, DbCommand command, string method)
+        private static DbConnection GetConnection3(DbCommand command, string method)
         {
             Debug.Assert(null != command, "GetConnection3: null command");
             Debug.Assert(!string.IsNullOrEmpty(method), "missing method name");
@@ -1679,13 +1592,13 @@ namespace AsyncDataAdapter
             return connection;
         }
 
-        private static DbConnection GetConnection4(AdaDbDataAdapter adapter, DbCommand command, StatementType statementType, bool isCommandFromRowUpdating)
+        private static DbConnection GetConnection4(DbCommand command, StatementType statementType, bool isCommandFromRowUpdating)
         {
             Debug.Assert(null != command, "GetConnection4: null command");
             DbConnection connection = command.Connection;
             if (null == connection)
             {
-                throw ADP.UpdateConnectionRequired(statementType, isCommandFromRowUpdating);
+                throw ADP.UpdateConnectionRequired(statementType, isRowUpdatingCommand: isCommandFromRowUpdating);
             }
             return connection;
         }
@@ -1709,7 +1622,6 @@ namespace AsyncDataAdapter
 
         /// <summary></summary>
         /// <remarks><see cref="QuietOpenAsync"/> needs to appear in the try {} finally { QuietClose } block otherwise a possibility exists that an exception may be thrown, i.e. <see cref="ThreadAbortException"/> where we would Open the connection and not close it</remarks>
-        /// <param name="connection"></param>
         /// <returns></returns>
         private static async Task<ConnectionState> QuietOpenAsync(DbConnection connection, CancellationToken cancellationToken )
         {

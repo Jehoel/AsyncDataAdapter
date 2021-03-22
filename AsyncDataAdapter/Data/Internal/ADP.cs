@@ -5,23 +5,22 @@ using System.Data.Common;
 using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.Globalization;
-using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
 
 namespace AsyncDataAdapter
 {
-	internal static class ADP
+    internal static class ADP
     {
         // only StackOverflowException & ThreadAbortException are sealed classes
-        static private readonly Type _StackOverflowType   = typeof(StackOverflowException);
-        static private readonly Type _OutOfMemoryType     = typeof(OutOfMemoryException);
-        static private readonly Type _ThreadAbortType     = typeof(ThreadAbortException);
-        static private readonly Type _NullReferenceType   = typeof(NullReferenceException);
-        static private readonly Type _AccessViolationType = typeof(AccessViolationException);
-        static private readonly Type _SecurityType        = typeof(SecurityException);
+        private static readonly Type _StackOverflowType   = typeof(StackOverflowException);
+        private static readonly Type _OutOfMemoryType     = typeof(OutOfMemoryException);
+        private static readonly Type _ThreadAbortType     = typeof(ThreadAbortException);
+        private static readonly Type _NullReferenceType   = typeof(NullReferenceException);
+        private static readonly Type _AccessViolationType = typeof(AccessViolationException);
+        private static readonly Type _SecurityType        = typeof(SecurityException);
 
-        static internal bool IsCatchableExceptionType(Exception e)
+        internal static bool IsCatchableExceptionType(Exception e)
         {
             // a 'catchable' exception is defined by what it is not.
             Debug.Assert(e != null, "Unexpected null exception!");
@@ -36,7 +35,7 @@ namespace AsyncDataAdapter
                 !_SecurityType.IsAssignableFrom(type);
         }
 
-        static internal bool IsCatchableOrSecurityExceptionType(Exception e)
+        internal static bool IsCatchableOrSecurityExceptionType(Exception e)
         {
             // a 'catchable' exception is defined by what it is not.
             // since IsCatchableExceptionType defined SecurityException as not 'catchable'
@@ -56,33 +55,21 @@ namespace AsyncDataAdapter
         }
 
         // Invalid Enumeration
-        static internal ArgumentOutOfRangeException InvalidEnumerationValue<TEnum>(TEnum value)
-            where TEnum : struct, Enum
-        {
-            string msg = string.Format("The {0} enumeration value, {1}, is invalid.", typeof(TEnum).Name, value);
-            return new ArgumentOutOfRangeException(paramName: typeof(TEnum).Name, actualValue: value, message: msg);
-        }
 
-        static internal ArgumentOutOfRangeException InvalidEnumerationValue(Type type, int value)
+        internal static ArgumentOutOfRangeException InvalidEnumerationValue(Type type, int value)
         {
             string msg = string.Format("The {0} enumeration value, {1}, is invalid.", type.Name, value.ToString(CultureInfo.InvariantCulture));
             return new ArgumentOutOfRangeException(paramName: type.Name, actualValue: value, message: msg);
         }
 
-        static internal ArgumentOutOfRangeException NotSupportedEnumerationValue<TEnum>(TEnum value, string method)
-            where TEnum : struct, Enum
-        {
-            return NotSupportedEnumerationValue(type: typeof(TEnum), value: value.ToString(), method: method);
-        }
-
-        static internal ArgumentOutOfRangeException NotSupportedEnumerationValue(Type type, string value, string method)
+        internal static ArgumentOutOfRangeException NotSupportedEnumerationValue(Type type, string value, string method)
         {
             string msg = string.Format("The {0} enumeration value, {1}, is not supported by the {2} method.", type.Name, value.ToString(CultureInfo.InvariantCulture), method);
             return new ArgumentOutOfRangeException(paramName: type.Name, actualValue: value, message: msg);
         }
 
         // IDataAdapter.Update
-        static internal ArgumentOutOfRangeException InvalidDataRowState(DataRowState value)
+        internal static ArgumentOutOfRangeException InvalidDataRowState(DataRowState value)
         {
 #if DEBUG
             switch (value)
@@ -100,7 +87,7 @@ namespace AsyncDataAdapter
         }
 
         // IDataAdapter.FillLoadOption
-        static internal ArgumentOutOfRangeException InvalidLoadOption(LoadOption value)
+        internal static ArgumentOutOfRangeException InvalidLoadOption(LoadOption value)
         {
 #if DEBUG
             switch (value)
@@ -116,7 +103,7 @@ namespace AsyncDataAdapter
         }
 
         // IDataAdapter.MissingMappingAction
-        static internal ArgumentOutOfRangeException InvalidMissingMappingAction(MissingMappingAction value)
+        internal static ArgumentOutOfRangeException InvalidMissingMappingAction(MissingMappingAction value)
         {
 #if DEBUG
             switch (value)
@@ -132,7 +119,7 @@ namespace AsyncDataAdapter
         }
 
         // IDataAdapter.MissingSchemaAction
-        static internal ArgumentOutOfRangeException InvalidMissingSchemaAction(MissingSchemaAction value)
+        internal static ArgumentOutOfRangeException InvalidMissingSchemaAction(MissingSchemaAction value)
         {
 #if DEBUG
             switch (value)
@@ -149,7 +136,7 @@ namespace AsyncDataAdapter
         }
 
         // IDataParameter.Direction
-        static internal ArgumentOutOfRangeException InvalidParameterDirection(ParameterDirection value)
+        internal static ArgumentOutOfRangeException InvalidParameterDirection(ParameterDirection value)
         {
 #if DEBUG
             switch (value)
@@ -166,7 +153,7 @@ namespace AsyncDataAdapter
         }
 
         // IDataAdapter.FillSchema
-        static internal ArgumentOutOfRangeException InvalidSchemaType(SchemaType value)
+        internal static ArgumentOutOfRangeException InvalidSchemaType(SchemaType value)
         {
 #if DEBUG
             switch (value)
@@ -181,7 +168,7 @@ namespace AsyncDataAdapter
         }
 
         // RowUpdatingEventArgs.StatementType
-        static internal ArgumentOutOfRangeException InvalidStatementType(StatementType value)
+        internal static ArgumentOutOfRangeException InvalidStatementType(StatementType value)
         {
 #if DEBUG
             switch (value)
@@ -199,7 +186,7 @@ namespace AsyncDataAdapter
         }
 
         // RowUpdatingEventArgs.UpdateStatus
-        static internal ArgumentOutOfRangeException InvalidUpdateStatus(UpdateStatus value)
+        internal static ArgumentOutOfRangeException InvalidUpdateStatus(UpdateStatus value)
         {
 #if DEBUG
             switch (value)
@@ -215,12 +202,12 @@ namespace AsyncDataAdapter
             return InvalidEnumerationValue(typeof(UpdateStatus), (int)value);
         }
 
-        static internal ArgumentOutOfRangeException NotSupportedCommandBehavior(CommandBehavior value, string method)
+        internal static ArgumentOutOfRangeException NotSupportedCommandBehavior(CommandBehavior value, string method)
         {
             return NotSupportedEnumerationValue(typeof(CommandBehavior), value.ToString(), method);
         }
 
-        static private string ConnectionStateMsg(ConnectionState state)
+        private static string ConnectionStateMsg(ConnectionState state)
         { // MDAC 82165, if the ConnectionState enum to msg the localization looks weird
             //switch (state)
             //{
@@ -242,7 +229,7 @@ namespace AsyncDataAdapter
         }
 
         // IDbDataAdapter.Fill(Schema)
-        static internal InvalidOperationException MissingSelectCommand(string method)
+        internal static InvalidOperationException MissingSelectCommand(string method)
         {
             return new InvalidOperationException(string.Format("Missing select command in {0}", method));
         }
@@ -250,24 +237,13 @@ namespace AsyncDataAdapter
         //
         // AdapterMappingException
         //
-        static private InvalidOperationException DataMapping(string error)
+        private static InvalidOperationException DataMapping(string error)
         {
             return new InvalidOperationException(error);
         }
 
-        //// DataColumnMapping.GetDataColumnBySchemaAction
-        static internal InvalidOperationException ColumnSchemaMissing(string cacheColumn, string tableName, string srcColumn)
-        {
-            if (String.IsNullOrEmpty(tableName))
-            {
-               return new InvalidOperationException(string.Format("Missing the DataColumn '{0}' for the SourceColumn '{2}'.", cacheColumn, tableName, srcColumn));
-            }
-
-            return new InvalidOperationException(string.Format("Missing the DataColumn '{0}' in the DataTable '{1}' for the SourceColumn '{2}'.", cacheColumn, tableName, srcColumn));
-        }
-
         // DbDataAdapter.Update
-        static internal InvalidOperationException MissingTableMappingDestination(string dstTable)
+        internal static InvalidOperationException MissingTableMappingDestination(string dstTable)
         {
             return DataMapping(string.Format("Missing table mapping for destionation {0}", dstTable));
         }
@@ -276,7 +252,7 @@ namespace AsyncDataAdapter
         // IDbCommand
         //
 
-        static internal InvalidOperationException UpdateConnectionRequired(StatementType statementType, bool isRowUpdatingCommand)
+        internal static InvalidOperationException UpdateConnectionRequired(StatementType statementType, bool isRowUpdatingCommand)
         {
             string resource;
             if (isRowUpdatingCommand)
@@ -311,7 +287,7 @@ namespace AsyncDataAdapter
             return new InvalidOperationException(resource);
         }
 
-        static internal InvalidOperationException ConnectionRequired_Res(string method)
+        internal static InvalidOperationException ConnectionRequired_Res(string method)
         {
             string resource = "ADP_ConnectionRequired_" + method;
 //#if DEBUG
@@ -330,25 +306,25 @@ namespace AsyncDataAdapter
 //#endif
             return new InvalidOperationException(resource);
         }
-        static internal InvalidOperationException UpdateOpenConnectionRequired(StatementType statementType, bool isRowUpdatingCommand, ConnectionState state)
+        internal static InvalidOperationException UpdateOpenConnectionRequired(StatementType statementType, bool isRowUpdatingCommand, ConnectionState state)
         {
-            string resource;
+            string message;
             if (isRowUpdatingCommand)
             {
-                resource = "Open connection required for clone";
+                message = "Open connection required for clone";
             }
             else
             {
                 switch (statementType)
                 {
                     case StatementType.Insert:
-                        resource = "Open connection required for insert";
+                        message = "Open connection required for insert";
                         break;
                     case StatementType.Update:
-                        resource = "Open connection required for update";
+                        message = "Open connection required for update";
                         break;
                     case StatementType.Delete:
-                        resource = "Open connection required for delete";
+                        message = "Open connection required for delete";
                         break;
 #if DEBUG
                     case StatementType.Select:
@@ -362,7 +338,8 @@ namespace AsyncDataAdapter
                         throw ADP.InvalidStatementType(statementType);
                 }
             }
-            return new InvalidOperationException(string.Format(resource, ADP.ConnectionStateMsg(state)));
+
+            return new InvalidOperationException(string.Format(message, ADP.ConnectionStateMsg(state)));
         }
 
         //
@@ -372,7 +349,7 @@ namespace AsyncDataAdapter
         //
         // DbDataAdapter.FillSchema
         //
-        static internal Exception FillSchemaRequiresSourceTableName(string parameter)
+        internal static Exception FillSchemaRequiresSourceTableName(string parameter)
         {
             return new ArgumentException("Fill schema requires source table name", parameter);
         }
@@ -380,36 +357,36 @@ namespace AsyncDataAdapter
         //
         // DbDataAdapter.Fill
         //
-        static internal Exception InvalidMaxRecords(string parameter, int max)
+        internal static Exception InvalidMaxRecords(string parameter, int max)
         {
             return new ArgumentException(message: string.Format("The MaxRecords value of {0} is invalid; the value must be >= 0.", max), parameter);
         }
-        static internal Exception InvalidStartRecord(string parameter, int start)
+        internal static Exception InvalidStartRecord(string parameter, int start)
         {
             return new ArgumentException(message: string.Format("The StartRecord value of {0} is invalid; the value must be >= 0.", start), parameter);
         }
-        static internal Exception FillRequires(string parameter)
+        internal static Exception FillRequires(string parameter)
         {
             return new ArgumentNullException(parameter);
         }
-        static internal Exception FillRequiresSourceTableName(string parameter)
+        internal static Exception FillRequiresSourceTableName(string parameter)
         {
             return new ArgumentException(message: "Fill: expected a non-empty string for the SourceTable name.", paramName: parameter);
         }
-        static internal Exception FillChapterAutoIncrement()
+        internal static Exception FillChapterAutoIncrement()
         {
             return new InvalidOperationException("Hierarchical chapter columns must map to an AutoIncrement DataColumn.");
         }
-        static internal InvalidOperationException MissingDataReaderFieldType(int index)
+        internal static InvalidOperationException MissingDataReaderFieldType(int index)
         {
             return new InvalidOperationException(string.Format("DataReader.GetFieldType({0}) returned null.", index));
         }
-        static internal InvalidOperationException OnlyOneTableForStartRecordOrMaxRecords()
+        internal static InvalidOperationException OnlyOneTableForStartRecordOrMaxRecords()
         {
             return new InvalidOperationException("Only specify one item in the dataTables array when using non-zero values for startRecords or maxRecords.");
         }
 
-        static internal Exception UpdateConcurrencyViolation(StatementType statementType, int affected, int expected, DataRow[] dataRows)
+        internal static Exception UpdateConcurrencyViolation(StatementType statementType, int affected, int expected, DataRow[] dataRows)
         {
             string format;
             switch (statementType)
@@ -438,7 +415,7 @@ namespace AsyncDataAdapter
             return exception;
         }
 
-        static internal InvalidOperationException UpdateRequiresCommand(StatementType statementType, bool isRowUpdatingCommand)
+        internal static InvalidOperationException UpdateRequiresCommand(StatementType statementType, bool isRowUpdatingCommand)
         {
             string resource;
             if (isRowUpdatingCommand)
@@ -473,27 +450,7 @@ namespace AsyncDataAdapter
             return new InvalidOperationException(resource);
         }
 
-        internal const CompareOptions compareOptions = CompareOptions.IgnoreKanaType | CompareOptions.IgnoreWidth | CompareOptions.IgnoreCase;
-        internal const int DecimalMaxPrecision = 29;
-        internal const int DecimalMaxPrecision28 = 28;  // there are some cases in Odbc where we need that ...
-        internal const int DefaultCommandTimeout = 30;
-        // internal const int DefaultConnectionTimeout = DbConnectionStringDefaults.ConnectTimeout;
-        internal const float FailoverTimeoutStep = 0.08F;    // fraction of timeout to use for fast failover connections
-        internal const int FirstTransparentAttemptTimeout = 500; // The first login attempt in  Transparent network IP Resolution 
-
-        // security issue, don't rely upon static public readonly values - AS/URT 109635
-        static internal readonly String StrEmpty = ""; // String.Empty
-
-        static internal readonly IntPtr PtrZero = new IntPtr(0); // IntPtr.Zero
-        static internal readonly int PtrSize = IntPtr.Size;
-        static internal readonly IntPtr InvalidPtr = new IntPtr(-1); // use for INVALID_HANDLE
-        static internal readonly IntPtr RecordsUnaffected = new IntPtr(-1);
-
-        static internal readonly HandleRef NullHandleRef = new HandleRef(null, IntPtr.Zero);
-
-        internal const int CharSize = System.Text.UnicodeEncoding.CharSize;
-
-        static internal Delegate FindBuilder(MulticastDelegate mcd)
+        internal static Delegate FindBuilder(MulticastDelegate mcd)
         { // V1.2.3300
             if (null != mcd)
             {
@@ -508,10 +465,7 @@ namespace AsyncDataAdapter
             return null;
         }
 
-        static internal readonly bool IsWindowsNT = (PlatformID.Win32NT == Environment.OSVersion.Platform);
-        static internal readonly bool IsPlatformNT5 = (ADP.IsWindowsNT && (Environment.OSVersion.Version.Major >= 5));
-
-        static internal DataRow[] SelectAdapterRows(DataTable dataTable, bool sorted)
+        internal static DataRow[] SelectAdapterRows(DataTable dataTable, bool sorted)
         {
             const DataRowState rowStates = DataRowState.Added | DataRowState.Deleted | DataRowState.Modified;
 
@@ -584,7 +538,7 @@ namespace AsyncDataAdapter
         // { "a", "a", "a1" } -> { "a", "a2", "a1" }
         // { "a", "A", "a" } -> { "a", "A1", "a2" }
         // { "a", "A", "a1" } -> { "a", "A2", "a1" } // MDAC 66718
-        static internal void BuildSchemaTableInfoTableNames(string[] columnNameArray)
+        internal static void BuildSchemaTableInfoTableNames(string[] columnNameArray)
         {
             Dictionary<string, int> hash = new Dictionary<string, int>(columnNameArray.Length);
 
@@ -595,8 +549,7 @@ namespace AsyncDataAdapter
                 if ((null != columnName) && (0 < columnName.Length))
                 {
                     columnName = columnName.ToLower(CultureInfo.InvariantCulture);
-                    int index;
-                    if (hash.TryGetValue(columnName, out index))
+                    if (hash.TryGetValue(columnName, out int index))
                     {
                         startIndex = Math.Min(startIndex, index);
                     }
@@ -604,7 +557,7 @@ namespace AsyncDataAdapter
                 }
                 else
                 {
-                    columnNameArray[i] = ADP.StrEmpty; // MDAC 66681
+                    columnNameArray[i] = String.Empty;
                     startIndex = i;
                 }
             }
@@ -622,13 +575,13 @@ namespace AsyncDataAdapter
                     columnName = columnName.ToLower(CultureInfo.InvariantCulture);
                     if (i != hash[columnName])
                     {
-                        GenerateUniqueName(hash, ref columnNameArray[i], i, 1); // MDAC 66718
+                        _ = GenerateUniqueName(hash, ref columnNameArray[i], i, 1); // MDAC 66718
                     }
                 }
             }
         }
 
-        static private int GenerateUniqueName(Dictionary<string, int> hash, ref string columnName, int index, int uniqueIndex)
+        private static int GenerateUniqueName(Dictionary<string, int> hash, ref string columnName, int index, int uniqueIndex)
         {
             for (; ; ++uniqueIndex)
             {
@@ -645,15 +598,27 @@ namespace AsyncDataAdapter
             return uniqueIndex;
         }
 
-        static internal bool IsNull(object value)
+        /// <summary>Indicates if <paramref name="value"/> is <see langword="null"/>, <see cref="DBNull"/>, or if it's <see cref="INullable"/> and indicates yes.</summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        internal static bool IsNull(object value)
         {
-            if ((null == value) || (DBNull.Value == value))
+            if( value is null )
             {
                 return true;
             }
-
-            var nullable = value as INullable;
-            return ((nullable != null) && nullable.IsNull);
+            else if( Object.ReferenceEquals( value, DBNull.Value ) )
+            {
+                return true;
+            }
+            else if( value is INullable nullable )
+            {
+                return nullable.IsNull;
+            }
+            else
+            {
+                return false;
+            }
         }
     }
 }
