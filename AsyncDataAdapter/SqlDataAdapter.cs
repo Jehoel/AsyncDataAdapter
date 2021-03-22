@@ -1,4 +1,4 @@
-﻿//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // <copyright file="SqlDataAdapter.cs" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
@@ -13,6 +13,8 @@ using System.Data.Common;
 using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 
+using AsyncDataAdapter.SqlClient;
+
 namespace AsyncDataAdapter
 {
     [
@@ -26,7 +28,7 @@ namespace AsyncDataAdapter
         static private readonly object EventRowUpdated = new object();
         static private readonly object EventRowUpdating = new object();
         
-        private SqlCommandSet _commandSet;
+        private ISqlCommandSet _commandSet;
         private int _updateBatchSize = 1;
 
         public SqlDataAdapter() : base()
@@ -239,8 +241,7 @@ namespace AsyncDataAdapter
 
         override protected void InitializeBatching()
         {
-            // TODO:   Bid.Trace("<sc.SqlDataAdapter.InitializeBatching|API> %d#\n", ObjectID);
-            _commandSet = new SqlCommandSet();
+            _commandSet = SqlCommandSetFactory.CreateInstance();
             SqlCommand command = SelectCommand;
             if (null == command)
             {
@@ -254,10 +255,10 @@ namespace AsyncDataAdapter
                     }
                 }
             }
-            if (null != command)
+            if (command != null)
             {
-                _commandSet.Connection = command.Connection;
-                _commandSet.Transaction = command.Transaction;
+                _commandSet.Connection     = command.Connection;
+                _commandSet.Transaction    = command.Transaction;
                 _commandSet.CommandTimeout = command.CommandTimeout;
             }
         }

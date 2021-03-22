@@ -1,42 +1,35 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
 
 namespace AsyncDataAdapter
 {
-	internal static class Reflection
+    internal static class Reflection
 	{
         public static MethodInfo GetStaticMethod<T>( string name, params Type[] paramTypes )
 		{
-			Type type = typeof(T);
+            return GetNonPublicMethod(type: typeof(T), name: name, bindingAttr: BindingFlags.Static, paramTypes: paramTypes);
+        }
 
-			MethodInfo methodInfo = type.GetMethod(
-				name       : name,
-				bindingAttr: BindingFlags.NonPublic | BindingFlags.Static,
-				binder     : null,
-				types      : paramTypes,
-				modifiers  : null
-			);
-
-			if (methodInfo is null)
-			{
-				string msg = string.Format("Couldn't find static method {0} in type {1}, in assembly {2}.", name, type.AssemblyQualifiedName);
-				throw new InvalidOperationException(msg);
-			}
-			else
-			{
-				return methodInfo;
-			}
-		}
+        public static MethodInfo GetStaticMethod(Type type, string name, params Type[] paramTypes )
+		{
+            return GetNonPublicMethod(type: type, name: name, bindingAttr: BindingFlags.Static, paramTypes: paramTypes);
+        }
 
 		public static MethodInfo GetInstanceMethod<T>( string name, params Type[] paramTypes )
 		{
-			Type type = typeof(T);
+			return GetInstanceMethod(type: typeof(T), name: name, paramTypes: paramTypes);
+		}
 
+        public static MethodInfo GetInstanceMethod(Type type, string name, params Type[] paramTypes)
+		{
+			return GetNonPublicMethod(type: type, name: name, bindingAttr: BindingFlags.Instance, paramTypes: paramTypes);
+		}
+
+        private static MethodInfo GetNonPublicMethod(Type type, string name, BindingFlags bindingAttr, Type[] paramTypes)
+		{
 			MethodInfo methodInfo = type.GetMethod(
 				name       : name,
-				bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
+				bindingAttr: BindingFlags.NonPublic | bindingAttr,
 				binder     : null,
 				types      : paramTypes,
 				modifiers  : null
@@ -44,7 +37,7 @@ namespace AsyncDataAdapter
 
 			if (methodInfo is null)
 			{
-				string msg = string.Format("Couldn't find instance method {0} in type {1}, in assembly {2}.", name, type.AssemblyQualifiedName);
+				string msg = string.Format("Couldn't find {0} method {1} in type {2}.", bindingAttr.ToString(), name, type.AssemblyQualifiedName);
 				throw new InvalidOperationException(msg);
 			}
 			else
@@ -53,11 +46,46 @@ namespace AsyncDataAdapter
 			}
 		}
 
-		public static MethodInfo GetInstancePropertyGetter<T>( string name, Type propertyType )
+        public static MethodInfo GetInstancePropertyGetter<T>( string name, Type propertyType )
 		{
-			Type type = typeof(T);
+            return GetInstancePropertyGetter(typeof(T), name, propertyType);
+        }
 
-			PropertyInfo propertyInfo = type.GetProperty(
+		public static MethodInfo GetInstancePropertyGetter(Type type, string name, Type propertyType)
+		{
+			PropertyInfo propertyInfo = GetInstancePropertyInfo(type, name, propertyType);
+
+			MethodInfo propertyGetterInfo = propertyInfo.GetGetMethod(nonPublic: true);
+			if (propertyGetterInfo is null)
+			{
+				string msg = string.Format("Couldn't find getter for property {0} in type {1}.", name, type.AssemblyQualifiedName);
+				throw new InvalidOperationException(msg);
+			}
+            else
+            {
+                return propertyGetterInfo;
+            }
+		}
+
+        public static MethodInfo GetInstancePropertySetter(Type type, string name, Type propertyType)
+		{
+            PropertyInfo propertyInfo = GetInstancePropertyInfo(type, name, propertyType);
+
+			MethodInfo propertySetterInfo = propertyInfo.GetSetMethod(nonPublic: true);
+			if (propertySetterInfo is null)
+			{
+				string msg = string.Format("Couldn't find setter for property {0} in type {1}.", name, type.AssemblyQualifiedName);
+				throw new InvalidOperationException(msg);
+			}
+            else
+            {
+                return propertySetterInfo;
+            }
+        }
+
+        private static PropertyInfo GetInstancePropertyInfo(Type type, string name, Type propertyType)
+        {
+            PropertyInfo propertyInfo = type.GetProperty(
 				name       : name,
 				bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
 				binder     : null,
@@ -68,19 +96,14 @@ namespace AsyncDataAdapter
 
 			if (propertyInfo is null)
 			{
-				string msg = string.Format("Couldn't find property {0} in type {1}, in assembly {2}.", name, type.AssemblyQualifiedName);
+				string msg = string.Format("Couldn't find property {0} in type {1}.", name, type.AssemblyQualifiedName);
 				throw new InvalidOperationException(msg);
 			}
-
-			MethodInfo propertyGetterInfo = propertyInfo.GetGetMethod(nonPublic: true);
-			if (propertyGetterInfo is null)
-			{
-				string msg = string.Format("Couldn't find getter for property {0} in type {1}, in assembly {2}.", name, type.AssemblyQualifiedName);
-				throw new InvalidOperationException(msg);
-			}
-
-			return propertyGetterInfo;
-		}
+            else
+            {
+                return propertyInfo;
+            }
+        }
 
         #region MethodInfo Invoke Wrappers
 
