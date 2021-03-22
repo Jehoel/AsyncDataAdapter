@@ -23,7 +23,7 @@
     <Authors>Vladimir Kloz; Jeremy Kruer; Dai Rees;</Authors>
     <Company />
     <Description>Jehoel.AsyncDataAdapter builds on Vladimir Kloz' original AsyncDataAdapter package, with support for .NET Standard 2.0, and numerous other improvements. The original implementation is based on Microsoft's MIT-licensed implementation of DataReader, DbDataReader, and SqlDataReader.</Description>
-    <PackageTags>DataAdapter DbDataAdapter SqlDataAdapter AsyncDataAdapter AdaDataAdapter FillAsync</PackageTags>
+    <PackageTags>DataAdapter DbDataAdapter SqlDataAdapter AsyncDataAdapter AdaDataAdapter AsyncSqlDataAdapter SqlAsyncDataAdapter FillAsync FillSchemaAsync UpdateAsync</PackageTags>
     <PackageReleaseNotes>Historical releases:
 1.0 - 1.0.25.1 - See https://www.nuget.org/packages/AsyncDataAdapter/ and https://github.com/voloda/AsyncDataAdapter
 2.0 - &lt;3.0 -See https://github.com/jkruer01/AsyncDataAdapter
