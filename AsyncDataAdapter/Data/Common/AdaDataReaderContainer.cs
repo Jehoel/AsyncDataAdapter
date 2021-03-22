@@ -2,41 +2,29 @@ using System;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AsyncDataAdapter.Internal
 {
     public abstract class AdaDataReaderContainer
     {
+        public static AdaDataReaderContainer Create(DbDataReader dbDataReader)
+        {
+            if (dbDataReader is null) throw new ArgumentNullException(nameof(dbDataReader));
+
+            return new ProviderSpecificDataReader( dbDataReader );
+        }
+
         protected readonly DbDataReader _dataReader;
         protected int _fieldCount;
 
-        static internal AdaDataReaderContainer Create(IDataReader dataReader, bool returnProviderSpecificTypes)
+        protected AdaDataReaderContainer(DbDataReader dataReader)
         {
-            if (returnProviderSpecificTypes)
-            {
-                DbDataReader providerSpecificDataReader = (dataReader as DbDataReader);
-                if (null != providerSpecificDataReader)
-                {
-                    return new ProviderSpecificDataReader(dataReader, providerSpecificDataReader);
-                }
-            }
-            return new CommonLanguageSubsetDataReader(dataReader);
+            this._dataReader = dataReader ?? throw new ArgumentNullException(nameof(dataReader));
         }
 
-        protected AdaDataReaderContainer(IDataReader dataReader)
-        {
-            Debug.Assert(null != dataReader, "null dataReader");
-            _dataReader = (DbDataReader)dataReader;
-        }
-
-        internal int FieldCount
-        {
-            get
-            {
-                return _fieldCount;
-            }
-        }
+        internal int FieldCount => this._fieldCount;
 
         internal abstract bool ReturnProviderSpecificTypes { get; }
         protected abstract int VisibleFieldCount { get; }
@@ -55,28 +43,31 @@ namespace AsyncDataAdapter.Internal
         {
             return _dataReader.GetSchemaTable();
         }
-        internal async Task<bool> NextResultAsync()
+
+        internal async Task<bool> NextResultAsync( CancellationToken cancellationToken )
         {
-            _fieldCount = 0;
-            if (await _dataReader.NextResultAsync().ConfigureAwait(false))
+            this._fieldCount = 0;
+            if (await this._dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false))
             {
-                _fieldCount = VisibleFieldCount;
+                this._fieldCount = this.VisibleFieldCount;
                 return true;
             }
             return false;
         }
-        internal async Task<bool> ReadAsync()
+
+        internal Task<bool> ReadAsync( CancellationToken cancellationToken )
         {
-            return await _dataReader.ReadAsync().ConfigureAwait(false);
+            return this._dataReader.ReadAsync( cancellationToken );
         }
 
         private sealed class ProviderSpecificDataReader : AdaDataReaderContainer
         {
             private DbDataReader _providerSpecificDataReader;
 
-            internal ProviderSpecificDataReader(IDataReader dataReader, DbDataReader dbDataReader) : base(dataReader)
+            internal ProviderSpecificDataReader( DbDataReader dbDataReader )
+                : base( dbDataReader )
             {
-                Debug.Assert(null != dataReader, "null dbDataReader");
+                Debug.Assert(null != dbDataReader, "null dbDataReader");
                 _providerSpecificDataReader = dbDataReader;
                 _fieldCount = VisibleFieldCount;
             }
@@ -114,10 +105,12 @@ namespace AsyncDataAdapter.Internal
             }
         }
 
+        /*
         private sealed class CommonLanguageSubsetDataReader : AdaDataReaderContainer
         {
 
-            internal CommonLanguageSubsetDataReader(IDataReader dataReader) : base(dataReader)
+            internal CommonLanguageSubsetDataReader(IDataReader dataReader)
+                : base(dataReader)
             {
                 _fieldCount = VisibleFieldCount;
             }
@@ -152,5 +145,6 @@ namespace AsyncDataAdapter.Internal
                 return _dataReader.GetValues(values);
             }
         }
+        */
     }
 }

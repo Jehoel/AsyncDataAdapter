@@ -245,25 +245,6 @@ namespace AsyncDataAdapter
         }
 
         [
-        DefaultValue(false),
-        CategoryAttribute("Settings"),
-        DescriptionAttribute("Return provider specific types"),
-        ]
-        virtual public bool ReturnProviderSpecificTypes
-        {
-            get
-            {
-                //Bid.Trace("<comm.DataAdapter.get_ReturnProviderSpecificTypes|API> %d#\n", ObjectID);
-                return _returnProviderSpecificTypes;
-            }
-            set
-            {
-                _returnProviderSpecificTypes = value;
-                //Bid.Trace("<comm.DataAdapter.set_ReturnProviderSpecificTypes|API> %d#, %d\n", ObjectID, (int)value);
-            }
-        }
-
-        [
         DesignerSerializationVisibility(DesignerSerializationVisibility.Content),
         CategoryAttribute("Settings"),
         DescriptionAttribute("Table mappings"),
@@ -370,7 +351,7 @@ namespace AsyncDataAdapter
 
         #region FillSchemaAsync
 
-        public abstract Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType);
+        public abstract Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, CancellationToken cancellationToken = default);
 
         protected virtual async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, string srcTable, DbDataReader dataReader)
         {
@@ -402,7 +383,7 @@ namespace AsyncDataAdapter
             int schemaCount = 0;
             do
             {
-                AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(dataReader, ReturnProviderSpecificTypes);
+                AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(dataReader);
 
                 AssertReaderHandleFieldCount(readerHandler);
                 if (0 >= readerHandler.FieldCount)
@@ -451,7 +432,7 @@ namespace AsyncDataAdapter
 
         public abstract Task<int> FillAsync( DataSet dataSet, CancellationToken cancellationToken );
 
-        virtual protected async Task<int> FillAsync( DataSet dataSet, string srcTable, IDataReader dataReader, int startRecord, int maxRecords, CancellationToken cancellationToken )
+        protected virtual async Task<int> FillAsync( DataSet dataSet, string srcTable, DbDataReader dataReader, int startRecord, int maxRecords, CancellationToken cancellationToken )
         {
             if (null == dataSet)
             {
@@ -479,18 +460,18 @@ namespace AsyncDataAdapter
             }
 
             // user must Close/Dispose of the dataReader
-            AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(dataReader, ReturnProviderSpecificTypes);
+            AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(dataReader);
             return await this.FillFromReaderAsync( dataSet, null, srcTable, readerHandler, startRecord, maxRecords, null, null, cancellationToken ).ConfigureAwait(false);
         }
 
-        protected virtual async Task<int> FillAsync(DataTable dataTable, IDataReader dataReader, CancellationToken cancellationToken)
+        protected virtual async Task<int> FillAsync(DataTable dataTable, DbDataReader dataReader, CancellationToken cancellationToken)
         {
             DataTable[] dataTables = new DataTable[] { dataTable };
 
             return await this.FillAsync( dataTables, dataReader, startRecord: 0, maxRecords: 0, cancellationToken ).ConfigureAwait(false);
         }
 
-        protected virtual async Task<int> FillAsync( DataTable[] dataTables, IDataReader dataReader, int startRecord, int maxRecords, CancellationToken cancellationToken )
+        protected virtual async Task<int> FillAsync( DataTable[] dataTables, DbDataReader dataReader, int startRecord, int maxRecords, CancellationToken cancellationToken )
         {
             if (dataTables is null) throw new ArgumentNullException(paramName: nameof(dataTables));
             if (0 == dataTables.Length) throw new ArgumentException(string.Format("Argument is empty: {0}", nameof(dataTables)), paramName: nameof(dataTables));
@@ -531,7 +512,7 @@ namespace AsyncDataAdapter
                             break;
                         }
 
-                        AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(dataReader, ReturnProviderSpecificTypes);
+                        AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(dataReader);
                         AssertReaderHandleFieldCount(readerHandler);
                        
                         if (readerHandler.FieldCount <= 0)
@@ -852,10 +833,7 @@ namespace AsyncDataAdapter
             }
         }
 
-        virtual public Task<int> UpdateAsync(DataSet dataSet)
-        { // V1.0.3300
-            throw new NotSupportedException();
-        }
+        public abstract Task<int> UpdateAsync(DataSet dataSet, CancellationToken cancellationToken = default);
 
         // used by FillSchema which returns an array of datatables added to the dataset
         static private DataTable[] AddDataTableToArray(DataTable[] tables, DataTable newTable)
@@ -884,19 +862,7 @@ namespace AsyncDataAdapter
             {
                 return srcTable; //[index];
             }
-            return srcTable + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        }
-    }
-
-    internal sealed class AdaLoadAdapter : AdaDataAdapter
-    {
-        internal AdaLoadAdapter()
-        {
-        }
-
-        internal async Task<int> FillFromReaderAsync( DataTable[] dataTables, IDataReader dataReader, int startRecord, int maxRecords, CancellationToken cancellationToken )
-        {
-            return await this.FillAsync( dataTables, dataReader, startRecord, maxRecords, cancellationToken ).ConfigureAwait(false);
+            return srcTable + index.ToString(CultureInfo.InvariantCulture);
         }
     }
 }
