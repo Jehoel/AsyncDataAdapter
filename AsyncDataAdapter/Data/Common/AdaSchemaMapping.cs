@@ -510,7 +510,7 @@ namespace AsyncDataAdapter.Internal
                     // correct on Fill, not FillFromReader
                     string chapterTableName = _tableMapping.SourceTable + _fieldNames[i]; // MDAC 70908
 
-                    AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dbDataReader );
+                    AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dbDataReader, this._dataReader.ReturnProviderSpecificTypes );
 
                     var fillFromReaderResult = await _adapter.FillFromReaderAsync( _dataSet, null, chapterTableName, readerHandler, 0, 0, parentChapterColumn, parentChapterValue, cancellationToken ).ConfigureAwait(false);
                     return fillFromReaderResult;

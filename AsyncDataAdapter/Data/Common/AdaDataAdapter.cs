@@ -20,7 +20,6 @@ namespace AsyncDataAdapter
         private bool _acceptChangesDuringUpdateAfterInsert = true;
         private bool _continueUpdateOnError                = false;
         private bool _hasFillErrorHandler                  = false;
-        private bool _returnProviderSpecificTypes          = false;
         private bool _acceptChangesDuringFill              = true;
 
         private LoadOption _fillLoadOption;
@@ -30,8 +29,8 @@ namespace AsyncDataAdapter
 
         private DataTableMappingCollection _tableMappings;
 
-        private static int _objectTypeCount; // Bid counter
-        internal readonly int _objectID = System.Threading.Interlocked.Increment(ref _objectTypeCount);
+        private static int _objectTypeCount;
+        internal readonly int _objectID = Interlocked.Increment(ref _objectTypeCount);
 
 #if DEBUG
         // if true, we are asserting that the caller has provided a select command
@@ -244,6 +243,10 @@ namespace AsyncDataAdapter
             }
         }
 
+        /// <summary>When <see langword="true"/> then <see cref="DbDataReader.GetProviderSpecificFieldType"/> and <see cref="DbDataReader.GetProviderSpecificValue"/> will be used instead of <see cref="DbDataReader.GetFieldType(int)"/> and <see cref="DbDataReader.GetValue(int)"/>.</summary>
+        [DefaultValue( value: false )]
+        public virtual bool ReturnProviderSpecificTypes { get; set; } = false;
+
         [
         DesignerSerializationVisibility(DesignerSerializationVisibility.Content),
         CategoryAttribute("Settings"),
@@ -283,7 +286,7 @@ namespace AsyncDataAdapter
 
         protected bool HasTableMappings()
         { // V1.2.3300
-            return ((null != _tableMappings) && (0 < TableMappings.Count));
+            return ((null != _tableMappings) && (0 < this.TableMappings.Count));
         }
 
         [
@@ -317,7 +320,7 @@ namespace AsyncDataAdapter
             _acceptChangesDuringUpdate = from._acceptChangesDuringUpdate;
             _acceptChangesDuringUpdateAfterInsert = from._acceptChangesDuringUpdateAfterInsert;
             _continueUpdateOnError = from._continueUpdateOnError;
-            _returnProviderSpecificTypes = from._returnProviderSpecificTypes; // WebData 101795
+            this.ReturnProviderSpecificTypes = from.ReturnProviderSpecificTypes;
             _acceptChangesDuringFill = from._acceptChangesDuringFill;
             _fillLoadOption = from._fillLoadOption;
             _missingMappingAction = from._missingMappingAction;
@@ -383,7 +386,7 @@ namespace AsyncDataAdapter
             int schemaCount = 0;
             do
             {
-                AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(dataReader);
+                AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dataReader, useProviderSpecificDataReader: this.ReturnProviderSpecificTypes );
 
                 AssertReaderHandleFieldCount(readerHandler);
                 if (0 >= readerHandler.FieldCount)
@@ -460,7 +463,7 @@ namespace AsyncDataAdapter
             }
 
             // user must Close/Dispose of the dataReader
-            AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(dataReader);
+            AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dataReader, useProviderSpecificDataReader: this.ReturnProviderSpecificTypes );
             return await this.FillFromReaderAsync( dataSet, null, srcTable, readerHandler, startRecord, maxRecords, null, null, cancellationToken ).ConfigureAwait(false);
         }
 
@@ -512,7 +515,7 @@ namespace AsyncDataAdapter
                             break;
                         }
 
-                        AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(dataReader);
+                        AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dataReader, useProviderSpecificDataReader: this.ReturnProviderSpecificTypes );
                         AssertReaderHandleFieldCount(readerHandler);
                        
                         if (readerHandler.FieldCount <= 0)

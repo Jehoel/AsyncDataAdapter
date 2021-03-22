@@ -1394,7 +1394,7 @@ namespace AsyncDataAdapter
                 // we only care about the first row of the first result
                 using ( DbDataReader dataReader = await dataCommand.ExecuteReaderAsync( CommandBehavior.SequentialAccess, cancellationToken ).ConfigureAwait(false) )
                 {
-                    AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(dataReader);
+                    AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dataReader, this.ReturnProviderSpecificTypes );
                     try
                     {
                         bool getData = false;

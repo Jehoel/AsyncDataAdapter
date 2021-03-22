@@ -9,11 +9,18 @@ namespace AsyncDataAdapter.Internal
 {
     public abstract class AdaDataReaderContainer
     {
-        public static AdaDataReaderContainer Create(DbDataReader dbDataReader)
+        public static AdaDataReaderContainer Create(DbDataReader dbDataReader, bool useProviderSpecificDataReader)
         {
             if (dbDataReader is null) throw new ArgumentNullException(nameof(dbDataReader));
 
-            return new ProviderSpecificDataReader( dbDataReader );
+            if (useProviderSpecificDataReader)
+            {
+                return new ProviderSpecificDataReader( dbDataReader );
+            }
+            else
+            {
+                return new CommonLanguageSubsetDataReader( dbDataReader );
+            }
         }
 
         protected readonly DbDataReader _dataReader;
@@ -60,6 +67,7 @@ namespace AsyncDataAdapter.Internal
             return this._dataReader.ReadAsync( cancellationToken );
         }
 
+        /// <summary>Will return values as, for example, <see cref="System.Data.SqlTypes.SqlDouble"/> instead of <see cref="System.Double"/>.</summary>
         private sealed class ProviderSpecificDataReader : AdaDataReaderContainer
         {
             private DbDataReader _providerSpecificDataReader;
@@ -69,7 +77,7 @@ namespace AsyncDataAdapter.Internal
             {
                 Debug.Assert(null != dbDataReader, "null dbDataReader");
                 _providerSpecificDataReader = dbDataReader;
-                _fieldCount = VisibleFieldCount;
+                _fieldCount = this.VisibleFieldCount;
             }
 
             internal override bool ReturnProviderSpecificTypes
@@ -105,14 +113,13 @@ namespace AsyncDataAdapter.Internal
             }
         }
 
-        /*
+        /// <summary>Will return values as, for example, <see cref="System.Double"/> instead of <see cref="System.Data.SqlTypes.SqlDouble"/>.</summary>
         private sealed class CommonLanguageSubsetDataReader : AdaDataReaderContainer
         {
-
-            internal CommonLanguageSubsetDataReader(IDataReader dataReader)
-                : base(dataReader)
+            internal CommonLanguageSubsetDataReader(DbDataReader dbDataReader)
+                : base(dbDataReader)
             {
-                _fieldCount = VisibleFieldCount;
+                _fieldCount = this.VisibleFieldCount;
             }
 
             internal override bool ReturnProviderSpecificTypes
@@ -145,6 +152,5 @@ namespace AsyncDataAdapter.Internal
                 return _dataReader.GetValues(values);
             }
         }
-        */
     }
 }
