@@ -1,27 +1,17 @@
-﻿//------------------------------------------------------------------------------
-// <copyright file="DataReaderContainer.cs" company="Microsoft">
-//      Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
-// <owner current="true" primary="true">[....]</owner>
-//------------------------------------------------------------------------------
-
+using System;
+using System.Data;
+using System.Data.Common;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace AsyncDataAdapter
+namespace AsyncDataAdapter.Internal
 {
-
-    using System;
-    using System.Data;
-    using System.Data.Common;
-    using System.Diagnostics;
-
-    internal abstract class DataReaderContainer
+    public abstract class AdaDataReaderContainer
     {
-
         protected readonly DbDataReader _dataReader;
         protected int _fieldCount;
 
-        static internal DataReaderContainer Create(IDataReader dataReader, bool returnProviderSpecificTypes)
+        static internal AdaDataReaderContainer Create(IDataReader dataReader, bool returnProviderSpecificTypes)
         {
             if (returnProviderSpecificTypes)
             {
@@ -34,7 +24,7 @@ namespace AsyncDataAdapter
             return new CommonLanguageSubsetDataReader(dataReader);
         }
 
-        protected DataReaderContainer(IDataReader dataReader)
+        protected AdaDataReaderContainer(IDataReader dataReader)
         {
             Debug.Assert(null != dataReader, "null dataReader");
             _dataReader = (DbDataReader)dataReader;
@@ -80,7 +70,7 @@ namespace AsyncDataAdapter
             return await _dataReader.ReadAsync().ConfigureAwait(false);
         }
 
-        private sealed class ProviderSpecificDataReader : DataReaderContainer
+        private sealed class ProviderSpecificDataReader : AdaDataReaderContainer
         {
             private DbDataReader _providerSpecificDataReader;
 
@@ -124,7 +114,7 @@ namespace AsyncDataAdapter
             }
         }
 
-        private sealed class CommonLanguageSubsetDataReader : DataReaderContainer
+        private sealed class CommonLanguageSubsetDataReader : AdaDataReaderContainer
         {
 
             internal CommonLanguageSubsetDataReader(IDataReader dataReader) : base(dataReader)

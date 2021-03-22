@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 
 using AsyncDataAdapter.Internal;
 
-namespace AsyncDataAdapter
+namespace AsyncDataAdapter.Internal
 {
-    sealed internal class SchemaMapping
+    internal sealed class AdaSchemaMapping
     {
 
         // DataColumns match in length and name order as the DataReader, no chapters
@@ -37,8 +37,8 @@ namespace AsyncDataAdapter
         private readonly DataSet _dataSet; // the current dataset, may be null if we are only filling a DataTable
         private DataTable _dataTable; // the current DataTable, should never be null
 
-        private readonly DataAdapter _adapter;
-        private readonly DataReaderContainer _dataReader;
+        private readonly AdaDataAdapter _adapter;
+        private readonly AdaDataReaderContainer _dataReader;
         private readonly DataTable _schemaTable;  // will be null if Fill without schema
         private readonly DataTableMapping _tableMapping;
 
@@ -58,7 +58,7 @@ namespace AsyncDataAdapter
 
         private readonly LoadOption _loadOption;
 
-        internal SchemaMapping(DataAdapter adapter, DataSet dataset, DataTable datatable, DataReaderContainer dataReader, bool keyInfo,
+        internal AdaSchemaMapping(AdaDataAdapter adapter, DataSet dataset, DataTable datatable, AdaDataReaderContainer dataReader, bool keyInfo,
                                     SchemaType schemaType, string sourceTableName, bool gettingData,
                                     DataColumn parentChapterColumn, object parentChapterValue)
         {
@@ -175,7 +175,7 @@ namespace AsyncDataAdapter
             }
         }
 
-        internal DataReaderContainer DataReader
+        internal AdaDataReaderContainer DataReader
         {
             get
             {
@@ -492,7 +492,7 @@ namespace AsyncDataAdapter
                                 // correct on Fill, not FillFromReader
                                 string chapterTableName = _tableMapping.SourceTable + _fieldNames[i]; // MDAC 70908
 
-                                DataReaderContainer readerHandler = DataReaderContainer.Create(nestedReader, _dataReader.ReturnProviderSpecificTypes);
+                                AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(nestedReader, _dataReader.ReturnProviderSpecificTypes);
                                 var fillFromReaderResult = await _adapter.FillFromReaderAsync(_dataSet, null, chapterTableName, readerHandler, 0, 0, parentChapterColumn, parentChapterValue).ConfigureAwait(false);
                                 datarowadded += fillFromReaderResult;
                             }
@@ -513,7 +513,7 @@ namespace AsyncDataAdapter
             return values;
         }
 
-        private static string[] GenerateFieldNames(DataReaderContainer dataReader)
+        private static string[] GenerateFieldNames(AdaDataReaderContainer dataReader)
         {
             string[] fieldNames = new string[dataReader.FieldCount];
             for (int i = 0; i < fieldNames.Length; ++i)
@@ -776,7 +776,7 @@ namespace AsyncDataAdapter
         private object[] SetupSchemaWithKeyInfo(MissingMappingAction mappingAction, MissingSchemaAction schemaAction, bool gettingData, DataColumn parentChapterColumn, object chapterValue)
         {
             // must sort rows from schema table by ordinal because Jet is sorted by coumn name
-            DbSchemaRow[] schemaRows = DbSchemaRow.GetSortedSchemaRows(_schemaTable, _dataReader.ReturnProviderSpecificTypes); // MDAC 60609
+            AdaDbSchemaRow[] schemaRows = AdaDbSchemaRow.GetSortedSchemaRows(_schemaTable, _dataReader.ReturnProviderSpecificTypes); // MDAC 60609
             Debug.Assert(null != schemaRows, "SchemaSetup - null DbSchemaRow[]");
             Debug.Assert(_dataReader.FieldCount <= schemaRows.Length, "unexpected fewer rows in Schema than FieldCount");
 
@@ -813,7 +813,7 @@ namespace AsyncDataAdapter
             {
                 for (int sortedIndex = 0; sortedIndex < schemaRows.Length; ++sortedIndex)
                 {
-                    DbSchemaRow schemaRow = schemaRows[sortedIndex];
+                    AdaDbSchemaRow schemaRow = schemaRows[sortedIndex];
 
                     int unsortedIndex = schemaRow.UnsortedIndex; // MDAC 67050
 

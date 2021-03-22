@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
+using AsyncDataAdapter.SqlClient;
+
 using Microsoft.Data.SqlClient;
 
 using NUnit.Framework;
@@ -76,7 +78,7 @@ namespace AsyncDataAdapter.Tests
                 c.CommandType = CommandType.StoredProcedure;
                 c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                using (var a = new SqlDataAdapter(c))
+                using (AdaSqlDataAdapter a = new AdaSqlDataAdapter(c))
                 {
                     var dt = new DataTable();
                     var r = await a.FillAsync(dt);
@@ -99,7 +101,7 @@ namespace AsyncDataAdapter.Tests
                 c.CommandType = CommandType.StoredProcedure;
                 c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                using (var a = new Microsoft.Data.SqlClient.SqlDataAdapter(c))
+                using (SqlDataAdapter a = new SqlDataAdapter(c))
                 {
                     var dt = new DataTable();
                     var r = a.Fill(dt);
@@ -126,7 +128,7 @@ namespace AsyncDataAdapter.Tests
                 c.CommandType = CommandType.StoredProcedure;
                 c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                using (var a = new SqlDataAdapter(c))
+                using (AdaSqlDataAdapter a = new AdaSqlDataAdapter(c))
                 {
                     var ds = new DataSet();
                     var r = await a.FillAsync(ds);
@@ -152,7 +154,7 @@ namespace AsyncDataAdapter.Tests
                 c.CommandType = CommandType.StoredProcedure;
                 c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                using (var a = new Microsoft.Data.SqlClient.SqlDataAdapter(c))
+                using (SqlDataAdapter a = new SqlDataAdapter(c))
                 {
                     var ds = new DataSet();
                     var r = a.Fill(ds);
@@ -186,7 +188,7 @@ namespace AsyncDataAdapter.Tests
                 c.Parameters.Add("@Number2", SqlDbType.Int).Value = 300000;
                 c.Parameters.Add("@Number3", SqlDbType.Int).Value = 500000;
 
-                using (var a = new SqlDataAdapter(c))
+                using (AdaSqlDataAdapter a = new AdaSqlDataAdapter(c))
                 {
                     var ds = new DataSet();
 
@@ -231,7 +233,7 @@ namespace AsyncDataAdapter.Tests
                 c.Parameters.Add("@Number2", SqlDbType.Int).Value = 300000;
                 c.Parameters.Add("@Number3", SqlDbType.Int).Value = 500000;
 
-                using (var a = new Microsoft.Data.SqlClient.SqlDataAdapter(c))
+                using (SqlDataAdapter a = new SqlDataAdapter(c))
                 {
                     var ds = new DataSet();
 

@@ -18,7 +18,7 @@ using AsyncDataAdapter.Internal;
 
 namespace AsyncDataAdapter
 {
-    public abstract class DbDataAdapter : DataAdapter, /* IDbDataAdapter, */ ICloneable
+    public abstract class AdaDbDataAdapter : AdaDataAdapter, /* IDbDataAdapter, */ ICloneable
     { // V1.0.3300, MDAC 69629
         public const string DefaultSourceTableName = "Table"; // V1.0.3300
 
@@ -40,20 +40,20 @@ namespace AsyncDataAdapter
             internal Exception Errors;
         }
 
-        protected DbDataAdapter() : base()
+        protected AdaDbDataAdapter() : base()
         { // V1.0.3300
         }
 
-        protected DbDataAdapter(DbDataAdapter adapter) : base(adapter)
+        protected AdaDbDataAdapter(AdaDbDataAdapter adapter) : base(adapter)
         { // V1.0.5000
             CloneFrom(adapter);
         }
 
-        private DbDataAdapter _IDbDataAdapter
+        private AdaDbDataAdapter _IDbDataAdapter
         {
             get
             {
-                return (DbDataAdapter)this;
+                return (AdaDbDataAdapter)this;
             }
         }
 
@@ -253,13 +253,13 @@ namespace AsyncDataAdapter
         object ICloneable.Clone()
         { // V1.0.3300, MDAC 69629
 #pragma warning disable 618 // ignore obsolete warning about CloneInternals
-            DbDataAdapter clone = (DbDataAdapter)CloneInternals();
+            AdaDbDataAdapter clone = (AdaDbDataAdapter)CloneInternals();
 #pragma warning restore 618
             clone.CloneFrom(this);
             return clone;
         }
 
-        private void CloneFrom(DbDataAdapter from)
+        private void CloneFrom(AdaDbDataAdapter from)
         {
             var pfrom = from._IDbDataAdapter;
             _IDbDataAdapter.SelectCommand = CloneCommand(pfrom.SelectCommand);
@@ -324,7 +324,7 @@ namespace AsyncDataAdapter
                     return new DataTable[0]; // design-time support
                 }
                 CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await FillSchemaAsync(dataSet, schemaType, command, DbDataAdapter.DefaultSourceTableName, cmdBehavior).ConfigureAwait(false);
+                return await FillSchemaAsync(dataSet, schemaType, command, AdaDbDataAdapter.DefaultSourceTableName, cmdBehavior).ConfigureAwait(false);
             }
         }
 
@@ -391,7 +391,7 @@ namespace AsyncDataAdapter
             bool restoreNullConnection = (null == command.Connection);
             try
             {
-                IDbConnection activeConnection = DbDataAdapter.GetConnection3(this, command, "FillSchema");
+                IDbConnection activeConnection = AdaDbDataAdapter.GetConnection3(this, command, "FillSchema");
                 ConnectionState originalState = ConnectionState.Open;
 
                 try
@@ -431,7 +431,7 @@ namespace AsyncDataAdapter
                 // delegate to Fill4
                 IDbCommand selectCmd = _IDbDataAdapter.SelectCommand;
                 CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await FillAsync(dataSet, 0, 0, DbDataAdapter.DefaultSourceTableName, selectCmd, cmdBehavior).ConfigureAwait(false);
+                return await FillAsync(dataSet, 0, 0, AdaDbDataAdapter.DefaultSourceTableName, selectCmd, cmdBehavior).ConfigureAwait(false);
             }
         }
 
@@ -558,7 +558,7 @@ namespace AsyncDataAdapter
             bool restoreNullConnection = (null == command.Connection);
             try
             {
-                IDbConnection activeConnection = DbDataAdapter.GetConnection3(this, command, "Fill");
+                IDbConnection activeConnection = AdaDbDataAdapter.GetConnection3(this, command, "Fill");
                 ConnectionState originalState = ConnectionState.Open;
 
                 // the default is MissingSchemaAction.Add, the user must explicitly
@@ -708,7 +708,7 @@ namespace AsyncDataAdapter
                         DataColumn dataColumn = mappings.GetDataColumn(columnName, null, row.Table, missingMapping, missingSchema);
                         if (null != dataColumn)
                         {
-                            DataRowVersion version = DbDataAdapter.GetParameterSourceVersion(typeIndex, parameter);
+                            DataRowVersion version = AdaDbDataAdapter.GetParameterSourceVersion(typeIndex, parameter);
                             parameter.Value = row[dataColumn, version];
                         }
                         else
@@ -792,7 +792,7 @@ namespace AsyncDataAdapter
             //if (!TableMappings.Contains(DbDataAdapter.DefaultSourceTableName)) { // MDAC 59268
             //    throw ADP.UpdateRequiresSourceTable(DbDataAdapter.DefaultSourceTableName);
             //}
-            return await UpdateAsync(dataSet, DbDataAdapter.DefaultSourceTableName).ConfigureAwait(false);
+            return await UpdateAsync(dataSet, AdaDbDataAdapter.DefaultSourceTableName).ConfigureAwait(false);
         }
 
         public async Task<int> UpdateAsync(DataRow[] dataRows)
@@ -844,7 +844,7 @@ namespace AsyncDataAdapter
                     {
                         throw ADP.MissingTableMappingDestination(dataTable.TableName);
                     }
-                    tableMapping = new DataTableMapping(DbDataAdapter.DefaultSourceTableName, dataTable.TableName);
+                    tableMapping = new DataTableMapping(AdaDbDataAdapter.DefaultSourceTableName, dataTable.TableName);
                 }
                 return await UpdateFromDataTableAsync(dataTable, tableMapping).ConfigureAwait(false);
             }
@@ -1121,7 +1121,7 @@ namespace AsyncDataAdapter
                             {
                                 if (1 != maxBatchCommands)
                                 {
-                                    IDbConnection connection = DbDataAdapter.GetConnection1(this);
+                                    IDbConnection connection = AdaDbDataAdapter.GetConnection1(this);
 
                                     ConnectionState state = await UpdateConnectionOpenAsync(connection, StatementType.Batch, connections, connectionStates, useSelectConnectionState).ConfigureAwait(false);
                                     rowUpdatedEvent.AdapterInit_(rowBatch);
@@ -1139,7 +1139,7 @@ namespace AsyncDataAdapter
                                 }
                                 else if (null != dataCommand)
                                 {
-                                    IDbConnection connection = DbDataAdapter.GetConnection4(this, dataCommand, statementType, isCommandFromRowUpdating);
+                                    IDbConnection connection = AdaDbDataAdapter.GetConnection4(this, dataCommand, statementType, isCommandFromRowUpdating);
                                     ConnectionState state = await UpdateConnectionOpenAsync(connection, statementType, connections, connectionStates, useSelectConnectionState).ConfigureAwait(false);
                                     if (ConnectionState.Open == state)
                                     {
@@ -1217,7 +1217,7 @@ namespace AsyncDataAdapter
 
                             try
                             {
-                                IDbConnection connection = DbDataAdapter.GetConnection1(this);
+                                IDbConnection connection = AdaDbDataAdapter.GetConnection1(this);
 
                                 ConnectionState state = await UpdateConnectionOpenAsync(connection, StatementType.Batch, connections, connectionStates, useSelectConnectionState).ConfigureAwait(false);
 
@@ -1432,7 +1432,7 @@ namespace AsyncDataAdapter
                 // we only care about the first row of the first result
                 using (IDataReader dataReader = dataCommand.ExecuteReader(CommandBehavior.SequentialAccess))
                 {
-                    DataReaderContainer readerHandler = DataReaderContainer.Create(dataReader, ReturnProviderSpecificTypes);
+                    AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(dataReader, ReturnProviderSpecificTypes);
                     try
                     {
                         bool getData = false;
@@ -1449,7 +1449,7 @@ namespace AsyncDataAdapter
 
                         if (getData && (0 != dataReader.RecordsAffected))
                         { // MDAC 71174
-                            SchemaMapping mapping = new SchemaMapping(this, null, rowUpdatedEvent.Row.Table, readerHandler, false, SchemaType.Mapped, rowUpdatedEvent.TableMapping.SourceTable, true, null, null);
+                            AdaSchemaMapping mapping = new AdaSchemaMapping(this, null, rowUpdatedEvent.Row.Table, readerHandler, false, SchemaType.Mapped, rowUpdatedEvent.TableMapping.SourceTable, true, null, null);
 
                             if ((null != mapping.DataTable) && (null != mapping.DataValues))
                             {
@@ -1662,7 +1662,7 @@ namespace AsyncDataAdapter
             }
         }
 
-        static private IDbConnection GetConnection1(DbDataAdapter adapter)
+        static private IDbConnection GetConnection1(AdaDbDataAdapter adapter)
         {
             IDbCommand command = adapter._IDbDataAdapter.SelectCommand;
             if (null == command)
@@ -1689,7 +1689,7 @@ namespace AsyncDataAdapter
             return connection;
         }
 
-        static private IDbConnection GetConnection3(DbDataAdapter adapter, IDbCommand command, string method)
+        static private IDbConnection GetConnection3(AdaDbDataAdapter adapter, IDbCommand command, string method)
         {
             Debug.Assert(null != command, "GetConnection3: null command");
             Debug.Assert(!string.IsNullOrEmpty(method), "missing method name");
@@ -1701,7 +1701,7 @@ namespace AsyncDataAdapter
             return connection;
         }
 
-        static private IDbConnection GetConnection4(DbDataAdapter adapter, IDbCommand command, StatementType statementType, bool isCommandFromRowUpdating)
+        static private IDbConnection GetConnection4(AdaDbDataAdapter adapter, IDbCommand command, StatementType statementType, bool isCommandFromRowUpdating)
         {
             Debug.Assert(null != command, "GetConnection4: null command");
             IDbConnection connection = command.Connection;

@@ -10,19 +10,18 @@ using System;
 using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
-using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 
-using AsyncDataAdapter.SqlClient;
+using Microsoft.Data.SqlClient;
 
-namespace AsyncDataAdapter
+namespace AsyncDataAdapter.SqlClient
 {
     [
     DefaultEvent("RowUpdated"),
     // TODO: ToolboxItem("Microsoft.VSDesigner.Data.VS.SqlDataAdapterToolboxItem, " + AssemblyRef.MicrosoftVSDesigner),
     // TODO: Designer("Microsoft.VSDesigner.Data.VS.SqlDataAdapterDesigner, " + AssemblyRef.MicrosoftVSDesigner)
     ]
-    public sealed class SqlDataAdapter : DbDataAdapter, /*IDbDataAdapter, */ICloneable
+    public sealed class AdaSqlDataAdapter : AdaDbDataAdapter, /*IDbDataAdapter, */ICloneable
     {
 
         static private readonly object EventRowUpdated = new object();
@@ -31,28 +30,28 @@ namespace AsyncDataAdapter
         private ISqlCommandSet _commandSet;
         private int _updateBatchSize = 1;
 
-        public SqlDataAdapter() : base()
+        public AdaSqlDataAdapter() : base()
         {
             GC.SuppressFinalize(this);
         }
 
-        public SqlDataAdapter(SqlCommand selectCommand) : this()
+        public AdaSqlDataAdapter(SqlCommand selectCommand) : this()
         {
             SelectCommand = selectCommand;
         }
 
-        public SqlDataAdapter(string selectCommandText, string selectConnectionString) : this()
+        public AdaSqlDataAdapter(string selectCommandText, string selectConnectionString) : this()
         {
             SqlConnection connection = new SqlConnection(selectConnectionString);
             SelectCommand = new SqlCommand(selectCommandText, connection);
         }
 
-        public SqlDataAdapter(string selectCommandText, SqlConnection selectConnection) : this()
+        public AdaSqlDataAdapter(string selectCommandText, SqlConnection selectConnection) : this()
         {
             SelectCommand = new SqlCommand(selectCommandText, selectConnection);
         }
 
-        private SqlDataAdapter(SqlDataAdapter from) : base(from)
+        private AdaSqlDataAdapter(AdaSqlDataAdapter from) : base(from)
         { // Clone
             GC.SuppressFinalize(this);
         }
@@ -205,7 +204,7 @@ namespace AsyncDataAdapter
 
         object ICloneable.Clone()
         {
-            return new SqlDataAdapter(this);
+            return new AdaSqlDataAdapter(this);
         }
 
         override protected RowUpdatedEventArgs CreateRowUpdatedEvent(DataRow dataRow, IDbCommand command, StatementType statementType, DataTableMapping tableMapping)
