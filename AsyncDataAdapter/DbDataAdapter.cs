@@ -322,7 +322,7 @@ namespace AsyncDataAdapter
         { // V1.0.3300
             {
                 IDbCommand command = _IDbDataAdapter.SelectCommand;
-                if (DesignMode && ((null == command) || (null == command.Connection) || ADP.IsEmpty(command.CommandText)))
+                if (DesignMode && ((null == command) || (null == command.Connection) || string.IsNullOrEmpty(command.CommandText)))
                 {
                     return new DataTable[0]; // design-time support
                 }
@@ -351,13 +351,13 @@ namespace AsyncDataAdapter
                 {
                     throw ADP.InvalidSchemaType(schemaType);
                 }
-                if (ADP.IsEmpty(srcTable))
+                if (string.IsNullOrEmpty(srcTable))
                 {
                     throw ADP.FillSchemaRequiresSourceTableName("srcTable");
                 }
                 if (null == command)
                 {
-                    throw ADP.MissingSelectCommand(ADP.FillSchema);
+                    throw ADP.MissingSelectCommand(method: "FillSchema");
                 }
                 return (DataTable[]) await FillSchemaInternalAsync(dataSet, null, schemaType, command, srcTable, behavior).ConfigureAwait(false);
             }
@@ -376,7 +376,7 @@ namespace AsyncDataAdapter
                 }
                 if (null == command)
                 {
-                    throw ADP.MissingSelectCommand(ADP.FillSchema);
+                    throw ADP.MissingSelectCommand("FillSchema");
                 }
                 string srcTableName = dataTable.TableName;
                 int index = IndexOfDataSetTable(srcTableName);
@@ -394,7 +394,7 @@ namespace AsyncDataAdapter
             bool restoreNullConnection = (null == command.Connection);
             try
             {
-                IDbConnection activeConnection = DbDataAdapter.GetConnection3(this, command, ADP.FillSchema);
+                IDbConnection activeConnection = DbDataAdapter.GetConnection3(this, command, "FillSchema");
                 ConnectionState originalState = ConnectionState.Open;
 
                 try
@@ -481,13 +481,13 @@ namespace AsyncDataAdapter
                 {
                     throw ADP.InvalidMaxRecords("maxRecords", maxRecords);
                 }
-                if (ADP.IsEmpty(srcTable))
+                if (string.IsNullOrEmpty(srcTable))
                 {
                     throw ADP.FillRequiresSourceTableName("srcTable");
                 }
                 if (null == command)
                 {
-                    throw ADP.MissingSelectCommand(ADP.Fill);
+                    throw ADP.MissingSelectCommand("Fill");
                 }
                 return await FillInternalAsync(dataSet, null, startRecord, maxRecords, srcTable, command, behavior).ConfigureAwait(false);
             }
@@ -545,7 +545,7 @@ namespace AsyncDataAdapter
                 }
                 if (null == command)
                 {
-                    throw ADP.MissingSelectCommand(ADP.Fill);
+                    throw ADP.MissingSelectCommand("Fill");
                 }
                 if (1 == dataTables.Length)
                 {
@@ -561,7 +561,7 @@ namespace AsyncDataAdapter
             bool restoreNullConnection = (null == command.Connection);
             try
             {
-                IDbConnection activeConnection = DbDataAdapter.GetConnection3(this, command, ADP.Fill);
+                IDbConnection activeConnection = DbDataAdapter.GetConnection3(this, command, "Fill");
                 ConnectionState originalState = ConnectionState.Open;
 
                 // the default is MissingSchemaAction.Add, the user must explicitly
@@ -705,7 +705,7 @@ namespace AsyncDataAdapter
                 {
 
                     string columnName = parameter.SourceColumn;
-                    if (!ADP.IsEmpty(columnName))
+                    if (!string.IsNullOrEmpty(columnName))
                     {
 
                         DataColumn dataColumn = mappings.GetDataColumn(columnName, null, row.Table, missingMapping, missingSchema);
@@ -740,7 +740,7 @@ namespace AsyncDataAdapter
                 {
                     // null means default, meaning we leave the current DataRow value alone
                     string columnName = parameter.SourceColumn;
-                    if (!ADP.IsEmpty(columnName))
+                    if (!string.IsNullOrEmpty(columnName))
                     {
 
                         DataColumn dataColumn = mappings.GetDataColumn(columnName, null, row.Table, missingMapping, missingSchema);
@@ -1695,7 +1695,7 @@ namespace AsyncDataAdapter
         static private IDbConnection GetConnection3(DbDataAdapter adapter, IDbCommand command, string method)
         {
             Debug.Assert(null != command, "GetConnection3: null command");
-            Debug.Assert(!ADP.IsEmpty(method), "missing method name");
+            Debug.Assert(!string.IsNullOrEmpty(method), "missing method name");
             IDbConnection connection = command.Connection;
             if (null == connection)
             {

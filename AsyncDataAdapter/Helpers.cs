@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlTypes;
@@ -50,7 +50,7 @@ namespace AsyncDataAdapter
 
         internal static DataColumn CreateDataColumnBySchemaAction(string sourceColumn, string dataSetColumn, DataTable dataTable, Type dataType, MissingSchemaAction schemaAction)
         {
-            if (ADP.IsEmpty(dataSetColumn))
+            if (string.IsNullOrEmpty(dataSetColumn))
                 return (DataColumn)null;
             switch (schemaAction)
             {

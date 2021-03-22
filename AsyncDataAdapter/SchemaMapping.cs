@@ -104,7 +104,7 @@ namespace AsyncDataAdapter
             {
                 mappingAction = _adapter.MissingMappingAction;
                 schemaAction = _adapter.MissingSchemaAction;
-                if (!ADP.IsEmpty(sourceTableName))
+                if (!string.IsNullOrEmpty(sourceTableName))
                 { // MDAC 66034
                     _tableMapping = _adapter.GetTableMappingBySchemaAction(sourceTableName, sourceTableName, mappingAction);
                 }
@@ -137,7 +137,7 @@ namespace AsyncDataAdapter
             {
                 mappingAction = System.Data.MissingMappingAction.Passthrough;
                 schemaAction = MissingSchemaAction.Add;
-                if (!ADP.IsEmpty(sourceTableName))
+                if (!string.IsNullOrEmpty(sourceTableName))
                 { // MDAC 66034
                     _tableMapping = DataTableMappingCollection.GetTableMappingBySchemaAction(null, sourceTableName, sourceTableName, mappingAction);
                 }
@@ -952,7 +952,7 @@ namespace AsyncDataAdapter
                     {// MDAC 67033
                         if (!commonFromMultiTable)
                         {
-                            if ((basetable != commonBaseTable) && (!ADP.IsEmpty(basetable)))
+                            if ((basetable != commonBaseTable) && (!string.IsNullOrEmpty(basetable)))
                             {
                                 if (null == commonBaseTable)
                                 {
@@ -1159,7 +1159,7 @@ namespace AsyncDataAdapter
                             }
                         }
                     }
-                    if (!commonFromMultiTable && !ADP.IsEmpty(commonBaseTable) && ADP.IsEmpty(_dataTable.TableName))
+                    if (!commonFromMultiTable && !string.IsNullOrEmpty(commonBaseTable) && string.IsNullOrEmpty(_dataTable.TableName))
                     {
                         _dataTable.TableName = commonBaseTable;
                     }

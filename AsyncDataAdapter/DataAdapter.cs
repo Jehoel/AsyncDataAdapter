@@ -391,7 +391,7 @@ namespace AsyncDataAdapter
                 {
                     throw ADP.InvalidSchemaType(schemaType);
                 }
-                if (ADP.IsEmpty(srcTable))
+                if (string.IsNullOrEmpty(srcTable))
                 {
                     throw ADP.FillSchemaRequiresSourceTableName("srcTable");
                 }
@@ -487,7 +487,7 @@ namespace AsyncDataAdapter
                 {
                     throw ADP.FillRequires("dataSet");
                 }
-                if (ADP.IsEmpty(srcTable))
+                if (string.IsNullOrEmpty(srcTable))
                 {
                     throw ADP.FillRequiresSourceTableName("srcTable");
                 }
