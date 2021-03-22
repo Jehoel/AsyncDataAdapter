@@ -56,11 +56,23 @@ namespace AsyncDataAdapter
         }
 
         // Invalid Enumeration
+        static internal ArgumentOutOfRangeException InvalidEnumerationValue<TEnum>(TEnum value)
+            where TEnum : struct, Enum
+        {
+            string msg = string.Format("The {0} enumeration value, {1}, is invalid.", typeof(TEnum).Name, value);
+            return new ArgumentOutOfRangeException(paramName: typeof(TEnum).Name, actualValue: value, message: msg);
+        }
 
         static internal ArgumentOutOfRangeException InvalidEnumerationValue(Type type, int value)
         {
             string msg = string.Format("The {0} enumeration value, {1}, is invalid.", type.Name, value.ToString(CultureInfo.InvariantCulture));
             return new ArgumentOutOfRangeException(paramName: type.Name, actualValue: value, message: msg);
+        }
+
+        static internal ArgumentOutOfRangeException NotSupportedEnumerationValue<TEnum>(TEnum value, string method)
+            where TEnum : struct, Enum
+        {
+            return NotSupportedEnumerationValue(type: typeof(TEnum), value: value.ToString(), method: method);
         }
 
         static internal ArgumentOutOfRangeException NotSupportedEnumerationValue(Type type, string value, string method)

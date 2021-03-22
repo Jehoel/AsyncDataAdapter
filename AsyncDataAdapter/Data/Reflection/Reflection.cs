@@ -62,7 +62,7 @@ namespace AsyncDataAdapter
 				bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
 				binder     : null,
 				returnType : propertyType,
-				types      : null,
+				types      : Array.Empty<Type>(),
 				modifiers  : null
 			);
 

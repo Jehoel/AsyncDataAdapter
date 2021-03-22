@@ -24,7 +24,7 @@ namespace AsyncDataAdapter.Internal
         {
             if (e is null) throw new ArgumentNullException(nameof(e));
 
-            _AdapterInit_DataRows.InvokeVoid(@this: e, rowBatch);
+            _AdapterInit_DataRows.InvokeVoid(@this: e, new object[] { rowBatch }); // Can't use implicit params[] because csc maps `DataRow[] rowBatch` directly to `object[] args`.
         }
 
         /// <summary>Exposes <c><see cref="DataRow"/>[] <see cref="RowUpdatedEventArgs"/>.Rows</c> instance property.</summary>
@@ -40,9 +40,7 @@ namespace AsyncDataAdapter.Internal
         {
             if (e is null) throw new ArgumentNullException(nameof(e));
 
-            return _GetRows.InvokeAllowNull<DataRow>(@this: e);
-
-            DataRow[] rows = GetRows_(e);
+            DataRow[] rows = _GetRows.InvokeAllowNull<DataRow[]>(@this: e); // allow `null` return values so we can throw our own exception:
             if (rows is null)
             {
                 throw new InvalidOperationException("The " + nameof(RowUpdatedEventArgs) + " instance has not yet been initialized.");
