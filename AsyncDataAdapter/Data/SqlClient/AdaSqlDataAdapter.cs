@@ -11,6 +11,8 @@ using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Microsoft.Data.SqlClient;
 
@@ -217,11 +219,11 @@ namespace AsyncDataAdapter.SqlClient
             return new SqlRowUpdatingEventArgs(dataRow, command, statementType, tableMapping);
         }
 
-        protected override int ExecuteBatch()
+        protected override Task<int> ExecuteBatchAsync(CancellationToken cancellationToken)
         {
             Debug.Assert(null != _commandSet && (0 < _commandSet.CommandCount), "no commands");
             // TODO:    Bid.CorrelationTrace("<sc.SqlDataAdapter.ExecuteBatch|Info|Correlation> ObjectID%d#, ActivityID %ls\n", ObjectID);
-            return _commandSet.ExecuteNonQuery();
+            return _commandSet.ExecuteNonQueryAsync();
         }
 
         protected override IDataParameter GetBatchedParameter(int commandIdentifier, int parameterIndex)

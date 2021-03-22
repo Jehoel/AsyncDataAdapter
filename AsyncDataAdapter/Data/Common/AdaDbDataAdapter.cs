@@ -32,13 +32,13 @@ namespace AsyncDataAdapter
 
         private struct BatchCommandInfo
         {
-            internal int CommandIdentifier;     // whatever AddToBatch returns, so we can reference the command later in GetBatchedParameter
-            internal int ParameterCount;        // number of parameters on the command, so we know how many to loop over when processing output parameters
-            internal DataRow Row;                   // the row that the command is intended to update
-            internal StatementType StatementType;         // the statement type of the command, needed for accept changes
+            internal int             CommandIdentifier;     // whatever AddToBatch returns, so we can reference the command later in GetBatchedParameter
+            internal int             ParameterCount;        // number of parameters on the command, so we know how many to loop over when processing output parameters
+            internal DataRow         Row;                   // the row that the command is intended to update
+            internal StatementType   StatementType;         // the statement type of the command, needed for accept changes
             internal UpdateRowSource UpdatedRowSource;      // the UpdatedRowSource value from the command, to know whether we need to look for output parameters or not
-            internal int? RecordsAffected;
-            internal Exception Errors;
+            internal int?            RecordsAffected;
+            internal Exception       Errors;
         }
 
         protected AdaDbDataAdapter() : base()
@@ -377,22 +377,22 @@ namespace AsyncDataAdapter
 
                 try
                 {
-                    originalState = await QuietOpenAsync((DbConnection)activeConnection).ConfigureAwait(false);
-                    using (DbDataReader dataReader = (DbDataReader)command.ExecuteReader(behavior | CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo))
+                    originalState = await QuietOpenAsync( activeConnection, cancellationToken ).ConfigureAwait(false);
+                    using (DbDataReader dataReader = await command.ExecuteReaderAsync( behavior | CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo, cancellationToken ).ConfigureAwait(false) )
                     {
                         if (null != datatable)
                         { // delegate to next set of protected FillSchema methods
-                            dataTables = await FillSchemaAsync(datatable, schemaType, dataReader).ConfigureAwait(false);
+                            dataTables = await this.FillSchemaAsync(datatable, schemaType, dataReader).ConfigureAwait(false);
                         }
                         else
                         {
-                            dataTables = await FillSchemaAsync(dataset, schemaType, srcTable, dataReader).ConfigureAwait(false);
+                            dataTables = await this.FillSchemaAsync(dataset, schemaType, srcTable, dataReader).ConfigureAwait(false);
                         }
                     }
                 }
                 finally
                 {
-                    QuietClose((DbConnection)activeConnection, originalState);
+                    QuietClose( activeConnection, originalState);
                 }
             }
             finally
@@ -532,14 +532,14 @@ namespace AsyncDataAdapter
 
                 // the default is MissingSchemaAction.Add, the user must explicitly
                 // set MisingSchemaAction.AddWithKey to get key information back in the dataset
-                if (MissingSchemaAction.AddWithKey == MissingSchemaAction)
+                if (MissingSchemaAction.AddWithKey == this.MissingSchemaAction)
                 {
                     behavior |= CommandBehavior.KeyInfo;
                 }
 
                 try
                 {
-                    originalState = await QuietOpenAsync((DbConnection)activeConnection).ConfigureAwait(false);
+                    originalState = await QuietOpenAsync( activeConnection, cancellationToken ).ConfigureAwait(false);
                     behavior |= CommandBehavior.SequentialAccess;
 
                     using( DbDataReader dbDataReader = await command.ExecuteReaderAsync( behavior, cancellationToken ).ConfigureAwait(false) )
@@ -557,7 +557,7 @@ namespace AsyncDataAdapter
                 }
                 finally
                 {
-                    QuietClose((DbConnection)activeConnection, originalState);
+                    QuietClose( activeConnection, originalState );
                 }
             }
             finally
@@ -691,7 +691,6 @@ namespace AsyncDataAdapter
         {
             if (0 != (ParameterDirection.Output & parameter.Direction))
             {
-
                 object value = parameter.Value;
                 if (null != value)
                 {
@@ -727,25 +726,20 @@ namespace AsyncDataAdapter
 
         private void ParameterOutput(IDataParameterCollection parameters, DataRow row, DataTableMapping mappings)
         {
-            MissingMappingAction missingMapping = UpdateMappingAction;
-            MissingSchemaAction missingSchema = UpdateSchemaAction;
+            MissingMappingAction missingMapping = this.UpdateMappingAction;
+            MissingSchemaAction  missingSchema  = this.UpdateSchemaAction;
 
             foreach (IDataParameter parameter in parameters)
             {
                 if (null != parameter)
                 {
-                    ParameterOutput(parameter, row, mappings, missingMapping, missingSchema);
+                    this.ParameterOutput(parameter, row, mappings, missingMapping, missingSchema);
                 }
             }
         }
 
-        protected virtual void TerminateBatching()
-        {
-            // Called when batch updates are requested to cleanup after a batch
-            // update has been completed.
-
-           throw new NotSupportedException();
-        }
+        /// <summary>Called when batch updates are requested to cleanup after a batch update has been completed.</summary>
+        protected abstract void TerminateBatching();
 
         public override Task<int> UpdateAsync(DataSet dataSet, CancellationToken cancellationToken = default)
         {
@@ -753,42 +747,37 @@ namespace AsyncDataAdapter
             //    throw ADP.UpdateRequiresSourceTable(DbDataAdapter.DefaultSourceTableName);
             //}
 
-            return this.UpdateAsync(dataSet, AdaDbDataAdapter.DefaultSourceTableName);
+            return this.UpdateAsync( dataSet, AdaDbDataAdapter.DefaultSourceTableName, cancellationToken );
         }
 
-        public async Task<int> UpdateAsync(DataRow[] dataRows)
+        public async Task<int> UpdateAsync(DataRow[] dataRows, CancellationToken cancellationToken)
         {
+            int rowsAffected = 0;
+            if (null == dataRows)
             {
-                int rowsAffected = 0;
-                if (null == dataRows)
-                {
-                    throw new ArgumentNullException(nameof(dataRows));
-                }
-                else if (0 != dataRows.Length)
-                {
-                    DataTable dataTable = null;
-                    for (int i = 0; i < dataRows.Length; ++i)
-                    {
-                        if ((null != dataRows[i]) && (dataTable != dataRows[i].Table))
-                        {
-                            if (null != dataTable)
-                            {
-                                throw new ArgumentException(string.Format("DataRow[{0}] is from a different DataTable than DataRow[0].", i));
-                            }
-                            dataTable = dataRows[i].Table;
-                        }
-                    }
-                    if (null != dataTable)
-                    {
-                        DataTableMapping tableMapping = GetTableMapping(dataTable);
-                        rowsAffected = await UpdateAsync(dataRows, tableMapping).ConfigureAwait(false);
-                    }
-                }
-                return rowsAffected;
+                throw new ArgumentNullException(nameof(dataRows));
             }
+            else if (0 != dataRows.Length)
+            {
+                DataTable dataTable = null;
+                for (int i = 0; i < dataRows.Length; ++i)
+                {
+                    if ((null != dataRows[i]) && (dataTable != dataRows[i].Table))
+                    {
+                        if (null != dataTable) throw new ArgumentException(string.Format("DataRow[{0}] is from a different DataTable than DataRow[0].", i));
+                        dataTable = dataRows[i].Table;
+                    }
+                }
+                if (null != dataTable)
+                {
+                    DataTableMapping tableMapping = this.GetTableMapping(dataTable);
+                    rowsAffected = await this.UpdateAsync( dataRows, tableMapping, cancellationToken ).ConfigureAwait(false);
+                }
+            }
+            return rowsAffected;
         }
 
-        public async Task<int> UpdateAsync(DataTable dataTable)
+        public async Task<int> UpdateAsync(DataTable dataTable, CancellationToken cancellationToken)
         {
             {
                 if (dataTable is null) throw new ArgumentNullException(nameof(dataTable));
@@ -799,19 +788,21 @@ namespace AsyncDataAdapter
                 {
                     tableMapping = TableMappings[index];
                 }
+
                 if (null == tableMapping)
                 {
-                    if (System.Data.MissingMappingAction.Error == MissingMappingAction)
+                    if (MissingMappingAction.Error == MissingMappingAction)
                     {
                         throw ADP.MissingTableMappingDestination(dataTable.TableName);
                     }
                     tableMapping = new DataTableMapping(AdaDbDataAdapter.DefaultSourceTableName, dataTable.TableName);
                 }
-                return await UpdateFromDataTableAsync(dataTable, tableMapping).ConfigureAwait(false);
+
+                return await this.UpdateFromDataTableAsync( dataTable, tableMapping, cancellationToken ).ConfigureAwait(false);
             }
         }
 
-        public async Task<int> UpdateAsync(DataSet dataSet, string srcTable)
+        public async Task<int> UpdateAsync(DataSet dataSet, string srcTable, CancellationToken cancellationToken)
         {
             {
                 if (dataSet is null) throw new ArgumentNullException(nameof(dataSet));
@@ -830,7 +821,7 @@ namespace AsyncDataAdapter
                 DataTable dataTable = tableMapping.GetDataTableBySchemaAction(dataSet, schemaAction);
                 if (null != dataTable)
                 {
-                    rowsAffected = await UpdateFromDataTableAsync(dataTable, tableMapping).ConfigureAwait(false);
+                    rowsAffected = await this.UpdateFromDataTableAsync(dataTable, tableMapping, cancellationToken ).ConfigureAwait(false);
                 }
                 else if (!HasTableMappings() || (-1 == TableMappings.IndexOf(tableMapping)))
                 {
@@ -841,7 +832,7 @@ namespace AsyncDataAdapter
             }
         }
 
-        protected virtual async Task<int> UpdateAsync(DataRow[] dataRows, DataTableMapping tableMapping)
+        protected virtual async Task<int> UpdateAsync(DataRow[] dataRows, DataTableMapping tableMapping, CancellationToken cancellationToken)
         {
             {
                 Debug.Assert((null != dataRows) && (0 < dataRows.Length), "Update: bad dataRows");
@@ -1085,12 +1076,12 @@ namespace AsyncDataAdapter
                                 {
                                     DbConnection connection = AdaDbDataAdapter.GetConnection1(this);
 
-                                    ConnectionState state = await UpdateConnectionOpenAsync(connection, StatementType.Batch, connections, connectionStates, useSelectConnectionState).ConfigureAwait(false);
+                                    ConnectionState state = await this.UpdateConnectionOpenAsync( connection, StatementType.Batch, connections, connectionStates, useSelectConnectionState, cancellationToken ).ConfigureAwait(false);
                                     rowUpdatedEvent.AdapterInit_(rowBatch);
 
                                     if (ConnectionState.Open == state)
                                     {
-                                        UpdateBatchExecute(batchCommands, commandCount, rowUpdatedEvent);
+                                        await this.UpdateBatchExecuteAsync( batchCommands, commandCount, rowUpdatedEvent, cancellationToken ).ConfigureAwait(false);
                                     }
                                     else
                                     {
@@ -1102,10 +1093,10 @@ namespace AsyncDataAdapter
                                 else if (null != dataCommand)
                                 {
                                     DbConnection connection = AdaDbDataAdapter.GetConnection4(this, dataCommand, statementType, isCommandFromRowUpdating);
-                                    ConnectionState state = await UpdateConnectionOpenAsync(connection, statementType, connections, connectionStates, useSelectConnectionState).ConfigureAwait(false);
+                                    ConnectionState state = await this.UpdateConnectionOpenAsync( connection, statementType, connections, connectionStates, useSelectConnectionState, cancellationToken ).ConfigureAwait(false);
                                     if (ConnectionState.Open == state)
                                     {
-                                        UpdateRowExecute(rowUpdatedEvent, dataCommand, statementType);
+                                        await this.UpdateRowExecuteAsync( rowUpdatedEvent, dataCommand, statementType, cancellationToken ).ConfigureAwait(false);
                                         batchCommands[0].RecordsAffected = rowUpdatedEvent.RecordsAffected;
                                         batchCommands[0].Errors = null;
                                     }
@@ -1181,7 +1172,7 @@ namespace AsyncDataAdapter
                             {
                                 DbConnection connection = AdaDbDataAdapter.GetConnection1(this);
 
-                                ConnectionState state = await UpdateConnectionOpenAsync(connection, StatementType.Batch, connections, connectionStates, useSelectConnectionState).ConfigureAwait(false);
+                                ConnectionState state = await this.UpdateConnectionOpenAsync( connection, StatementType.Batch, connections, connectionStates, useSelectConnectionState, cancellationToken ).ConfigureAwait(false);
 
                                 DataRow[] finalRowBatch = rowBatch;
 
@@ -1194,7 +1185,7 @@ namespace AsyncDataAdapter
 
                                 if (ConnectionState.Open == state)
                                 {
-                                    UpdateBatchExecute(batchCommands, commandCount, rowUpdatedEvent);
+                                    await this.UpdateBatchExecuteAsync( batchCommands, commandCount, rowUpdatedEvent, cancellationToken );
                                 }
                                 else
                                 {
@@ -1247,12 +1238,12 @@ namespace AsyncDataAdapter
             }
         }
 
-        private void UpdateBatchExecute(BatchCommandInfo[] batchCommands, int commandCount, RowUpdatedEventArgs rowUpdatedEvent)
+        private async Task UpdateBatchExecuteAsync(BatchCommandInfo[] batchCommands, int commandCount, RowUpdatedEventArgs rowUpdatedEvent, CancellationToken cancellationToken )
         {
             try
             {
                 // the batch execution may succeed, partially succeed and throw an exception (or not), or totally fail
-                int recordsAffected = ExecuteBatch();
+                int recordsAffected = await this.ExecuteBatchAsync( cancellationToken );
                 rowUpdatedEvent.AdapterInit_(recordsAffected);
             }
             catch (DbException e)
@@ -1261,8 +1252,14 @@ namespace AsyncDataAdapter
                 rowUpdatedEvent.Errors = e;
                 rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
             }
-            MissingMappingAction missingMapping = UpdateMappingAction;
-            MissingSchemaAction missingSchema = UpdateSchemaAction;
+
+            this.AfterUpdateBatchExecute( batchCommands, commandCount, rowUpdatedEvent );
+        }
+
+        private void AfterUpdateBatchExecute(BatchCommandInfo[] batchCommands, int commandCount, RowUpdatedEventArgs rowUpdatedEvent )
+        {
+            MissingMappingAction missingMapping = this.UpdateMappingAction;
+            MissingSchemaAction  missingSchema  = this.UpdateSchemaAction;
 
             int checkRecordsAffected = 0;
             bool hasConcurrencyViolation = false;
@@ -1308,7 +1305,7 @@ namespace AsyncDataAdapter
                         && (0 != (UpdateRowSource.OutputParameters & batchCommand.UpdatedRowSource)) && (0 != rowAffected))  // MDAC 71174
                     {
                         if (StatementType.Insert == statementType)
-                        { // MDAC 64199
+                        {
                             // AcceptChanges for 'added' rows so backend generated keys that are returned
                             // propagte into the datatable correctly.
                             rowUpdatedEvent.GetRow_(bc).AcceptChanges();
@@ -1341,7 +1338,7 @@ namespace AsyncDataAdapter
             }
         }
 
-        private async Task<ConnectionState> UpdateConnectionOpenAsync(DbConnection connection, StatementType statementType, DbConnection[] connections, ConnectionState[] connectionStates, bool useSelectConnectionState)
+        private async Task<ConnectionState> UpdateConnectionOpenAsync(DbConnection connection, StatementType statementType, DbConnection[] connections, ConnectionState[] connectionStates, bool useSelectConnectionState, CancellationToken cancellationToken )
         {
             Debug.Assert(null != connection, "unexpected null connection");
             Debug.Assert(null != connection, "unexpected null connection");
@@ -1355,28 +1352,29 @@ namespace AsyncDataAdapter
                 connections[index] = connection;
                 connectionStates[index] = ConnectionState.Closed; // required, open may throw
 
-                connectionStates[index] = await QuietOpenAsync((DbConnection)connection).ConfigureAwait(false);
+                connectionStates[index] = await QuietOpenAsync( connection, cancellationToken ).ConfigureAwait(false);
 
                 if (useSelectConnectionState && (connections[0] == connection))
                 {
                     connectionStates[index] = connections[0].State;
                 }
             }
+
             return connection.State;
         }
 
-        private async Task<int> UpdateFromDataTableAsync(DataTable dataTable, DataTableMapping tableMapping)
+        private async Task<int> UpdateFromDataTableAsync(DataTable dataTable, DataTableMapping tableMapping, CancellationToken cancellationToken )
         {
             int rowsAffected = 0;
             DataRow[] dataRows = ADP.SelectAdapterRows(dataTable, false);
             if ((null != dataRows) && (0 < dataRows.Length))
             {
-                rowsAffected = await UpdateAsync(dataRows, tableMapping).ConfigureAwait(false);
+                rowsAffected = await this.UpdateAsync( dataRows, tableMapping, cancellationToken ).ConfigureAwait(false);
             }
             return rowsAffected;
         }
 
-        private void UpdateRowExecute(RowUpdatedEventArgs rowUpdatedEvent, DbCommand dataCommand, StatementType cmdIndex)
+        private async Task UpdateRowExecuteAsync( RowUpdatedEventArgs rowUpdatedEvent, DbCommand dataCommand, StatementType cmdIndex, CancellationToken cancellationToken )
         {
             Debug.Assert(null != rowUpdatedEvent, "null rowUpdatedEvent");
             Debug.Assert(null != dataCommand, "null dataCommand");
@@ -1384,15 +1382,17 @@ namespace AsyncDataAdapter
 
             bool insertAcceptChanges = true;
             UpdateRowSource updatedRowSource = dataCommand.UpdatedRowSource;
+           
             if ((StatementType.Delete == cmdIndex) || (0 == (UpdateRowSource.FirstReturnedRecord & updatedRowSource)))
             {
-                int recordsAffected = dataCommand.ExecuteNonQuery(); // MDAC 88441
-                rowUpdatedEvent.AdapterInit_(recordsAffected);
+                int recordsAffected = await dataCommand.ExecuteNonQueryAsync().ConfigureAwait(false);
+
+                rowUpdatedEvent.AdapterInit_( recordsAffected );
             }
             else if ((StatementType.Insert == cmdIndex) || (StatementType.Update == cmdIndex))
             {
                 // we only care about the first row of the first result
-                using (DbDataReader dataReader = dataCommand.ExecuteReader(CommandBehavior.SequentialAccess))
+                using ( DbDataReader dataReader = await dataCommand.ExecuteReaderAsync( CommandBehavior.SequentialAccess, cancellationToken ).ConfigureAwait(false) )
                 {
                     AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(dataReader);
                     try
@@ -1407,10 +1407,11 @@ namespace AsyncDataAdapter
                                 getData = true;
                                 break;
                             }
-                        } while (dataReader.NextResult());
+                        }
+                        while ( await dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false) );
 
                         if (getData && (0 != dataReader.RecordsAffected))
-                        { // MDAC 71174
+                        {
                             AdaSchemaMapping mapping = new AdaSchemaMapping(this, null, rowUpdatedEvent.Row.Table, readerHandler, false, SchemaType.Mapped, rowUpdatedEvent.TableMapping.SourceTable, true, null, null);
 
                             if ((null != mapping.DataTable) && (null != mapping.DataValues))
@@ -1445,15 +1446,28 @@ namespace AsyncDataAdapter
             }
 
             // map the parameter results to the dataSet
-            if (((StatementType.Insert == cmdIndex) || (StatementType.Update == cmdIndex))
-                && (0 != (UpdateRowSource.OutputParameters & updatedRowSource)) && (0 != rowUpdatedEvent.RecordsAffected))
-            { // MDAC 71174
+            if
+                (
+                    (
+                        (StatementType.Insert == cmdIndex)
+                        ||
+                        (StatementType.Update == cmdIndex)
+                    )
+                    &&
+                    (
+                        0 != (UpdateRowSource.OutputParameters & updatedRowSource)
+                    )
+                    &&
+                    (0 != rowUpdatedEvent.RecordsAffected)
+                )
+            {
 
                 if ((StatementType.Insert == cmdIndex) && insertAcceptChanges)
-                { // MDAC 64199
+                {
                     rowUpdatedEvent.Row.AcceptChanges();
                 }
-                ParameterOutput(dataCommand.Parameters, rowUpdatedEvent.Row, rowUpdatedEvent.TableMapping);
+                
+                this.ParameterOutput(dataCommand.Parameters, rowUpdatedEvent.Row, rowUpdatedEvent.TableMapping);
             }
 
             // Only error if RecordsAffect == 0, not -1.  A value of -1 means no count was received from server,
@@ -1624,6 +1638,8 @@ namespace AsyncDataAdapter
             }
         }
 
+        #region GetConnection
+
         private static DbConnection GetConnection1(AdaDbDataAdapter adapter)
         {
             DbCommand command = adapter.SelectCommand;
@@ -1673,6 +1689,9 @@ namespace AsyncDataAdapter
             }
             return connection;
         }
+
+        #endregion
+
         private static DataRowVersion GetParameterSourceVersion(StatementType statementType, IDataParameter parameter)
         {
             switch (statementType)
@@ -1688,6 +1707,22 @@ namespace AsyncDataAdapter
             }
         }
 
+        /// <summary></summary>
+        /// <remarks><see cref="QuietOpenAsync"/> needs to appear in the try {} finally { QuietClose } block otherwise a possibility exists that an exception may be thrown, i.e. <see cref="ThreadAbortException"/> where we would Open the connection and not close it</remarks>
+        /// <param name="connection"></param>
+        /// <returns></returns>
+        private static async Task<ConnectionState> QuietOpenAsync(DbConnection connection, CancellationToken cancellationToken )
+        {
+            Debug.Assert(null != connection, "QuietOpen: null connection");
+            var originalState = connection.State;
+            if (ConnectionState.Closed == originalState)
+            {
+                await connection.OpenAsync( cancellationToken ).ConfigureAwait(false);
+            }
+
+            return originalState;
+        }
+
         private static void QuietClose(DbConnection connection, ConnectionState originalState)
         {
             // close the connection if:
@@ -1699,20 +1734,6 @@ namespace AsyncDataAdapter
                 // it is supposed to be safe to call Close multiple times
                 connection.Close();
             }
-        }
-
-        // QuietOpen needs to appear in the try {} finally { QuietClose } block
-        // otherwise a possibility exists that an exception may be thrown, i.e. ThreadAbortException
-        // where we would Open the connection and not close it
-        private static async Task<ConnectionState> QuietOpenAsync(DbConnection connection)
-        {
-            Debug.Assert(null != connection, "QuietOpen: null connection");
-            var originalState = connection.State;
-            if (ConnectionState.Closed == originalState)
-            {
-                await connection.OpenAsync().ConfigureAwait(false);
-            }
-            return originalState;
         }
     }
 }
