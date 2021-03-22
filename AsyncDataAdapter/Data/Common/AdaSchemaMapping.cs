@@ -1,23 +1,17 @@
-﻿//------------------------------------------------------------------------------
-// <copyright file="SchemaMapping.cs" company="Microsoft">
-//      Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
-// <owner current="true" primary="true">[....]</owner>
-//------------------------------------------------------------------------------
-
 using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
+using System.Diagnostics;
+using System.Globalization;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace AsyncDataAdapter
+using AsyncDataAdapter.Internal;
+
+namespace AsyncDataAdapter.Internal
 {
-
-    using System.Collections.Generic;
-    using System.Data;
-    using System.Data.Common;
-    using System.Diagnostics;
-    using System.Globalization;
-
-    sealed internal class SchemaMapping
+    internal sealed class AdaSchemaMapping
     {
 
         // DataColumns match in length and name order as the DataReader, no chapters
@@ -44,8 +38,8 @@ namespace AsyncDataAdapter
         private readonly DataSet _dataSet; // the current dataset, may be null if we are only filling a DataTable
         private DataTable _dataTable; // the current DataTable, should never be null
 
-        private readonly DataAdapter _adapter;
-        private readonly DataReaderContainer _dataReader;
+        private readonly AdaDataAdapter _adapter;
+        private readonly AdaDataReaderContainer _dataReader;
         private readonly DataTable _schemaTable;  // will be null if Fill without schema
         private readonly DataTableMapping _tableMapping;
 
@@ -65,7 +59,7 @@ namespace AsyncDataAdapter
 
         private readonly LoadOption _loadOption;
 
-        internal SchemaMapping(DataAdapter adapter, DataSet dataset, DataTable datatable, DataReaderContainer dataReader, bool keyInfo,
+        internal AdaSchemaMapping(AdaDataAdapter adapter, DataSet dataset, DataTable datatable, AdaDataReaderContainer dataReader, bool keyInfo,
                                     SchemaType schemaType, string sourceTableName, bool gettingData,
                                     DataColumn parentChapterColumn, object parentChapterValue)
         {
@@ -104,7 +98,7 @@ namespace AsyncDataAdapter
             {
                 mappingAction = _adapter.MissingMappingAction;
                 schemaAction = _adapter.MissingSchemaAction;
-                if (!ADP.IsEmpty(sourceTableName))
+                if (!string.IsNullOrEmpty(sourceTableName))
                 { // MDAC 66034
                     _tableMapping = _adapter.GetTableMappingBySchemaAction(sourceTableName, sourceTableName, mappingAction);
                 }
@@ -137,7 +131,7 @@ namespace AsyncDataAdapter
             {
                 mappingAction = System.Data.MissingMappingAction.Passthrough;
                 schemaAction = MissingSchemaAction.Add;
-                if (!ADP.IsEmpty(sourceTableName))
+                if (!string.IsNullOrEmpty(sourceTableName))
                 { // MDAC 66034
                     _tableMapping = DataTableMappingCollection.GetTableMappingBySchemaAction(null, sourceTableName, sourceTableName, mappingAction);
                 }
@@ -182,7 +176,7 @@ namespace AsyncDataAdapter
             }
         }
 
-        internal DataReaderContainer DataReader
+        internal AdaDataReaderContainer DataReader
         {
             get
             {
@@ -398,44 +392,46 @@ namespace AsyncDataAdapter
             return _mappedDataValues;
         }
 
-        internal async Task LoadDataRowWithClear()
+        internal async Task LoadDataRowWithClearAsync( CancellationToken cancellationToken )
         {
             // for FillErrorEvent to ensure no values leftover from previous row
-            for (int i = 0; i < _readerDataValues.Length; ++i)
+            for (int i = 0; i < this._readerDataValues.Length; ++i)
             {
-                _readerDataValues[i] = null;
+                this._readerDataValues[i] = null;
             }
-            await LoadDataRow();
+
+            await this.LoadDataRowAsync( cancellationToken ).ConfigureAwait(false);
         }
 
-        internal async Task LoadDataRow()
+        internal async Task LoadDataRowAsync( CancellationToken cancellationToken )
         {
             try
             {
-                _dataReader.GetValues(_readerDataValues);
-                object[] mapped = GetMappedValues();
+                _ = this._dataReader.GetValues( _readerDataValues );
+                object[] mapped = this.GetMappedValues();
 
                 DataRow dataRow;
-                switch (_loadOption)
+                switch (this._loadOption)
                 {
                     case LoadOption.OverwriteChanges:
                     case LoadOption.PreserveChanges:
                     case LoadOption.Upsert:
-                        dataRow = _dataTable.LoadDataRow(mapped, _loadOption);
+                        dataRow = this._dataTable.LoadDataRow(mapped, _loadOption);
                         break;
                     case (LoadOption)4: // true
-                        dataRow = _dataTable.LoadDataRow(mapped, true);
+                        dataRow = this._dataTable.LoadDataRow(mapped, true);
                         break;
                     case (LoadOption)5: // false
-                        dataRow = _dataTable.LoadDataRow(mapped, false);
+                        dataRow = this._dataTable.LoadDataRow(mapped, false);
                         break;
                     default:
                         Debug.Assert(false, "unexpected LoadOption");
-                        throw ADP.InvalidLoadOption(_loadOption);
+                        throw ADP.InvalidLoadOption(this._loadOption);
                 }
-                if ((null != _chapterMap) && (null != _dataSet))
+
+                if ((null != this._chapterMap) && (null != this._dataSet))
                 {
-                    await LoadDataRowChaptersAsync(dataRow); // MDAC 70772
+                    await LoadDataRowChaptersAsync( dataRow, cancellationToken ).ConfigureAwait(false); // MDAC 70772
                 }
             }
             finally
@@ -463,7 +459,7 @@ namespace AsyncDataAdapter
             }
         }
 
-        internal async Task<int> LoadDataRowChaptersAsync(DataRow dataRow)
+        internal async Task<int> LoadDataRowChaptersAsync( DataRow dataRow, CancellationToken cancellationToken )
         {
             int datarowadded = 0;
 
@@ -474,39 +470,56 @@ namespace AsyncDataAdapter
                 {
                     object readerValue = _readerDataValues[i];
                     if ((null != readerValue) && !Convert.IsDBNull(readerValue))
-                    { // MDAC 70441
+                    {
                         _readerDataValues[i] = null;
 
-                        using (IDataReader nestedReader = (IDataReader)readerValue)
+                        if( readerValue is IDataReader nestedDataReader )
                         {
-                            if (!nestedReader.IsClosed)
-                            {
-                                Debug.Assert(null != _dataSet, "if chapters, then Fill(DataSet,...) not Fill(DataTable,...)");
-
-                                object parentChapterValue;
-                                DataColumn parentChapterColumn;
-                                if (null == _indexMap)
-                                {
-                                    parentChapterColumn = _dataTable.Columns[i];
-                                    parentChapterValue = dataRow[parentChapterColumn];
-                                }
-                                else
-                                {
-                                    parentChapterColumn = _dataTable.Columns[_indexMap[i]];
-                                    parentChapterValue = dataRow[parentChapterColumn];
-                                }
-
-                                // correct on Fill, not FillFromReader
-                                string chapterTableName = _tableMapping.SourceTable + _fieldNames[i]; // MDAC 70908
-
-                                DataReaderContainer readerHandler = DataReaderContainer.Create(nestedReader, _dataReader.ReturnProviderSpecificTypes);
-                                datarowadded += await _adapter.FillFromReaderAsync(_dataSet, null, chapterTableName, readerHandler, 0, 0, parentChapterColumn, parentChapterValue);
-                            }
+                            Int32 added = await this.LoadDataRowChaptersNestedReaderAsync( dataRow, i, nestedDataReader, cancellationToken ).ConfigureAwait(false);
+                            datarowadded += added;
                         }
                     }
                 }
             }
+
             return datarowadded;
+        }
+
+        private async Task<Int32> LoadDataRowChaptersNestedReaderAsync( DataRow dataRow, Int32 i, IDataReader nestedDataReader, CancellationToken cancellationToken )
+        {
+            using( nestedDataReader )
+            {
+                if( nestedDataReader.IsClosed ) return 0;
+                if( nestedDataReader is DbDataReader dbDataReader )
+                {
+                    Debug.Assert(null != _dataSet, "if chapters, then Fill(DataSet,...) not Fill(DataTable,...)");
+
+                    object parentChapterValue;
+                    DataColumn parentChapterColumn;
+                    if (null == _indexMap)
+                    {
+                        parentChapterColumn = _dataTable.Columns[i];
+                        parentChapterValue = dataRow[parentChapterColumn];
+                    }
+                    else
+                    {
+                        parentChapterColumn = _dataTable.Columns[_indexMap[i]];
+                        parentChapterValue = dataRow[parentChapterColumn];
+                    }
+
+                    // correct on Fill, not FillFromReader
+                    string chapterTableName = _tableMapping.SourceTable + _fieldNames[i]; // MDAC 70908
+
+                    AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dbDataReader, this._dataReader.ReturnProviderSpecificTypes );
+
+                    var fillFromReaderResult = await _adapter.FillFromReaderAsync( _dataSet, null, chapterTableName, readerHandler, 0, 0, parentChapterColumn, parentChapterValue, cancellationToken ).ConfigureAwait(false);
+                    return fillFromReaderResult;
+                }
+                else
+                {
+                    throw new InvalidOperationException( "Encountered an " + nameof(IDataReader) + " which is not a subclass of " + nameof(DbDataReader) + ". A " + nameof(DbDataReader) + " subclass is required for async operations." );
+                }
+            }
         }
 
         private int[] CreateIndexMap(int count, int index)
@@ -519,7 +532,7 @@ namespace AsyncDataAdapter
             return values;
         }
 
-        private static string[] GenerateFieldNames(DataReaderContainer dataReader)
+        private static string[] GenerateFieldNames(AdaDataReaderContainer dataReader)
         {
             string[] fieldNames = new string[dataReader.FieldCount];
             for (int i = 0; i < fieldNames.Length; ++i)
@@ -594,7 +607,7 @@ namespace AsyncDataAdapter
             try
             {
                 DataColumnCollection columnCollection = _dataTable.Columns;
-                columnCollection.EnsureAdditionalCapacity(count + (chapterValue != null ? 1 : 0));
+                columnCollection.EnsureAdditionalCapacity_(count + (chapterValue != null ? 1 : 0));
                 // We can always just create column if there are no existing column or column mappings, and the mapping action is passthrough
                 bool alwaysCreateColumns = ((_dataTable.Columns.Count == 0) && ((_tableMapping.ColumnMappings == null) || (_tableMapping.ColumnMappings.Count == 0)) && (mappingAction == MissingMappingAction.Passthrough));
 
@@ -640,7 +653,7 @@ namespace AsyncDataAdapter
                     DataColumn dataColumn;
                     if (alwaysCreateColumns)
                     {
-                        dataColumn = Helpers.CreateDataColumnBySchemaAction(_fieldNames[i], _fieldNames[i], _dataTable, fieldType, schemaAction);
+                        dataColumn = DataColumnReflection.CreateDataColumnBySchemaAction_(_fieldNames[i], _fieldNames[i], _dataTable, fieldType, schemaAction);
                     }
                     else
                     {
@@ -782,7 +795,7 @@ namespace AsyncDataAdapter
         private object[] SetupSchemaWithKeyInfo(MissingMappingAction mappingAction, MissingSchemaAction schemaAction, bool gettingData, DataColumn parentChapterColumn, object chapterValue)
         {
             // must sort rows from schema table by ordinal because Jet is sorted by coumn name
-            DbSchemaRow[] schemaRows = DbSchemaRow.GetSortedSchemaRows(_schemaTable, _dataReader.ReturnProviderSpecificTypes); // MDAC 60609
+            AdaDbSchemaRow[] schemaRows = AdaDbSchemaRow.GetSortedSchemaRows(_schemaTable, _dataReader.ReturnProviderSpecificTypes); // MDAC 60609
             Debug.Assert(null != schemaRows, "SchemaSetup - null DbSchemaRow[]");
             Debug.Assert(_dataReader.FieldCount <= schemaRows.Length, "unexpected fewer rows in Schema than FieldCount");
 
@@ -819,7 +832,7 @@ namespace AsyncDataAdapter
             {
                 for (int sortedIndex = 0; sortedIndex < schemaRows.Length; ++sortedIndex)
                 {
-                    DbSchemaRow schemaRow = schemaRows[sortedIndex];
+                    AdaDbSchemaRow schemaRow = schemaRows[sortedIndex];
 
                     int unsortedIndex = schemaRow.UnsortedIndex; // MDAC 67050
 
@@ -951,7 +964,7 @@ namespace AsyncDataAdapter
                     {// MDAC 67033
                         if (!commonFromMultiTable)
                         {
-                            if ((basetable != commonBaseTable) && (!ADP.IsEmpty(basetable)))
+                            if ((basetable != commonBaseTable) && (!string.IsNullOrEmpty(basetable)))
                             {
                                 if (null == commonBaseTable)
                                 {
@@ -965,7 +978,7 @@ namespace AsyncDataAdapter
                         }
                         if (4 <= (int)_loadOption)
                         {
-                            if (schemaRow.IsAutoIncrement && Helpers.IsAutoIncrementType(fieldType))
+                            if (schemaRow.IsAutoIncrement && DataColumnReflection.IsAutoIncrementType_(fieldType))
                             {
                                 // 
 
@@ -1158,7 +1171,7 @@ namespace AsyncDataAdapter
                             }
                         }
                     }
-                    if (!commonFromMultiTable && !ADP.IsEmpty(commonBaseTable) && ADP.IsEmpty(_dataTable.TableName))
+                    if (!commonFromMultiTable && !string.IsNullOrEmpty(commonBaseTable) && string.IsNullOrEmpty(_dataTable.TableName))
                     {
                         _dataTable.TableName = commonBaseTable;
                     }

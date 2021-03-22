@@ -1,27 +1,18 @@
-﻿//------------------------------------------------------------------------------
-// <copyright file="DBSchemaRow.cs" company="Microsoft">
-//      Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
-// <owner current="true" primary="true">[....]</owner>
-// <owner current="true" primary="false">[....]</owner>
-//------------------------------------------------------------------------------
+using System;
+using System.ComponentModel;
+using System.Data;
+using System.Diagnostics;
+using System.Globalization;
 
-namespace AsyncDataAdapter
+namespace AsyncDataAdapter.Internal
 {
-
-    using System;
-    using System.ComponentModel;
-    using System.Data;
-    using System.Diagnostics;
-    using System.Globalization;
-
-    sealed internal class DbSchemaRow
+    public sealed class AdaDbSchemaRow
     {
         internal const string SchemaMappingUnsortedIndex = "SchemaMapping Unsorted Index";
-        DbSchemaTable schemaTable;
+        AdaDbSchemaTable schemaTable;
         DataRow dataRow;
 
-        static internal DbSchemaRow[] GetSortedSchemaRows(DataTable dataTable, bool returnProviderSpecificTypes)
+        static internal AdaDbSchemaRow[] GetSortedSchemaRows(DataTable dataTable, bool returnProviderSpecificTypes)
         { // MDAC 60609
             DataColumn sortindex = dataTable.Columns[SchemaMappingUnsortedIndex];
             if (null == sortindex)
@@ -34,34 +25,28 @@ namespace AsyncDataAdapter
             {
                 dataTable.Rows[i][sortindex] = i;
             };
-            DbSchemaTable schemaTable = new DbSchemaTable(dataTable, returnProviderSpecificTypes);
+            AdaDbSchemaTable schemaTable = new AdaDbSchemaTable(dataTable, returnProviderSpecificTypes);
 
             const DataViewRowState rowStates = DataViewRowState.Unchanged | DataViewRowState.Added | DataViewRowState.ModifiedCurrent;
             DataRow[] dataRows = dataTable.Select(null, "ColumnOrdinal ASC", rowStates);
             Debug.Assert(null != dataRows, "GetSchemaRows: unexpected null dataRows");
 
-            DbSchemaRow[] schemaRows = new DbSchemaRow[dataRows.Length];
+            AdaDbSchemaRow[] schemaRows = new AdaDbSchemaRow[dataRows.Length];
 
             for (int i = 0; i < dataRows.Length; ++i)
             {
-                schemaRows[i] = new DbSchemaRow(schemaTable, dataRows[i]);
+                schemaRows[i] = new AdaDbSchemaRow(schemaTable, dataRows[i]);
             }
             return schemaRows;
         }
 
-        internal DbSchemaRow(DbSchemaTable schemaTable, DataRow dataRow)
+        internal AdaDbSchemaRow(AdaDbSchemaTable schemaTable, DataRow dataRow)
         {
             this.schemaTable = schemaTable;
             this.dataRow = dataRow;
         }
 
-        internal DataRow DataRow
-        {
-            get
-            {
-                return dataRow;
-            }
-        }
+        internal DataRow DataRow => this.dataRow;
 
         internal string ColumnName
         {

@@ -1,41 +1,92 @@
-﻿using System;
+using System;
 using System.Data;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
+
+using AsyncDataAdapter.SqlClient;
+
 using Microsoft.Data.SqlClient;
+
 using NUnit.Framework;
 
 namespace AsyncDataAdapter.Tests
 {
+    /// <remarks>Each individual test should take 9-15s to run.</summary>
     [TestFixture]
     public class SqlDataAdapterTest
     {
-        //private const string ConnectionString = @"server=.\sqlexpress;database=AsyncDataReaderTest;Trusted_Connection=Yes";
-        private const string ConnectionString = @"server=.\SQL2017;database=AsyncDataReaderTest;Trusted_Connection=Yes";
+        private const Int32 COMMAND_TIMEOUT = 30; // `SqlCommand.CommandTimeou` is valued in seconds, not milliseconds!
+
+        private static readonly String _ConnectionString = TestConfiguration.Instance.ConnectionString;
+
+        #region Utility
+        private static async Task<SqlConnection> CreateOpenConnectionAsync(CancellationToken cancellationToken = default)
+        {
+            SqlConnection conn = new SqlConnection(_ConnectionString);
+            try
+            {
+                await conn.OpenAsync(cancellationToken);
+                return conn;
+            }
+            catch
+            {
+                conn.Dispose();
+                throw;
+            }
+        }
+
+        private static SqlConnection CreateOpenConnection()
+        {
+            SqlConnection conn = new SqlConnection(_ConnectionString);
+            try
+            {
+                conn.Open();
+                return conn;
+            }
+            catch
+            {
+                conn.Dispose();
+                throw;
+            }
+        }
+
+        [OneTimeSetUp]
+        public async Task Setup()
+        {
+            using (SqlConnection conn = await CreateOpenConnectionAsync())
+            using (SqlCommand cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = "dbo.ResetTab1";
+                cmd.CommandType = CommandType.StoredProcedure;
+                
+                _ = await cmd.ExecuteNonQueryAsync();
+            }
+        }
+
+        #endregion
+
+        #region Fill(DataTable)
 
         [Test]
         public async Task FillAsyncDataTable()
         {
-            using (var conn = new SqlConnection())
+            using (SqlConnection conn = await CreateOpenConnectionAsync())
+            using (var c = conn.CreateCommand())
             {
-                conn.ConnectionString = ConnectionString;
-                await conn.OpenAsync();
+                c.CommandText = "GetFast";
+                c.CommandType = CommandType.StoredProcedure;
+                c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                using (var c = conn.CreateCommand())
+                using (AdaSqlDataAdapter a = new AdaSqlDataAdapter(c))
                 {
-                    c.CommandText = "GetFast";
-                    c.CommandType = CommandType.StoredProcedure;
-                    c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+                    var dt = new DataTable();
+                    var r = await a.FillAsync(dt);
 
-                    using (var a = new SqlDataAdapter(c))
-                    {
-                        var dt = new DataTable();
-                        var r = await a.FillAsync(dt);
+                    Assert.AreEqual(900000, r);
+                    Assert.AreEqual(900000, dt.Rows.Count);
 
-                        Assert.AreEqual(900000, r);
-                        Assert.AreEqual(900000, dt.Rows.Count);
-
-                        AssertDataTableContent(dt);
-                    }
+                    AssertDataTableContent(dt);
                 }
             }
         }
@@ -43,58 +94,52 @@ namespace AsyncDataAdapter.Tests
         [Test]
         public void FillDataTable()
         {
-            using (var conn = new SqlConnection())
+            using (SqlConnection conn = CreateOpenConnection())
+            using (var c = conn.CreateCommand())
             {
-                conn.ConnectionString = ConnectionString;
-                conn.Open();
+                c.CommandText = "GetFast";
+                c.CommandType = CommandType.StoredProcedure;
+                c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                using (var c = conn.CreateCommand())
+                using (SqlDataAdapter a = new SqlDataAdapter(c))
                 {
-                    c.CommandText = "GetFast";
-                    c.CommandType = CommandType.StoredProcedure;
-                    c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+                    var dt = new DataTable();
+                    var r = a.Fill(dt);
 
-                    using (var a = new Microsoft.Data.SqlClient.SqlDataAdapter(c))
-                    {
-                        var dt = new DataTable();
-                        var r = a.Fill(dt);
+                    Assert.AreEqual(900000, r);
+                    Assert.AreEqual(900000, dt.Rows.Count);
 
-                        Assert.AreEqual(900000, r);
-                        Assert.AreEqual(900000, dt.Rows.Count);
-
-                        AssertDataTableContent(dt);
-                    }
+                    AssertDataTableContent(dt);
                 }
             }
         }
 
+        #endregion
+
+        #region Fill(DataSet)
+
         [Test]
         public async Task FillAsyncDataSet()
         {
-            using (var conn = new SqlConnection())
+            using (SqlConnection conn = await CreateOpenConnectionAsync())
+            using (var c = conn.CreateCommand())
             {
-                conn.ConnectionString = ConnectionString;
-                await conn.OpenAsync();
+                c.CommandText = "GetFast";
+                c.CommandType = CommandType.StoredProcedure;
+                c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                using (var c = conn.CreateCommand())
+                using (AdaSqlDataAdapter a = new AdaSqlDataAdapter(c))
                 {
-                    c.CommandText = "GetFast";
-                    c.CommandType = CommandType.StoredProcedure;
-                    c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+                    var ds = new DataSet();
+                    var r = await a.FillAsync(ds);
 
-                    using (var a = new SqlDataAdapter(c))
-                    {
-                        var ds = new DataSet();
-                        var r = await a.FillAsync(ds);
+                    Assert.AreEqual(1, ds.Tables.Count);
+                    var dt = ds.Tables[0];
 
-                        Assert.AreEqual(1, ds.Tables.Count);
-                        var dt = ds.Tables[0];
+                    Assert.AreEqual(900000, r);
+                    Assert.AreEqual(900000, dt.Rows.Count);
 
-                        Assert.AreEqual(900000, r);
-                        Assert.AreEqual(900000, dt.Rows.Count);
-
-                        AssertDataTableContent(dt);
-                    }
+                    AssertDataTableContent(dt);
                 }
             }
         }
@@ -102,131 +147,125 @@ namespace AsyncDataAdapter.Tests
         [Test]
         public void FillDataSet()
         {
-            using (var conn = new SqlConnection())
+            using (SqlConnection conn = CreateOpenConnection())
+            using (var c = conn.CreateCommand())
             {
-                conn.ConnectionString = ConnectionString;
-                conn.Open();
+                c.CommandText = "GetFast";
+                c.CommandType = CommandType.StoredProcedure;
+                c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                using (var c = conn.CreateCommand())
+                using (SqlDataAdapter a = new SqlDataAdapter(c))
                 {
-                    c.CommandText = "GetFast";
-                    c.CommandType = CommandType.StoredProcedure;
-                    c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+                    var ds = new DataSet();
+                    var r = a.Fill(ds);
 
-                    using (var a = new Microsoft.Data.SqlClient.SqlDataAdapter(c))
-                    {
-                        var ds = new DataSet();
-                        var r = a.Fill(ds);
+                    Assert.AreEqual(1, ds.Tables.Count);
 
-                        Assert.AreEqual(1, ds.Tables.Count);
+                    var dt = ds.Tables[0];
 
-                        var dt = ds.Tables[0];
+                    Assert.AreEqual(900000, r);
+                    Assert.AreEqual(900000, dt.Rows.Count);
 
-                        Assert.AreEqual(900000, r);
-                        Assert.AreEqual(900000, dt.Rows.Count);
-
-                        AssertDataTableContent(dt);
-                    }
+                    AssertDataTableContent(dt);
                 }
             }
         }
+
+        #endregion
+
+        #region Fill(DataSet) - dbo.GetMulti
 
         [Test]
         public async Task FillAsyncDataSetMulti()
         {
-            using (var conn = new SqlConnection())
+            using (SqlConnection conn = await CreateOpenConnectionAsync())
+            using (var c = conn.CreateCommand())
             {
-                conn.ConnectionString = ConnectionString;
-                await conn.OpenAsync();
+                c.CommandText = "GetMulti";
+                c.CommandTimeout = COMMAND_TIMEOUT;
+                c.CommandType = CommandType.StoredProcedure;
+                c.Parameters.Add("@Number1", SqlDbType.Int).Value = 100000;
+                c.Parameters.Add("@Number2", SqlDbType.Int).Value = 300000;
+                c.Parameters.Add("@Number3", SqlDbType.Int).Value = 500000;
 
-                using (var c = conn.CreateCommand())
+                using (AdaSqlDataAdapter a = new AdaSqlDataAdapter(c))
                 {
-                    c.CommandText = "GetMulti";
-                    c.CommandTimeout = 600000;
-                    c.CommandType = CommandType.StoredProcedure;
-                    c.Parameters.Add("@Number1", SqlDbType.Int).Value = 100000;
-                    c.Parameters.Add("@Number2", SqlDbType.Int).Value = 300000;
-                    c.Parameters.Add("@Number3", SqlDbType.Int).Value = 500000;
+                    var ds = new DataSet();
 
-                    using (var a = new SqlDataAdapter(c))
-                    {
-                        var ds = new DataSet();
-                        var r = await a.FillAsync(ds);
+                    Stopwatch sw = Stopwatch.StartNew();
+                    var rowsRead = await a.FillAsync(ds);
+                    sw.Stop();
+                    Assert.GreaterOrEqual(sw.Elapsed.TotalSeconds, 7); // There are 7 `WAITFOR DELAY '00:00:01'` statements in the procedure.
+                    Assert.AreEqual(8, ds.Tables.Count);
 
-                        Assert.AreEqual(8, ds.Tables.Count);
+                    var dt = ds.Tables[0];
 
-                        var dt = ds.Tables[0];
+                    Assert.AreEqual(50000, rowsRead);
+                    Assert.AreEqual(50000, dt.Rows.Count);
 
-                        Assert.AreEqual(50000, r);
-                        Assert.AreEqual(50000, dt.Rows.Count);
+                    AssertDataTableContent(dt);
 
-                        AssertDataTableContent(dt);
+                    dt = ds.Tables[6];
 
-                        dt = ds.Tables[6];
+                    Assert.AreEqual(50000, dt.Rows.Count);
 
-                        Assert.AreEqual(50000, dt.Rows.Count);
+                    AssertDataTableContent(dt);
 
-                        AssertDataTableContent(dt);
+                    dt = ds.Tables[7];
 
-                        dt = ds.Tables[7];
+                    Assert.AreEqual(50000, dt.Rows.Count);
 
-                        Assert.AreEqual(50000, dt.Rows.Count);
-
-                        AssertDataTableContent(dt);
-                    }
+                    AssertDataTableContent(dt);
                 }
             }
         }
-
 
         [Test]
         public void FillDataSetMulti()
         {
-            using (var conn = new SqlConnection())
+            using (SqlConnection conn = CreateOpenConnection())
+            using (var c = conn.CreateCommand())
             {
-                conn.ConnectionString = ConnectionString;
-                conn.Open();
+                c.CommandText = "GetMulti";
+                c.CommandTimeout = COMMAND_TIMEOUT;
+                c.CommandType = CommandType.StoredProcedure;
+                c.Parameters.Add("@Number1", SqlDbType.Int).Value = 100000;
+                c.Parameters.Add("@Number2", SqlDbType.Int).Value = 300000;
+                c.Parameters.Add("@Number3", SqlDbType.Int).Value = 500000;
 
-                using (var c = conn.CreateCommand())
+                using (SqlDataAdapter a = new SqlDataAdapter(c))
                 {
-                    c.CommandText = "GetMulti";
-                    c.CommandTimeout = 600000;
-                    c.CommandType = CommandType.StoredProcedure;
-                    c.Parameters.Add("@Number1", SqlDbType.Int).Value = 100000;
-                    c.Parameters.Add("@Number2", SqlDbType.Int).Value = 300000;
-                    c.Parameters.Add("@Number3", SqlDbType.Int).Value = 500000;
+                    var ds = new DataSet();
 
-                    using (var a = new Microsoft.Data.SqlClient.SqlDataAdapter(c))
-                    {
-                        var ds = new DataSet();
-                        var r = a.Fill(ds);
+                    Stopwatch sw = Stopwatch.StartNew();
+                    var rowsRead = a.Fill(ds);
+                    sw.Stop();
+                    Assert.GreaterOrEqual(sw.Elapsed.TotalSeconds, 7); // There are 7 `WAITFOR DELAY '00:00:01'` statements in the procedure.
+                    Assert.AreEqual(8, ds.Tables.Count);
 
-                        Assert.AreEqual(8, ds.Tables.Count);
+                    var dt = ds.Tables[0];
 
-                        var dt = ds.Tables[0];
+                    Assert.AreEqual(50000, rowsRead);
+                    Assert.AreEqual(50000, dt.Rows.Count);
 
-                        Assert.AreEqual(50000, r);
-                        Assert.AreEqual(50000, dt.Rows.Count);
+                    AssertDataTableContent(dt);
 
-                        AssertDataTableContent(dt);
+                    dt = ds.Tables[6];
 
-                        dt = ds.Tables[6];
+                    Assert.AreEqual(50000, dt.Rows.Count);
 
-                        Assert.AreEqual(50000, dt.Rows.Count);
+                    AssertDataTableContent(dt);
 
-                        AssertDataTableContent(dt);
+                    dt = ds.Tables[7];
 
-                        dt = ds.Tables[7];
+                    Assert.AreEqual(50000, dt.Rows.Count);
 
-                        Assert.AreEqual(50000, dt.Rows.Count);
-
-                        AssertDataTableContent(dt);
-                    }
+                    AssertDataTableContent(dt);
                 }
             }
         }
 
-        private void AssertDataTableContent(DataTable dt)
+        private static void AssertDataTableContent(DataTable dt)
         {
             int i = 1;
 
@@ -254,7 +293,10 @@ namespace AsyncDataAdapter.Tests
                 Assert.AreEqual(st, ast);
                 Assert.AreEqual(txt, atxt);
                 i++;
-            } while (i < dt.Rows.Count);
+            }
+            while (i < dt.Rows.Count);
         }
+
+        #endregion
     }
 }

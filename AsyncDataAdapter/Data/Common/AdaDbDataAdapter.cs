@@ -1,4 +1,4 @@
-﻿//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // <copyright file="DbDataAdapter.cs" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
@@ -6,58 +6,48 @@
 // <owner current="true" primary="false">[....]</owner>
 //------------------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
+
+using AsyncDataAdapter.Internal;
 
 namespace AsyncDataAdapter
 {
-
-    using System;
-    using System.ComponentModel;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Data;
-    using System.Diagnostics;
-    using System.Reflection;
-    using System.Threading;
-
-    public abstract class DbDataAdapter : DataAdapter, /* IDbDataAdapter, */ ICloneable
-    { // V1.0.3300, MDAC 69629
-        public const string DefaultSourceTableName = "Table"; // V1.0.3300
+    public abstract class AdaDbDataAdapter : AdaDataAdapter, /* IDbDataAdapter, */ ICloneable
+    {
+        public const string DefaultSourceTableName = "Table";
 
         internal static readonly object ParameterValueNonNullValue = 0;
         internal static readonly object ParameterValueNullValue = 1;
 
-        private IDbCommand _deleteCommand, _insertCommand, _selectCommand, _updateCommand;
+        private DbCommand _deleteCommand, _insertCommand, _selectCommand, _updateCommand;
 
         private CommandBehavior _fillCommandBehavior;
 
         private struct BatchCommandInfo
         {
-            internal int CommandIdentifier;     // whatever AddToBatch returns, so we can reference the command later in GetBatchedParameter
-            internal int ParameterCount;        // number of parameters on the command, so we know how many to loop over when processing output parameters
-            internal DataRow Row;                   // the row that the command is intended to update
-            internal StatementType StatementType;         // the statement type of the command, needed for accept changes
+            internal int             CommandIdentifier;     // whatever AddToBatch returns, so we can reference the command later in GetBatchedParameter
+            internal int             ParameterCount;        // number of parameters on the command, so we know how many to loop over when processing output parameters
+            internal DataRow         Row;                   // the row that the command is intended to update
+            internal StatementType   StatementType;         // the statement type of the command, needed for accept changes
             internal UpdateRowSource UpdatedRowSource;      // the UpdatedRowSource value from the command, to know whether we need to look for output parameters or not
-            internal int? RecordsAffected;
-            internal Exception Errors;
+            internal int?            RecordsAffected;
+            internal Exception       Errors;
         }
 
-        protected DbDataAdapter() : base()
-        { // V1.0.3300
-        }
-
-        protected DbDataAdapter(DbDataAdapter adapter) : base(adapter)
-        { // V1.0.5000
-            CloneFrom(adapter);
-        }
-
-        private DbDataAdapter _IDbDataAdapter
+        protected AdaDbDataAdapter() : base()
         {
-            get
-            {
-                return (DbDataAdapter)this;
-            }
+        }
+
+        protected AdaDbDataAdapter(AdaDbDataAdapter adapter) : base(adapter)
+        { // V1.0.5000
+            this.CloneFrom(adapter);
         }
 
         //[
@@ -68,15 +58,15 @@ namespace AsyncDataAdapter
         //{ // V1.2.3300
         //    get
         //    {
-        //        return (DbCommand)(_IDbDataAdapter.DeleteCommand);
+        //        return (DbCommand)(this.DeleteCommand);
         //    }
         //    set
         //    {
-        //        _IDbDataAdapter.DeleteCommand = value;
+        //        this.DeleteCommand = value;
         //    }
         //}
 
-        public IDbCommand DeleteCommand
+        public DbCommand DeleteCommand
         { // V1.2.3300
             get
             {
@@ -114,15 +104,15 @@ namespace AsyncDataAdapter
         //{ // V1.2.3300
         //    get
         //    {
-        //        return (DbCommand)(_IDbDataAdapter.InsertCommand);
+        //        return (DbCommand)(this.InsertCommand);
         //    }
         //    set
         //    {
-        //        _IDbDataAdapter.InsertCommand = value;
+        //        this.InsertCommand = value;
         //    }
         //}
 
-        public IDbCommand InsertCommand
+        public DbCommand InsertCommand
         { // V1.2.3300
             get
             {
@@ -142,15 +132,15 @@ namespace AsyncDataAdapter
         //{ // V1.2.3300
         //    get
         //    {
-        //        return (DbCommand)(_IDbDataAdapter.SelectCommand);
+        //        return (DbCommand)(this.SelectCommand);
         //    }
         //    set
         //    {
-        //        _IDbDataAdapter.SelectCommand = value;
+        //        this.SelectCommand = value;
         //    }
         //}
 
-        public IDbCommand SelectCommand
+        public DbCommand SelectCommand
         { // V1.2.3300
             get
             {
@@ -177,7 +167,7 @@ namespace AsyncDataAdapter
             {
                 if (1 != value)
                 {
-                    throw ADP.NotSupported();
+                    throw new NotSupportedException();
                 }
             }
         }
@@ -190,15 +180,15 @@ namespace AsyncDataAdapter
         //{ // V1.2.3300
         //    get
         //    {
-        //        return (DbCommand)(_IDbDataAdapter.UpdateCommand);
+        //        return (DbCommand)(this.UpdateCommand);
         //    }
         //    set
         //    {
-        //        _IDbDataAdapter.UpdateCommand = value;
+        //        this.UpdateCommand = value;
         //    }
         //}
 
-        public IDbCommand UpdateCommand
+        public DbCommand UpdateCommand
         { // V1.2.3300
             get
             {
@@ -235,59 +225,54 @@ namespace AsyncDataAdapter
             }
         }
 
-        protected virtual int AddToBatch(IDbCommand command)
-        {
-            // Called to add a single command to the batch of commands that need
-            // to be executed as a batch, when batch updates are requested.  It
-            // must return an identifier that can be used to identify the command
-            // to GetBatchedParameter later.
+        /// <summary>Called to add a single command to the batch of commands that need to be executed as a batch, when batch updates are requested.  It must return an identifier that can be used to identify the command to GetBatchedParameter later.</summary>
+        protected abstract int AddToBatch(DbCommand command);
 
-            throw ADP.NotSupported();
-        }
+        /// <summary>Called when batch updates are requested to clear out the contents of the batch, whether or not it's been executed.</summary>
+        protected abstract void ClearBatch();
 
-        virtual protected void ClearBatch()
-        {
-            // Called when batch updates are requested to clear out the contents
-            // of the batch, whether or not it's been executed.
-
-            throw ADP.NotSupported();
-        }
+        /// <summary>Called to execute the batched update command, returns the number of rows affected, just as ExecuteNonQuery would.</summary>
+        protected abstract Task<int> ExecuteBatchAsync( CancellationToken cancellationToken );
 
         object ICloneable.Clone()
-        { // V1.0.3300, MDAC 69629
+        {
 #pragma warning disable 618 // ignore obsolete warning about CloneInternals
-            DbDataAdapter clone = (DbDataAdapter)CloneInternals();
+            AdaDbDataAdapter clone = (AdaDbDataAdapter)CloneInternals();
 #pragma warning restore 618
             clone.CloneFrom(this);
             return clone;
         }
 
-        private void CloneFrom(DbDataAdapter from)
+        private void CloneFrom(AdaDbDataAdapter from)
         {
-            var pfrom = from._IDbDataAdapter;
-            _IDbDataAdapter.SelectCommand = CloneCommand(pfrom.SelectCommand);
-            _IDbDataAdapter.InsertCommand = CloneCommand(pfrom.InsertCommand);
-            _IDbDataAdapter.UpdateCommand = CloneCommand(pfrom.UpdateCommand);
-            _IDbDataAdapter.DeleteCommand = CloneCommand(pfrom.DeleteCommand);
+            this.SelectCommand = CloneCommand(from.SelectCommand);
+            this.InsertCommand = CloneCommand(from.InsertCommand);
+            this.UpdateCommand = CloneCommand(from.UpdateCommand);
+            this.DeleteCommand = CloneCommand(from.DeleteCommand);
         }
 
-        private IDbCommand CloneCommand(IDbCommand command)
+        private static DbCommand CloneCommand(DbCommand command)
         {
-            return (IDbCommand)((command is ICloneable) ? ((ICloneable)command).Clone() : null);
+            if(command is ICloneable clonableCommand)
+            {
+                return (DbCommand)clonableCommand.Clone();
+            }
+
+            return null;
         }
 
-        virtual protected RowUpdatedEventArgs CreateRowUpdatedEvent(DataRow dataRow, IDbCommand command, StatementType statementType, DataTableMapping tableMapping)
-        { // V1.0.3300
+        protected virtual RowUpdatedEventArgs CreateRowUpdatedEvent(DataRow dataRow, DbCommand command, StatementType statementType, DataTableMapping tableMapping)
+        {
             return new RowUpdatedEventArgs(dataRow, command, statementType, tableMapping);
         }
 
-        virtual protected RowUpdatingEventArgs CreateRowUpdatingEvent(DataRow dataRow, IDbCommand command, StatementType statementType, DataTableMapping tableMapping)
-        { // V1.0.3300
+        protected virtual RowUpdatingEventArgs CreateRowUpdatingEvent(DataRow dataRow, DbCommand command, StatementType statementType, DataTableMapping tableMapping)
+        {
             return new RowUpdatingEventArgs(dataRow, command, statementType, tableMapping);
         }
 
-        override protected void Dispose(bool disposing)
-        { // V1.0.3300, MDAC 69629
+        protected override void Dispose(bool disposing)
+        {
             if (disposing)
             { // release mananged objects
                 var pthis = this; //(IDbDataAdapter)this; // must cast to interface to obtain correct value
@@ -301,105 +286,66 @@ namespace AsyncDataAdapter
             base.Dispose(disposing); // notify base classes
         }
 
-        protected virtual int ExecuteBatch()
+        public async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType, CancellationToken cancellationToken )
         {
-            // Called to execute the batched update command, returns the number
-            // of rows affected, just as ExecuteNonQuery would.
-
-            throw ADP.NotSupported();
-        }
-
-        public async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.FillSchema|API> %d#, dataTable, schemaType=%d{ds.SchemaType}\n", ObjectID, (int)schemaType);
-            try
             {
-                IDbCommand selectCmd = _IDbDataAdapter.SelectCommand;
+                DbCommand selectCmd = this.SelectCommand;
                 CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await FillSchemaAsync(dataTable, schemaType, selectCmd, cmdBehavior); // MDAC 67666
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
+                return await FillSchemaAsync(dataTable, schemaType, selectCmd, cmdBehavior, cancellationToken ).ConfigureAwait(false); // MDAC 67666
             }
         }
 
-        override public async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.FillSchema|API> %d#, dataSet, schemaType=%d{ds.SchemaType}\n", ObjectID, (int)schemaType);
-            try
+        public override async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, CancellationToken cancellationToken )
+        {
             {
-                IDbCommand command = _IDbDataAdapter.SelectCommand;
-                if (DesignMode && ((null == command) || (null == command.Connection) || ADP.IsEmpty(command.CommandText)))
+                DbCommand command = this.SelectCommand;
+                if (DesignMode && ((null == command) || (null == command.Connection) || string.IsNullOrEmpty(command.CommandText)))
                 {
                     return new DataTable[0]; // design-time support
                 }
                 CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await FillSchemaAsync(dataSet, schemaType, command, DbDataAdapter.DefaultSourceTableName, cmdBehavior);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
+                return await this.FillSchemaAsync(dataSet, schemaType, command, AdaDbDataAdapter.DefaultSourceTableName, cmdBehavior, cancellationToken ).ConfigureAwait(false);
             }
         }
 
-        public async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, string srcTable)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.FillSchema|API> %d#, dataSet, schemaType=%d{ds.SchemaType}, srcTable=%ls%\n", ObjectID, (int)schemaType, srcTable);
-            try
+        public async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, string srcTable, CancellationToken cancellationToken )
+        {
             {
-                IDbCommand selectCmd = _IDbDataAdapter.SelectCommand;
+                DbCommand selectCmd = this.SelectCommand;
                 CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await FillSchemaAsync(dataSet, schemaType, selectCmd, srcTable, cmdBehavior);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
+                return await this.FillSchemaAsync(dataSet, schemaType, selectCmd, srcTable, cmdBehavior, cancellationToken ).ConfigureAwait(false);
             }
         }
 
-        virtual async protected Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, IDbCommand command, string srcTable, CommandBehavior behavior)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.FillSchema|API> %d#, dataSet, schemaType, command, srcTable, behavior=%d{ds.CommandBehavior}\n", ObjectID, (int)behavior);
-            try
+        protected virtual async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, DbCommand command, string srcTable, CommandBehavior behavior, CancellationToken cancellationToken )
+        {
             {
                 if (null == dataSet)
                 {
-                    throw ADP.ArgumentNull("dataSet");
+                    throw new ArgumentNullException(nameof(dataSet));
                 }
                 if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType))
                 {
                     throw ADP.InvalidSchemaType(schemaType);
                 }
-                if (ADP.IsEmpty(srcTable))
+                if (string.IsNullOrEmpty(srcTable))
                 {
                     throw ADP.FillSchemaRequiresSourceTableName("srcTable");
                 }
                 if (null == command)
                 {
-                    throw ADP.MissingSelectCommand(ADP.FillSchema);
+                    throw ADP.MissingSelectCommand(method: "FillSchema");
                 }
-                return (DataTable[]) await FillSchemaInternalAsync(dataSet, null, schemaType, command, srcTable, behavior);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
+                return (DataTable[]) await this.FillSchemaInternalAsync(dataSet, null, schemaType, command, srcTable, behavior, cancellationToken ).ConfigureAwait(false);
             }
         }
 
-        virtual protected async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType, IDbCommand command, CommandBehavior behavior)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.FillSchema|API> %d#, dataTable, schemaType, command, behavior=%d{ds.CommandBehavior}\n", ObjectID, (int)behavior);
-            try
+        protected virtual async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType, DbCommand command, CommandBehavior behavior, CancellationToken cancellationToken )
+        {
             {
                 if (null == dataTable)
                 {
-                    throw ADP.ArgumentNull("dataTable");
+                    throw new ArgumentNullException(nameof(dataTable));
                 }
                 if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType))
                 {
@@ -407,49 +353,46 @@ namespace AsyncDataAdapter
                 }
                 if (null == command)
                 {
-                    throw ADP.MissingSelectCommand(ADP.FillSchema);
+                    throw ADP.MissingSelectCommand("FillSchema");
                 }
                 string srcTableName = dataTable.TableName;
                 int index = IndexOfDataSetTable(srcTableName);
                 if (-1 != index)
                 {
-                    srcTableName = TableMappings[index].SourceTable;
+                    srcTableName = this.TableMappings[index].SourceTable;
                 }
-                return (DataTable) await FillSchemaInternalAsync(null, dataTable, schemaType, command, srcTableName, behavior | CommandBehavior.SingleResult);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
+
+                return (DataTable) await this.FillSchemaInternalAsync( null, dataTable, schemaType, command, srcTableName, behavior | CommandBehavior.SingleResult, cancellationToken ).ConfigureAwait(false);
             }
         }
 
-        private async Task<object> FillSchemaInternalAsync(DataSet dataset, DataTable datatable, SchemaType schemaType, IDbCommand command, string srcTable, CommandBehavior behavior)
+        private async Task<object> FillSchemaInternalAsync(DataSet dataset, DataTable datatable, SchemaType schemaType, DbCommand command, string srcTable, CommandBehavior behavior, CancellationToken cancellationToken )
         {
             object dataTables = null;
             bool restoreNullConnection = (null == command.Connection);
             try
             {
-                IDbConnection activeConnection = DbDataAdapter.GetConnection3(this, command, ADP.FillSchema);
+                DbConnection activeConnection = AdaDbDataAdapter.GetConnection3(this, command, "FillSchema");
                 ConnectionState originalState = ConnectionState.Open;
 
                 try
                 {
-                    originalState = await QuietOpenAsync((DbConnection)activeConnection);
-                    using (DbDataReader dataReader = (DbDataReader)command.ExecuteReader(behavior | CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo))
+                    originalState = await QuietOpenAsync( activeConnection, cancellationToken ).ConfigureAwait(false);
+                    using (DbDataReader dataReader = await command.ExecuteReaderAsync( behavior | CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo, cancellationToken ).ConfigureAwait(false) )
                     {
                         if (null != datatable)
                         { // delegate to next set of protected FillSchema methods
-                            dataTables = await FillSchemaAsync(datatable, schemaType, dataReader);
+                            dataTables = await this.FillSchemaAsync(datatable, schemaType, dataReader).ConfigureAwait(false);
                         }
                         else
                         {
-                            dataTables = await FillSchemaAsync(dataset, schemaType, srcTable, dataReader);
+                            dataTables = await this.FillSchemaAsync(dataset, schemaType, srcTable, dataReader).ConfigureAwait(false);
                         }
                     }
                 }
                 finally
                 {
-                    QuietClose((DbConnection)activeConnection, originalState);
+                    QuietClose( activeConnection, originalState);
                 }
             }
             finally
@@ -463,149 +406,92 @@ namespace AsyncDataAdapter
             return dataTables;
         }
 
-        override public async Task<int> FillAsync(DataSet dataSet)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, dataSet\n", ObjectID);
-            try
-            {
-                // delegate to Fill4
-                IDbCommand selectCmd = _IDbDataAdapter.SelectCommand;
-                CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await FillAsync(dataSet, 0, 0, DbDataAdapter.DefaultSourceTableName, selectCmd, cmdBehavior);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
+        public override async Task<int> FillAsync( DataSet dataSet, CancellationToken cancellationToken = default )
+        {
+            // delegate to Fill4
+            DbCommand selectCmd = this.SelectCommand;
+            CommandBehavior cmdBehavior = this.FillCommandBehavior;
+
+            return await this.FillAsync( dataSet, 0, 0, AdaDbDataAdapter.DefaultSourceTableName, selectCmd, cmdBehavior, cancellationToken ).ConfigureAwait(false);
         }
 
-        public async Task<int> FillAsync(DataSet dataSet, string srcTable)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, dataSet, srcTable='%ls'\n", ObjectID, srcTable);
-            try
-            {
-                // delegate to Fill4
-                IDbCommand selectCmd = _IDbDataAdapter.SelectCommand;
-                CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await FillAsync(dataSet, 0, 0, srcTable, selectCmd, cmdBehavior);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
+        public async Task<int> FillAsync(DataSet dataSet, string srcTable, CancellationToken cancellationToken = default )
+        {
+            // delegate to Fill4
+            DbCommand selectCmd = this.SelectCommand;
+            CommandBehavior cmdBehavior = this.FillCommandBehavior;
+
+            return await this.FillAsync( dataSet, 0, 0, srcTable, selectCmd, cmdBehavior, cancellationToken ).ConfigureAwait(false);
         }
 
-        public async Task<int> FillAsync(DataSet dataSet, int startRecord, int maxRecords, string srcTable)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, dataSet, startRecord=%d, maxRecords=%d, srcTable='%ls'\n", ObjectID, startRecord, maxRecords, srcTable);
-            try
-            {
-                // delegate to Fill4
-                IDbCommand selectCmd = _IDbDataAdapter.SelectCommand;
-                CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await FillAsync(dataSet, startRecord, maxRecords, srcTable, selectCmd, cmdBehavior);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
+        public async Task<int> FillAsync(DataSet dataSet, int startRecord, int maxRecords, string srcTable, CancellationToken cancellationToken = default )
+        {
+            // delegate to Fill4
+            DbCommand selectCmd = this.SelectCommand;
+            CommandBehavior cmdBehavior = this.FillCommandBehavior;
+
+            return await this.FillAsync( dataSet, startRecord, maxRecords, srcTable, selectCmd, cmdBehavior, cancellationToken ).ConfigureAwait(false);
         }
 
-        virtual protected async Task<int> FillAsync(DataSet dataSet, int startRecord, int maxRecords, string srcTable, IDbCommand command, CommandBehavior behavior)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, dataSet, startRecord, maxRecords, srcTable, command, behavior=%d{ds.CommandBehavior}\n", ObjectID, (int)behavior);
-            try
+        protected virtual async Task<int> FillAsync(DataSet dataSet, int startRecord, int maxRecords, string srcTable, DbCommand command, CommandBehavior behavior, CancellationToken cancellationToken = default )
+        {
+            if (null == dataSet)
             {
-                if (null == dataSet)
-                {
-                    throw ADP.FillRequires("dataSet");
-                }
-                if (startRecord < 0)
-                {
-                    throw ADP.InvalidStartRecord("startRecord", startRecord);
-                }
-                if (maxRecords < 0)
-                {
-                    throw ADP.InvalidMaxRecords("maxRecords", maxRecords);
-                }
-                if (ADP.IsEmpty(srcTable))
-                {
-                    throw ADP.FillRequiresSourceTableName("srcTable");
-                }
-                if (null == command)
-                {
-                    throw ADP.MissingSelectCommand(ADP.Fill);
-                }
-                return await FillInternalAsync(dataSet, null, startRecord, maxRecords, srcTable, command, behavior);
+                throw ADP.FillRequires("dataSet");
             }
-            finally
+            if (startRecord < 0)
             {
-
-                Bid.ScopeLeave(ref hscp);
+                throw ADP.InvalidStartRecord("startRecord", startRecord);
             }
+            if (maxRecords < 0)
+            {
+                throw ADP.InvalidMaxRecords("maxRecords", maxRecords);
+            }
+            if (string.IsNullOrEmpty(srcTable))
+            {
+                throw ADP.FillRequiresSourceTableName("srcTable");
+            }
+            if (null == command)
+            {
+                throw ADP.MissingSelectCommand("Fill");
+            }
+            return await this.FillInternalAsync( dataSet, null, startRecord, maxRecords, srcTable, command, behavior, cancellationToken ).ConfigureAwait(false);
         }
 
 
-        public async Task<int> FillAsync(DataTable dataTable)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, dataTable\n", ObjectID);
-            try
+        public async Task<int> FillAsync(DataTable dataTable, CancellationToken cancellationToken = default )
+        {
             {
                 // delegate to Fill8
                 DataTable[] dataTables = new DataTable[1] { dataTable };
-                IDbCommand selectCmd = _IDbDataAdapter.SelectCommand;
+                DbCommand selectCmd = this.SelectCommand;
                 CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await FillAsync(dataTables, 0, 0, selectCmd, cmdBehavior);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
+                return await FillAsync(dataTables, 0, 0, selectCmd, cmdBehavior, cancellationToken ).ConfigureAwait(false);
             }
         }
 
-        public async Task<int> FillAsync(int startRecord, int maxRecords, params DataTable[] dataTables)
+//      public async Task<int> FillAsync(int startRecord, int maxRecords, params DataTable[] dataTables)
+        public async Task<int> FillAsync(int startRecord, int maxRecords, CancellationToken cancellationToken, params DataTable[] dataTables)
         { // V1.2.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, startRecord=%d, maxRecords=%d, dataTable[]\n", ObjectID, startRecord, maxRecords);
-            try
             {
                 // delegate to Fill8
-                IDbCommand selectCmd = _IDbDataAdapter.SelectCommand;
+                DbCommand selectCmd = this.SelectCommand;
                 CommandBehavior cmdBehavior = FillCommandBehavior;
-                return await FillAsync(dataTables, startRecord, maxRecords, selectCmd, cmdBehavior);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
+                return await FillAsync(dataTables, startRecord, maxRecords, selectCmd, cmdBehavior, cancellationToken ).ConfigureAwait(false);
             }
         }
 
-        virtual protected async Task<int> FillAsync(DataTable dataTable, IDbCommand command, CommandBehavior behavior)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> dataTable, command, behavior=%d{ds.CommandBehavior}%d#\n", ObjectID, (int)behavior);
-            try
+        protected virtual async Task<int> FillAsync(DataTable dataTable, DbCommand command, CommandBehavior behavior, CancellationToken cancellationToken = default )
+        {
             {
                 // delegate to Fill8
                 DataTable[] dataTables = new DataTable[1] { dataTable };
-                return await FillAsync(dataTables, 0, 0, command, behavior);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
+                return await FillAsync(dataTables, 0, 0, command, behavior, cancellationToken ).ConfigureAwait(false);
             }
         }
 
-        virtual protected async Task<int> FillAsync(DataTable[] dataTables, int startRecord, int maxRecords, IDbCommand command, CommandBehavior behavior)
+        protected virtual async Task<int> FillAsync(DataTable[] dataTables, int startRecord, int maxRecords, DbCommand command, CommandBehavior behavior, CancellationToken cancellationToken = default )
         { // V1.2.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, dataTables[], startRecord, maxRecords, command, behavior=%d{ds.CommandBehavior}\n", ObjectID, (int)behavior);
-            try
             {
                 if ((null == dataTables) || (0 == dataTables.Length) || (null == dataTables[0]))
                 {
@@ -625,66 +511,53 @@ namespace AsyncDataAdapter
                 }
                 if (null == command)
                 {
-                    throw ADP.MissingSelectCommand(ADP.Fill);
+                    throw ADP.MissingSelectCommand("Fill");
                 }
                 if (1 == dataTables.Length)
                 {
                     behavior |= CommandBehavior.SingleResult;
                 }
-                return await FillInternalAsync(null, dataTables, startRecord, maxRecords, null, command, behavior);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
+                return await FillInternalAsync(null, dataTables, startRecord, maxRecords, null, command, behavior, cancellationToken ).ConfigureAwait(false);
             }
         }
 
-        private async Task<int> FillInternalAsync(DataSet dataset, DataTable[] datatables, int startRecord, int maxRecords, string srcTable, IDbCommand command, CommandBehavior behavior)
+        private async Task<int> FillInternalAsync( DataSet dataset, DataTable[] datatables, int startRecord, int maxRecords, string srcTable, DbCommand command, CommandBehavior behavior, CancellationToken cancellationToken )
         {
             int rowsAddedToDataSet = 0;
             bool restoreNullConnection = (null == command.Connection);
             try
             {
-                IDbConnection activeConnection = DbDataAdapter.GetConnection3(this, command, ADP.Fill);
+                DbConnection activeConnection = AdaDbDataAdapter.GetConnection3(this, command, "Fill");
                 ConnectionState originalState = ConnectionState.Open;
 
                 // the default is MissingSchemaAction.Add, the user must explicitly
                 // set MisingSchemaAction.AddWithKey to get key information back in the dataset
-                if (MissingSchemaAction.AddWithKey == MissingSchemaAction)
+                if (MissingSchemaAction.AddWithKey == this.MissingSchemaAction)
                 {
                     behavior |= CommandBehavior.KeyInfo;
                 }
 
                 try
                 {
-                    originalState = await QuietOpenAsync((DbConnection)activeConnection);
+                    originalState = await QuietOpenAsync( activeConnection, cancellationToken ).ConfigureAwait(false);
                     behavior |= CommandBehavior.SequentialAccess;
 
-                    IDataReader dataReader = null;
-                    try
+                    using( DbDataReader dbDataReader = await command.ExecuteReaderAsync( behavior, cancellationToken ).ConfigureAwait(false) )
                     {
-                        dataReader = await ((DbCommand)command).ExecuteReaderAsync(behavior);
-
-                        if (null != datatables)
-                        { // delegate to next set of protected Fill methods
-                            rowsAddedToDataSet = await FillAsync(datatables, dataReader, startRecord, maxRecords);
+                        if (datatables != null)
+                        {
+                            // delegate to next set of protected Fill methods
+                            rowsAddedToDataSet = await this.FillAsync( datatables, dbDataReader, startRecord, maxRecords, cancellationToken ).ConfigureAwait(false);
                         }
                         else
                         {
-                            rowsAddedToDataSet = await FillAsync(dataset, srcTable, dataReader, startRecord, maxRecords);
-                        }
-                    }
-                    finally
-                    {
-                        if (null != dataReader)
-                        {
-                            dataReader.Dispose();
+                            rowsAddedToDataSet = await this.FillAsync( dataset, srcTable, dbDataReader, startRecord, maxRecords, cancellationToken ).ConfigureAwait(false);
                         }
                     }
                 }
                 finally
                 {
-                    QuietClose((DbConnection)activeConnection, originalState);
+                    QuietClose( activeConnection, originalState );
                 }
             }
             finally
@@ -698,16 +571,16 @@ namespace AsyncDataAdapter
             return rowsAddedToDataSet;
         }
 
-        virtual protected IDataParameter GetBatchedParameter(int commandIdentifier, int parameterIndex)
+        protected virtual IDataParameter GetBatchedParameter(int commandIdentifier, int parameterIndex)
         {
             // Called to retrieve a parameter from a specific bached command, the
             // first argument is the value that was returned by AddToBatch when it
             // was called for the command.
 
-            throw ADP.NotSupported();
+           throw new NotSupportedException();
         }
 
-        virtual protected bool GetBatchedRecordsAffected(int commandIdentifier, out int recordsAffected, out Exception error)
+        protected virtual bool GetBatchedRecordsAffected(int commandIdentifier, out int recordsAffected, out Exception error)
         { // SQLBU 412467
             // Called to retrieve the records affected from a specific batched command,
             // first argument is the value that was returned by AddToBatch when it
@@ -724,9 +597,9 @@ namespace AsyncDataAdapter
 
         [EditorBrowsableAttribute(EditorBrowsableState.Advanced)] // MDAC 69508
         override public IDataParameter[] GetFillParameters()
-        { // V1.0.3300
+        {
             IDataParameter[] value = null;
-            IDbCommand select = _IDbDataAdapter.SelectCommand;
+            DbCommand select = this.SelectCommand;
             if (null != select)
             {
                 IDataParameterCollection parameters = select.Parameters;
@@ -762,20 +635,20 @@ namespace AsyncDataAdapter
             return tableMapping;
         }
 
-        virtual protected void InitializeBatching()
+        protected virtual void InitializeBatching()
         {
             // Called when batch updates are requested to prepare for processing
             // of a batch of commands.
 
-            throw ADP.NotSupported();
+           throw new NotSupportedException();
         }
 
-        virtual protected void OnRowUpdated(RowUpdatedEventArgs value)
-        { // V1.0.3300
+        protected virtual void OnRowUpdated(RowUpdatedEventArgs value)
+        {
         }
 
-        virtual protected void OnRowUpdating(RowUpdatingEventArgs value)
-        { // V1.0.3300
+        protected virtual void OnRowUpdating(RowUpdatingEventArgs value)
+        {
         }
 
         private void ParameterInput(IDataParameterCollection parameters, StatementType typeIndex, DataRow row, DataTableMapping mappings)
@@ -789,13 +662,13 @@ namespace AsyncDataAdapter
                 {
 
                     string columnName = parameter.SourceColumn;
-                    if (!ADP.IsEmpty(columnName))
+                    if (!string.IsNullOrEmpty(columnName))
                     {
 
                         DataColumn dataColumn = mappings.GetDataColumn(columnName, null, row.Table, missingMapping, missingSchema);
                         if (null != dataColumn)
                         {
-                            DataRowVersion version = DbDataAdapter.GetParameterSourceVersion(typeIndex, parameter);
+                            DataRowVersion version = AdaDbDataAdapter.GetParameterSourceVersion(typeIndex, parameter);
                             parameter.Value = row[dataColumn, version];
                         }
                         else
@@ -818,13 +691,12 @@ namespace AsyncDataAdapter
         {
             if (0 != (ParameterDirection.Output & parameter.Direction))
             {
-
                 object value = parameter.Value;
                 if (null != value)
                 {
                     // null means default, meaning we leave the current DataRow value alone
                     string columnName = parameter.SourceColumn;
-                    if (!ADP.IsEmpty(columnName))
+                    if (!string.IsNullOrEmpty(columnName))
                     {
 
                         DataColumn dataColumn = mappings.GetDataColumn(columnName, null, row.Table, missingMapping, missingSchema);
@@ -854,83 +726,61 @@ namespace AsyncDataAdapter
 
         private void ParameterOutput(IDataParameterCollection parameters, DataRow row, DataTableMapping mappings)
         {
-            MissingMappingAction missingMapping = UpdateMappingAction;
-            MissingSchemaAction missingSchema = UpdateSchemaAction;
+            MissingMappingAction missingMapping = this.UpdateMappingAction;
+            MissingSchemaAction  missingSchema  = this.UpdateSchemaAction;
 
             foreach (IDataParameter parameter in parameters)
             {
                 if (null != parameter)
                 {
-                    ParameterOutput(parameter, row, mappings, missingMapping, missingSchema);
+                    this.ParameterOutput(parameter, row, mappings, missingMapping, missingSchema);
                 }
             }
         }
 
-        virtual protected void TerminateBatching()
+        /// <summary>Called when batch updates are requested to cleanup after a batch update has been completed.</summary>
+        protected abstract void TerminateBatching();
+
+        public override Task<int> UpdateAsync(DataSet dataSet, CancellationToken cancellationToken = default)
         {
-            // Called when batch updates are requested to cleanup after a batch
-            // update has been completed.
-
-            throw ADP.NotSupported();
-        }
-
-        override public async Task<int> UpdateAsync(DataSet dataSet)
-        { // V1.0.3300
             //if (!TableMappings.Contains(DbDataAdapter.DefaultSourceTableName)) { // MDAC 59268
             //    throw ADP.UpdateRequiresSourceTable(DbDataAdapter.DefaultSourceTableName);
             //}
-            return await UpdateAsync(dataSet, DbDataAdapter.DefaultSourceTableName);
+
+            return this.UpdateAsync( dataSet, AdaDbDataAdapter.DefaultSourceTableName, cancellationToken );
         }
 
-        public async Task<int> UpdateAsync(DataRow[] dataRows)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Update|API> %d#, dataRows[]\n", ObjectID);
-            try
+        public async Task<int> UpdateAsync(DataRow[] dataRows, CancellationToken cancellationToken)
+        {
+            int rowsAffected = 0;
+            if (null == dataRows)
             {
-                int rowsAffected = 0;
-                if (null == dataRows)
+                throw new ArgumentNullException(nameof(dataRows));
+            }
+            else if (0 != dataRows.Length)
+            {
+                DataTable dataTable = null;
+                for (int i = 0; i < dataRows.Length; ++i)
                 {
-                    throw ADP.ArgumentNull("dataRows");
-                }
-                else if (0 != dataRows.Length)
-                {
-                    DataTable dataTable = null;
-                    for (int i = 0; i < dataRows.Length; ++i)
+                    if ((null != dataRows[i]) && (dataTable != dataRows[i].Table))
                     {
-                        if ((null != dataRows[i]) && (dataTable != dataRows[i].Table))
-                        {
-                            if (null != dataTable)
-                            {
-                                throw ADP.UpdateMismatchRowTable(i);
-                            }
-                            dataTable = dataRows[i].Table;
-                        }
-                    }
-                    if (null != dataTable)
-                    {
-                        DataTableMapping tableMapping = GetTableMapping(dataTable);
-                        rowsAffected = await UpdateAsync(dataRows, tableMapping);
+                        if (null != dataTable) throw new ArgumentException(string.Format("DataRow[{0}] is from a different DataTable than DataRow[0].", i));
+                        dataTable = dataRows[i].Table;
                     }
                 }
-                return rowsAffected;
+                if (null != dataTable)
+                {
+                    DataTableMapping tableMapping = this.GetTableMapping(dataTable);
+                    rowsAffected = await this.UpdateAsync( dataRows, tableMapping, cancellationToken ).ConfigureAwait(false);
+                }
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
+            return rowsAffected;
         }
 
-        public async Task<int> UpdateAsync(DataTable dataTable)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Update|API> %d#, dataTable", ObjectID);
-            try
+        public async Task<int> UpdateAsync(DataTable dataTable, CancellationToken cancellationToken)
+        {
             {
-                if (null == dataTable)
-                {
-                    throw ADP.UpdateRequiresDataTable("dataTable");
-                }
+                if (dataTable is null) throw new ArgumentNullException(nameof(dataTable));
 
                 DataTableMapping tableMapping = null;
                 int index = IndexOfDataSetTable(dataTable.TableName);
@@ -938,39 +788,26 @@ namespace AsyncDataAdapter
                 {
                     tableMapping = TableMappings[index];
                 }
+
                 if (null == tableMapping)
                 {
-                    if (System.Data.MissingMappingAction.Error == MissingMappingAction)
+                    if (MissingMappingAction.Error == MissingMappingAction)
                     {
                         throw ADP.MissingTableMappingDestination(dataTable.TableName);
                     }
-                    tableMapping = new DataTableMapping(DbDataAdapter.DefaultSourceTableName, dataTable.TableName);
+                    tableMapping = new DataTableMapping(AdaDbDataAdapter.DefaultSourceTableName, dataTable.TableName);
                 }
-                return await UpdateFromDataTableAsync(dataTable, tableMapping);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
+
+                return await this.UpdateFromDataTableAsync( dataTable, tableMapping, cancellationToken ).ConfigureAwait(false);
             }
         }
 
-        public async Task<int> UpdateAsync(DataSet dataSet, string srcTable)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Update|API> %d#, dataSet, srcTable='%ls'", ObjectID, srcTable);
-            try
+        public async Task<int> UpdateAsync(DataSet dataSet, string srcTable, CancellationToken cancellationToken)
+        {
             {
-                if (null == dataSet)
-                {
-                    throw ADP.UpdateRequiresNonNullDataSet("dataSet");
-                }
-                if (ADP.IsEmpty(srcTable))
-                {
-                    throw ADP.UpdateRequiresSourceTableName("srcTable");
-                }
-#if DEBUG
-                //ADP.TraceDataSet("Update <" + srcTable + ">", dataSet);
-#endif
+                if (dataSet is null) throw new ArgumentNullException(nameof(dataSet));
+                if (srcTable is null) throw new ArgumentNullException(nameof(srcTable));
+                if (string.IsNullOrEmpty(srcTable)) throw new ArgumentException(message: "Update: expected a non-empty SourceTable name.", paramName: nameof(srcTable));
 
                 int rowsAffected = 0;
 
@@ -984,26 +821,19 @@ namespace AsyncDataAdapter
                 DataTable dataTable = tableMapping.GetDataTableBySchemaAction(dataSet, schemaAction);
                 if (null != dataTable)
                 {
-                    rowsAffected = await UpdateFromDataTableAsync(dataTable, tableMapping);
+                    rowsAffected = await this.UpdateFromDataTableAsync(dataTable, tableMapping, cancellationToken ).ConfigureAwait(false);
                 }
                 else if (!HasTableMappings() || (-1 == TableMappings.IndexOf(tableMapping)))
                 {
                     //throw error since the user didn't explicitly map this tableName to Ignore.
-                    throw ADP.UpdateRequiresSourceTable(srcTable); // MDAC 72681
+                    throw new InvalidOperationException(string.Format("Update unable to find TableMapping['{0}'] or DataTable '{0}'.", srcTable));
                 }
                 return rowsAffected;
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
-        virtual protected async Task<int> UpdateAsync(DataRow[] dataRows, DataTableMapping tableMapping)
-        { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Update|API> %d#, dataRows[], tableMapping", ObjectID);
-            try
+        protected virtual async Task<int> UpdateAsync(DataRow[] dataRows, DataTableMapping tableMapping, CancellationToken cancellationToken)
+        {
             {
                 Debug.Assert((null != dataRows) && (0 < dataRows.Length), "Update: bad dataRows");
                 Debug.Assert(null != tableMapping, "Update: bad DataTableMapping");
@@ -1011,11 +841,11 @@ namespace AsyncDataAdapter
                 // If records were affected, increment row count by one - that is number of rows affected in dataset.
                 int cumulativeDataRowsAffected = 0;
 
-                IDbConnection[] connections = new IDbConnection[5]; // one for each statementtype
+                DbConnection[] connections = new DbConnection[5]; // one for each statementtype
                 ConnectionState[] connectionStates = new ConnectionState[5]; // closed by default (== 0)
 
                 bool useSelectConnectionState = false; // MDAC 58710
-                IDbCommand tmpcmd = _IDbDataAdapter.SelectCommand;
+                DbCommand tmpcmd = this.SelectCommand;
                 if (null != tmpcmd)
                 {
                     connections[0] = tmpcmd.Connection;
@@ -1047,7 +877,7 @@ namespace AsyncDataAdapter
                             InitializeBatching();
                         }
                         StatementType statementType = StatementType.Select;
-                        IDbCommand dataCommand = null;
+                        DbCommand dataCommand = null;
 
                         // for each row which is either insert, update, or delete
                         foreach (DataRow dataRow in dataRows)
@@ -1066,15 +896,15 @@ namespace AsyncDataAdapter
                                     continue; // foreach DataRow
                                 case DataRowState.Added:
                                     statementType = StatementType.Insert;
-                                    dataCommand = _IDbDataAdapter.InsertCommand;
+                                    dataCommand = this.InsertCommand;
                                     break;
                                 case DataRowState.Deleted:
                                     statementType = StatementType.Delete;
-                                    dataCommand = _IDbDataAdapter.DeleteCommand;
+                                    dataCommand = this.DeleteCommand;
                                     break;
                                 case DataRowState.Modified:
                                     statementType = StatementType.Update;
-                                    dataCommand = _IDbDataAdapter.UpdateCommand;
+                                    dataCommand = this.UpdateCommand;
                                     break;
                                 default:
                                     Debug.Assert(false, "InvalidDataRowState");
@@ -1102,19 +932,18 @@ namespace AsyncDataAdapter
                                     throw;
                                 }
 
-                                ADP.TraceExceptionForCapture(e);
-
                                 rowUpdatingEvent.Errors = e;
                                 rowUpdatingEvent.Status = UpdateStatus.ErrorsOccurred;
                             }
 
-                            OnRowUpdating(rowUpdatingEvent); // user may throw out of Update without completing batch
+                            this.OnRowUpdating(rowUpdatingEvent); // user may throw out of Update without completing batch
 
-                            IDbCommand tmpCommand = rowUpdatingEvent.Command;
-                            isCommandFromRowUpdating = (dataCommand != tmpCommand);
-                            dataCommand = tmpCommand;
-                            tmpCommand = null;
-
+                            if( rowUpdatingEvent.Command is DbCommand tmpCommand )
+                            {
+                                isCommandFromRowUpdating = (dataCommand != tmpCommand);
+                                dataCommand = tmpCommand;
+                            }
+                            
                             // handle the status from RowUpdating event
                             UpdateStatus rowUpdatingStatus = rowUpdatingEvent.Status;
                             if (UpdateStatus.Continue != rowUpdatingStatus)
@@ -1194,7 +1023,7 @@ namespace AsyncDataAdapter
                                         else
                                         {
                                             // do not allow the expectation that returned results will be used
-                                            errors = ADP.ResultsNotAllowedDuringBatch();
+                                            errors = new InvalidOperationException("When batching, the command's UpdatedRowSource property value of UpdateRowSource.FirstReturnedRecord or UpdateRowSource.Both is invalid.");
                                         }
                                     }
                                     else
@@ -1211,7 +1040,6 @@ namespace AsyncDataAdapter
                                         throw;
                                     }
 
-                                    ADP.TraceExceptionForCapture(e);
                                     errors = e;
                                 }
 
@@ -1246,14 +1074,14 @@ namespace AsyncDataAdapter
                             {
                                 if (1 != maxBatchCommands)
                                 {
-                                    IDbConnection connection = DbDataAdapter.GetConnection1(this);
+                                    DbConnection connection = AdaDbDataAdapter.GetConnection1(this);
 
-                                    ConnectionState state = await UpdateConnectionOpenAsync(connection, StatementType.Batch, connections, connectionStates, useSelectConnectionState);
-                                    rowUpdatedEvent.AdapterInit(rowBatch);
+                                    ConnectionState state = await this.UpdateConnectionOpenAsync( connection, StatementType.Batch, connections, connectionStates, useSelectConnectionState, cancellationToken ).ConfigureAwait(false);
+                                    rowUpdatedEvent.AdapterInit_(rowBatch);
 
                                     if (ConnectionState.Open == state)
                                     {
-                                        UpdateBatchExecute(batchCommands, commandCount, rowUpdatedEvent);
+                                        await this.UpdateBatchExecuteAsync( batchCommands, commandCount, rowUpdatedEvent, cancellationToken ).ConfigureAwait(false);
                                     }
                                     else
                                     {
@@ -1264,11 +1092,11 @@ namespace AsyncDataAdapter
                                 }
                                 else if (null != dataCommand)
                                 {
-                                    IDbConnection connection = DbDataAdapter.GetConnection4(this, dataCommand, statementType, isCommandFromRowUpdating);
-                                    ConnectionState state = await UpdateConnectionOpenAsync(connection, statementType, connections, connectionStates, useSelectConnectionState);
+                                    DbConnection connection = AdaDbDataAdapter.GetConnection4(this, dataCommand, statementType, isCommandFromRowUpdating);
+                                    ConnectionState state = await this.UpdateConnectionOpenAsync( connection, statementType, connections, connectionStates, useSelectConnectionState, cancellationToken ).ConfigureAwait(false);
                                     if (ConnectionState.Open == state)
                                     {
-                                        UpdateRowExecute(rowUpdatedEvent, dataCommand, statementType);
+                                        await this.UpdateRowExecuteAsync( rowUpdatedEvent, dataCommand, statementType, cancellationToken ).ConfigureAwait(false);
                                         batchCommands[0].RecordsAffected = rowUpdatedEvent.RecordsAffected;
                                         batchCommands[0].Errors = null;
                                     }
@@ -1293,8 +1121,6 @@ namespace AsyncDataAdapter
                                 {
                                     throw;
                                 }
-
-                                ADP.TraceExceptionForCapture(e);
 
                                 rowUpdatedEvent.Errors = e;
                                 rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
@@ -1344,9 +1170,9 @@ namespace AsyncDataAdapter
 
                             try
                             {
-                                IDbConnection connection = DbDataAdapter.GetConnection1(this);
+                                DbConnection connection = AdaDbDataAdapter.GetConnection1(this);
 
-                                ConnectionState state = await UpdateConnectionOpenAsync(connection, StatementType.Batch, connections, connectionStates, useSelectConnectionState);
+                                ConnectionState state = await this.UpdateConnectionOpenAsync( connection, StatementType.Batch, connections, connectionStates, useSelectConnectionState, cancellationToken ).ConfigureAwait(false);
 
                                 DataRow[] finalRowBatch = rowBatch;
 
@@ -1355,11 +1181,11 @@ namespace AsyncDataAdapter
                                     finalRowBatch = new DataRow[commandCount];
                                     Array.Copy(rowBatch, finalRowBatch, commandCount);
                                 }
-                                rowUpdatedEvent.AdapterInit(finalRowBatch);
+                                rowUpdatedEvent.AdapterInit_(finalRowBatch);
 
                                 if (ConnectionState.Open == state)
                                 {
-                                    UpdateBatchExecute(batchCommands, commandCount, rowUpdatedEvent);
+                                    await this.UpdateBatchExecuteAsync( batchCommands, commandCount, rowUpdatedEvent, cancellationToken );
                                 }
                                 else
                                 {
@@ -1375,8 +1201,6 @@ namespace AsyncDataAdapter
                                 {
                                     throw;
                                 }
-
-                                ADP.TraceExceptionForCapture(e);
 
                                 rowUpdatedEvent.Errors = e;
                                 rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
@@ -1412,29 +1236,30 @@ namespace AsyncDataAdapter
                 }
                 return cumulativeDataRowsAffected;
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
-        private void UpdateBatchExecute(BatchCommandInfo[] batchCommands, int commandCount, RowUpdatedEventArgs rowUpdatedEvent)
+        private async Task UpdateBatchExecuteAsync(BatchCommandInfo[] batchCommands, int commandCount, RowUpdatedEventArgs rowUpdatedEvent, CancellationToken cancellationToken )
         {
             try
             {
                 // the batch execution may succeed, partially succeed and throw an exception (or not), or totally fail
-                int recordsAffected = ExecuteBatch();
-                rowUpdatedEvent.AdapterInit(recordsAffected);
+                int recordsAffected = await this.ExecuteBatchAsync( cancellationToken );
+                rowUpdatedEvent.AdapterInit_(recordsAffected);
             }
             catch (DbException e)
             {
                 // an exception was thrown be but some part of the batch may have been succesfull
-                ADP.TraceExceptionForCapture(e);
                 rowUpdatedEvent.Errors = e;
                 rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
             }
-            MissingMappingAction missingMapping = UpdateMappingAction;
-            MissingSchemaAction missingSchema = UpdateSchemaAction;
+
+            this.AfterUpdateBatchExecute( batchCommands, commandCount, rowUpdatedEvent );
+        }
+
+        private void AfterUpdateBatchExecute(BatchCommandInfo[] batchCommands, int commandCount, RowUpdatedEventArgs rowUpdatedEvent )
+        {
+            MissingMappingAction missingMapping = this.UpdateMappingAction;
+            MissingSchemaAction  missingSchema  = this.UpdateSchemaAction;
 
             int checkRecordsAffected = 0;
             bool hasConcurrencyViolation = false;
@@ -1469,9 +1294,9 @@ namespace AsyncDataAdapter
                             {
                                 rows = new List<DataRow>();
                             }
-                            batchCommands[bc].Errors = ADP.UpdateConcurrencyViolation(batchCommands[bc].StatementType, 0, 1, new DataRow[] { rowUpdatedEvent.GetRows(bc) });
+                            batchCommands[bc].Errors = ADP.UpdateConcurrencyViolation(batchCommands[bc].StatementType, 0, 1, new DataRow[] { rowUpdatedEvent.GetRow_(bc) });
                             hasConcurrencyViolation = true;
-                            rows.Add(rowUpdatedEvent.GetRows(bc));
+                            rows.Add(rowUpdatedEvent.GetRow_(bc));
                         }
                     }
 
@@ -1480,10 +1305,10 @@ namespace AsyncDataAdapter
                         && (0 != (UpdateRowSource.OutputParameters & batchCommand.UpdatedRowSource)) && (0 != rowAffected))  // MDAC 71174
                     {
                         if (StatementType.Insert == statementType)
-                        { // MDAC 64199
+                        {
                             // AcceptChanges for 'added' rows so backend generated keys that are returned
                             // propagte into the datatable correctly.
-                            rowUpdatedEvent.GetRows(bc).AcceptChanges();
+                            rowUpdatedEvent.GetRow_(bc).AcceptChanges();
                         }
 
                         for (int i = 0; i < batchCommand.ParameterCount; ++i)
@@ -1505,7 +1330,7 @@ namespace AsyncDataAdapter
                     {
                         // bug50526, an exception if no records affected and attempted an Update/Delete
                         Debug.Assert(null == rowUpdatedEvent.Errors, "Continue - but contains an exception");
-                        DataRow[] rowsInError = (null != rows) ? rows.ToArray() : rowUpdatedEvent.GetRows();
+                        DataRow[] rowsInError = (null != rows) ? rows.ToArray() : rowUpdatedEvent.GetRows_();
                         rowUpdatedEvent.Errors = ADP.UpdateConcurrencyViolation(StatementType.Batch, commandCount - rowsInError.Length, commandCount, rowsInError); // MDAC 55735
                         rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
                     }
@@ -1513,7 +1338,7 @@ namespace AsyncDataAdapter
             }
         }
 
-        private async Task<ConnectionState> UpdateConnectionOpenAsync(IDbConnection connection, StatementType statementType, IDbConnection[] connections, ConnectionState[] connectionStates, bool useSelectConnectionState)
+        private async Task<ConnectionState> UpdateConnectionOpenAsync(DbConnection connection, StatementType statementType, DbConnection[] connections, ConnectionState[] connectionStates, bool useSelectConnectionState, CancellationToken cancellationToken )
         {
             Debug.Assert(null != connection, "unexpected null connection");
             Debug.Assert(null != connection, "unexpected null connection");
@@ -1527,28 +1352,29 @@ namespace AsyncDataAdapter
                 connections[index] = connection;
                 connectionStates[index] = ConnectionState.Closed; // required, open may throw
 
-                connectionStates[index] = await QuietOpenAsync((DbConnection)connection);
+                connectionStates[index] = await QuietOpenAsync( connection, cancellationToken ).ConfigureAwait(false);
 
                 if (useSelectConnectionState && (connections[0] == connection))
                 {
                     connectionStates[index] = connections[0].State;
                 }
             }
+
             return connection.State;
         }
 
-        private async Task<int> UpdateFromDataTableAsync(DataTable dataTable, DataTableMapping tableMapping)
+        private async Task<int> UpdateFromDataTableAsync(DataTable dataTable, DataTableMapping tableMapping, CancellationToken cancellationToken )
         {
             int rowsAffected = 0;
             DataRow[] dataRows = ADP.SelectAdapterRows(dataTable, false);
             if ((null != dataRows) && (0 < dataRows.Length))
             {
-                rowsAffected = await UpdateAsync(dataRows, tableMapping);
+                rowsAffected = await this.UpdateAsync( dataRows, tableMapping, cancellationToken ).ConfigureAwait(false);
             }
             return rowsAffected;
         }
 
-        private void UpdateRowExecute(RowUpdatedEventArgs rowUpdatedEvent, IDbCommand dataCommand, StatementType cmdIndex)
+        private async Task UpdateRowExecuteAsync( RowUpdatedEventArgs rowUpdatedEvent, DbCommand dataCommand, StatementType cmdIndex, CancellationToken cancellationToken )
         {
             Debug.Assert(null != rowUpdatedEvent, "null rowUpdatedEvent");
             Debug.Assert(null != dataCommand, "null dataCommand");
@@ -1556,17 +1382,19 @@ namespace AsyncDataAdapter
 
             bool insertAcceptChanges = true;
             UpdateRowSource updatedRowSource = dataCommand.UpdatedRowSource;
+           
             if ((StatementType.Delete == cmdIndex) || (0 == (UpdateRowSource.FirstReturnedRecord & updatedRowSource)))
             {
-                int recordsAffected = dataCommand.ExecuteNonQuery(); // MDAC 88441
-                rowUpdatedEvent.AdapterInit(recordsAffected);
+                int recordsAffected = await dataCommand.ExecuteNonQueryAsync().ConfigureAwait(false);
+
+                rowUpdatedEvent.AdapterInit_( recordsAffected );
             }
             else if ((StatementType.Insert == cmdIndex) || (StatementType.Update == cmdIndex))
             {
                 // we only care about the first row of the first result
-                using (IDataReader dataReader = dataCommand.ExecuteReader(CommandBehavior.SequentialAccess))
+                using ( DbDataReader dataReader = await dataCommand.ExecuteReaderAsync( CommandBehavior.SequentialAccess, cancellationToken ).ConfigureAwait(false) )
                 {
-                    DataReaderContainer readerHandler = DataReaderContainer.Create(dataReader, ReturnProviderSpecificTypes);
+                    AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dataReader, this.ReturnProviderSpecificTypes );
                     try
                     {
                         bool getData = false;
@@ -1579,11 +1407,12 @@ namespace AsyncDataAdapter
                                 getData = true;
                                 break;
                             }
-                        } while (dataReader.NextResult());
+                        }
+                        while ( await dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false) );
 
                         if (getData && (0 != dataReader.RecordsAffected))
-                        { // MDAC 71174
-                            SchemaMapping mapping = new SchemaMapping(this, null, rowUpdatedEvent.Row.Table, readerHandler, false, SchemaType.Mapped, rowUpdatedEvent.TableMapping.SourceTable, true, null, null);
+                        {
+                            AdaSchemaMapping mapping = new AdaSchemaMapping(this, null, rowUpdatedEvent.Row.Table, readerHandler, false, SchemaType.Mapped, rowUpdatedEvent.TableMapping.SourceTable, true, null, null);
 
                             if ((null != mapping.DataTable) && (null != mapping.DataValues))
                             {
@@ -1606,7 +1435,7 @@ namespace AsyncDataAdapter
 
                         // RecordsAffected is available after Close, but don't trust it after Dispose
                         int recordsAffected = dataReader.RecordsAffected;
-                        rowUpdatedEvent.AdapterInit(recordsAffected);
+                        rowUpdatedEvent.AdapterInit_(recordsAffected);
                     }
                 }
             }
@@ -1617,15 +1446,28 @@ namespace AsyncDataAdapter
             }
 
             // map the parameter results to the dataSet
-            if (((StatementType.Insert == cmdIndex) || (StatementType.Update == cmdIndex))
-                && (0 != (UpdateRowSource.OutputParameters & updatedRowSource)) && (0 != rowUpdatedEvent.RecordsAffected))
-            { // MDAC 71174
+            if
+                (
+                    (
+                        (StatementType.Insert == cmdIndex)
+                        ||
+                        (StatementType.Update == cmdIndex)
+                    )
+                    &&
+                    (
+                        0 != (UpdateRowSource.OutputParameters & updatedRowSource)
+                    )
+                    &&
+                    (0 != rowUpdatedEvent.RecordsAffected)
+                )
+            {
 
                 if ((StatementType.Insert == cmdIndex) && insertAcceptChanges)
-                { // MDAC 64199
+                {
                     rowUpdatedEvent.Row.AcceptChanges();
                 }
-                ParameterOutput(dataCommand.Parameters, rowUpdatedEvent.Row, rowUpdatedEvent.TableMapping);
+                
+                this.ParameterOutput(dataCommand.Parameters, rowUpdatedEvent.Row, rowUpdatedEvent.TableMapping);
             }
 
             // Only error if RecordsAffect == 0, not -1.  A value of -1 means no count was received from server,
@@ -1713,7 +1555,7 @@ namespace AsyncDataAdapter
             if (null == errors)
             {
                 // user changed status to ErrorsOccured without supplying an exception message
-                errors = ADP.RowUpdatedErrors();
+                errors = new DataException("RowUpdatedEvent: Errors occurred; no additional is information available.");
                 rowUpdatedEvent.Errors = errors;
             }
 
@@ -1784,7 +1626,7 @@ namespace AsyncDataAdapter
             if (null == errors)
             {
                 // user changed status to ErrorsOccured without supplying an exception message
-                errors = ADP.RowUpdatingErrors();
+                errors = new DataException("RowUpdatingEvent: Errors occurred; no additional is information available.");
                 rowUpdatedEvent.Errors = errors;
             }
             string message = errors.Message;
@@ -1796,22 +1638,24 @@ namespace AsyncDataAdapter
             }
         }
 
-        static private IDbConnection GetConnection1(DbDataAdapter adapter)
+        #region GetConnection
+
+        private static DbConnection GetConnection1(AdaDbDataAdapter adapter)
         {
-            IDbCommand command = adapter._IDbDataAdapter.SelectCommand;
+            DbCommand command = adapter.SelectCommand;
             if (null == command)
             {
-                command = adapter._IDbDataAdapter.InsertCommand;
+                command = adapter.InsertCommand;
                 if (null == command)
                 {
-                    command = adapter._IDbDataAdapter.UpdateCommand;
+                    command = adapter.UpdateCommand;
                     if (null == command)
                     {
-                        command = adapter._IDbDataAdapter.DeleteCommand;
+                        command = adapter.DeleteCommand;
                     }
                 }
             }
-            IDbConnection connection = null;
+            DbConnection connection = null;
             if (null != command)
             {
                 connection = command.Connection;
@@ -1823,11 +1667,11 @@ namespace AsyncDataAdapter
             return connection;
         }
 
-        static private IDbConnection GetConnection3(DbDataAdapter adapter, IDbCommand command, string method)
+        private static DbConnection GetConnection3(AdaDbDataAdapter adapter, DbCommand command, string method)
         {
             Debug.Assert(null != command, "GetConnection3: null command");
-            Debug.Assert(!ADP.IsEmpty(method), "missing method name");
-            IDbConnection connection = command.Connection;
+            Debug.Assert(!string.IsNullOrEmpty(method), "missing method name");
+            DbConnection connection = command.Connection;
             if (null == connection)
             {
                 throw ADP.ConnectionRequired_Res(method);
@@ -1835,17 +1679,20 @@ namespace AsyncDataAdapter
             return connection;
         }
 
-        static private IDbConnection GetConnection4(DbDataAdapter adapter, IDbCommand command, StatementType statementType, bool isCommandFromRowUpdating)
+        private static DbConnection GetConnection4(AdaDbDataAdapter adapter, DbCommand command, StatementType statementType, bool isCommandFromRowUpdating)
         {
             Debug.Assert(null != command, "GetConnection4: null command");
-            IDbConnection connection = command.Connection;
+            DbConnection connection = command.Connection;
             if (null == connection)
             {
                 throw ADP.UpdateConnectionRequired(statementType, isCommandFromRowUpdating);
             }
             return connection;
         }
-        static private DataRowVersion GetParameterSourceVersion(StatementType statementType, IDataParameter parameter)
+
+        #endregion
+
+        private static DataRowVersion GetParameterSourceVersion(StatementType statementType, IDataParameter parameter)
         {
             switch (statementType)
             {
@@ -1854,13 +1701,29 @@ namespace AsyncDataAdapter
                 case StatementType.Delete: return DataRowVersion.Original; // ignores parameter.SourceVersion
                 case StatementType.Select:
                 case StatementType.Batch:
-                    throw ADP.UnwantedStatementType(statementType);
+                    throw new ArgumentException(message: string.Format("Unwanted statement type {0}", statementType.ToString()), paramName: nameof(statementType));
                 default:
                     throw ADP.InvalidStatementType(statementType);
             }
         }
 
-        static private void QuietClose(DbConnection connection, ConnectionState originalState)
+        /// <summary></summary>
+        /// <remarks><see cref="QuietOpenAsync"/> needs to appear in the try {} finally { QuietClose } block otherwise a possibility exists that an exception may be thrown, i.e. <see cref="ThreadAbortException"/> where we would Open the connection and not close it</remarks>
+        /// <param name="connection"></param>
+        /// <returns></returns>
+        private static async Task<ConnectionState> QuietOpenAsync(DbConnection connection, CancellationToken cancellationToken )
+        {
+            Debug.Assert(null != connection, "QuietOpen: null connection");
+            var originalState = connection.State;
+            if (ConnectionState.Closed == originalState)
+            {
+                await connection.OpenAsync( cancellationToken ).ConfigureAwait(false);
+            }
+
+            return originalState;
+        }
+
+        private static void QuietClose(DbConnection connection, ConnectionState originalState)
         {
             // close the connection if:
             // * it was closed on first use and adapter has opened it, AND
@@ -1871,20 +1734,6 @@ namespace AsyncDataAdapter
                 // it is supposed to be safe to call Close multiple times
                 connection.Close();
             }
-        }
-
-        // QuietOpen needs to appear in the try {} finally { QuietClose } block
-        // otherwise a possibility exists that an exception may be thrown, i.e. ThreadAbortException
-        // where we would Open the connection and not close it
-        static private async Task<ConnectionState> QuietOpenAsync(DbConnection connection)
-        {
-            Debug.Assert(null != connection, "QuietOpen: null connection");
-            var originalState = connection.State;
-            if (ConnectionState.Closed == originalState)
-            {
-                await connection.OpenAsync();
-            }
-            return originalState;
         }
     }
 }
