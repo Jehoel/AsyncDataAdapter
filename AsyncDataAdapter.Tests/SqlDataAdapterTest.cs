@@ -21,7 +21,7 @@ namespace AsyncDataAdapter.Tests
         private static readonly String _ConnectionString = TestConfiguration.Instance.ConnectionString;
 
         #region Utility
-        private static async Task<SqlConnection> CreateOpenConnectionAsync(CancellationToken cancellationToken = default)
+        private static async Task<SqlConnection> CreateOpenConnectionAsync( CancellationToken cancellationToken = default )
         {
             SqlConnection conn = new SqlConnection(_ConnectionString);
             try

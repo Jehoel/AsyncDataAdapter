@@ -12,138 +12,83 @@ using AsyncDataAdapter.Internal;
 
 namespace AsyncDataAdapter
 {
-    public abstract class AdaDataAdapter : Component /*, IDataAdapter */
+    public abstract class AdaDataAdapter : Component, IDataAdapter3
     {
         private static readonly object EventFillError = new object();
 
-        private bool _acceptChangesDuringUpdate            = true;
-        private bool _acceptChangesDuringUpdateAfterInsert = true;
-        private bool _continueUpdateOnError                = false;
-        private bool _hasFillErrorHandler                  = false;
-        private bool _acceptChangesDuringFill              = true;
-
         private LoadOption _fillLoadOption;
 
-        private MissingMappingAction _missingMappingAction = System.Data.MissingMappingAction.Passthrough;
-        private MissingSchemaAction  _missingSchemaAction  = System.Data.MissingSchemaAction.Add;
+        private MissingMappingAction _missingMappingAction = MissingMappingAction.Passthrough;
+        private MissingSchemaAction  _missingSchemaAction  = MissingSchemaAction.Add;
 
         private DataTableMappingCollection _tableMappings;
 
         private static int _objectTypeCount;
-        internal readonly int _objectID = Interlocked.Increment(ref _objectTypeCount);
 
-#if DEBUG
-        // if true, we are asserting that the caller has provided a select command
-        // which should not return an empty result set
-        private static bool _debugHookNonEmptySelectCommand = false;
-#endif
-
-        [Conditional("DEBUG")]
-        private static void AssertReaderHandleFieldCount(AdaDataReaderContainer readerHandler)
+        /// <summary>Normal constructor.</summary>
+        protected AdaDataAdapter()
+            : base()
         {
-#if DEBUG
-            Debug.Assert(!_debugHookNonEmptySelectCommand || readerHandler.FieldCount > 0, "Scenario expects non-empty results but no fields reported by reader");
-#endif
+            GC.SuppressFinalize(this); // <-- whaaaaa, is this right?
         }
 
-        [Conditional("DEBUG")]
-        private static void AssertSchemaMapping(AdaSchemaMapping mapping)
+        /// <summary>Clone constructor.</summary>
+        protected AdaDataAdapter(AdaDataAdapter cloneFrom)
+            : base()
         {
-#if DEBUG
-            if (_debugHookNonEmptySelectCommand)
-            {
-                Debug.Assert(mapping != null && mapping.DataValues != null && mapping.DataTable != null, "Debug hook specifies that non-empty results are not expected");
-            }
-#endif
-        }
+            if (cloneFrom is null) throw new ArgumentNullException(nameof(cloneFrom));
 
-        protected AdaDataAdapter() : base()
-        { // V1.0.3300
-            GC.SuppressFinalize(this);
-        }
+            //
 
-        protected AdaDataAdapter(AdaDataAdapter from) : base()
-        { // V1.1.3300
-            CloneFrom(from);
-        }
+            this.AcceptChangesDuringUpdate            = cloneFrom.AcceptChangesDuringUpdate;
+            this.AcceptChangesDuringUpdateAfterInsert = cloneFrom.AcceptChangesDuringUpdateAfterInsert;
+            this.ContinueUpdateOnError                = cloneFrom.ContinueUpdateOnError;
+            this.ReturnProviderSpecificTypes          = cloneFrom.ReturnProviderSpecificTypes;
+            this.AcceptChangesDuringFill              = cloneFrom.AcceptChangesDuringFill;
+            this._fillLoadOption                      = cloneFrom._fillLoadOption;
+            this._missingMappingAction                = cloneFrom._missingMappingAction;
+            this._missingSchemaAction                 = cloneFrom._missingSchemaAction;
 
-        [
-        DefaultValue(true),
-        CategoryAttribute("Settins"),
-        DescriptionAttribute("Accept changes during fill"),
-        ]
-        public bool AcceptChangesDuringFill
-        { // V1.0.3300
-            get
+            if ((null != cloneFrom._tableMappings) && (0 < cloneFrom.TableMappings.Count))
             {
-                //Bid.Trace("<comm.DataAdapter.get_AcceptChangesDuringFill|API> %d#\n", ObjectID);
-                return _acceptChangesDuringFill;
-            }
-            set
-            {
-                _acceptChangesDuringFill = value;
-                //Bid.Trace("<comm.DataAdapter.set_AcceptChangesDuringFill|API> %d#, %d\n", ObjectID, value);
+                DataTableMappingCollection parameters = this.TableMappings;
+                foreach (object parameter in cloneFrom.TableMappings)
+                {
+                    if( parameter is ICloneable clonable )
+                    {
+                        _ = parameters.Add( clonable.Clone() );
+                    }
+                    else
+                    {
+                        _ = parameters.Add( parameter );
+                    }
+                }
             }
         }
 
-        [
-        EditorBrowsableAttribute(EditorBrowsableState.Never)
-        ]
-        virtual public bool ShouldSerializeAcceptChangesDuringFill()
-        {
-            return (0 == _fillLoadOption);
-        }
+        #region Properties and trivial getters
 
-        [
-        DefaultValue(true),
-        CategoryAttribute("Settings"),
-        DescriptionAttribute("Accept changes during update"),
-        ]
-        public bool AcceptChangesDuringUpdate
-        {  // V1.2.3300, MDAC 74988
-            get
-            {
-                //Bid.Trace("<comm.DataAdapter.get_AcceptChangesDuringUpdate|API> %d#\n", ObjectID);
-                return _acceptChangesDuringUpdate;
-            }
-            set
-            {
-                _acceptChangesDuringUpdate = value;
-                //Bid.Trace("<comm.DataAdapter.set_AcceptChangesDuringUpdate|API> %d#, %d\n", ObjectID, value);
-            }
-        }
+        internal int ObjectId { get; } = Interlocked.Increment(ref _objectTypeCount);
 
-        [
-        DefaultValue(false),
-        CategoryAttribute("Settings"),
-        DescriptionAttribute("Continue update on error"),
-        ]
-        public bool ContinueUpdateOnError
-        {  // V1.0.3300, MDAC 66900
-            get
-            {
-                //Bid.Trace("<comm.DataAdapter.get_ContinueUpdateOnError|API> %d#\n", ObjectID);
-                return _continueUpdateOnError;
-            }
-            set
-            {
-                _continueUpdateOnError = value;
-                //Bid.Trace("<comm.DataAdapter.set_ContinueUpdateOnError|API> %d#, %d\n", ObjectID, value);
-            }
-        }
+        [DefaultValue(true)]
+        public bool AcceptChangesDuringFill { get; set; } = true;
 
-        [
-        RefreshProperties(RefreshProperties.All),
-        CategoryAttribute("Settings"),
-        DescriptionAttribute("Fill load option"),
-        ]
+        [DefaultValue(true)]
+        public bool AcceptChangesDuringUpdate { get; set; } = true;
+
+        [DefaultValue(true)]
+        public bool AcceptChangesDuringUpdateAfterInsert { get; set; } = true;
+
+        [DefaultValue(false)]
+        public bool ContinueUpdateOnError { get; set; } = false;
+
+        [RefreshProperties(RefreshProperties.All)]
         public LoadOption FillLoadOption
-        { // V1.2.3300
+        {
             get
             {
-                //Bid.Trace("<comm.DataAdapter.get_FillLoadOption|API> %d#\n", ObjectID);
-                LoadOption fillLoadOption = _fillLoadOption;
-                return ((0 != fillLoadOption) ? _fillLoadOption : LoadOption.OverwriteChanges);
+                LoadOption fillLoadOption = this._fillLoadOption;
+                return ((0 != fillLoadOption) ? this._fillLoadOption : LoadOption.OverwriteChanges);
             }
             set
             {
@@ -153,8 +98,7 @@ namespace AsyncDataAdapter
                     case LoadOption.OverwriteChanges:
                     case LoadOption.PreserveChanges:
                     case LoadOption.Upsert:
-                        _fillLoadOption = value;
-                        //Bid.Trace("<comm.DataAdapter.set_FillLoadOption|API> %d#, %d{ds.LoadOption}\n", ObjectID, (int)value);
+                        this._fillLoadOption = value;
                         break;
                     default:
                         throw ADP.InvalidLoadOption(value);
@@ -162,33 +106,30 @@ namespace AsyncDataAdapter
             }
         }
 
-        [
-        EditorBrowsableAttribute(EditorBrowsableState.Never)
-        ]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public virtual bool ShouldSerializeAcceptChangesDuringFill()
+        {
+            return (0 == this._fillLoadOption);
+        }
+
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public void ResetFillLoadOption()
         {
-            _fillLoadOption = 0;
+            this._fillLoadOption = 0;
         }
 
-        [
-        EditorBrowsableAttribute(EditorBrowsableState.Never)
-        ]
-        virtual public bool ShouldSerializeFillLoadOption()
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public virtual bool ShouldSerializeFillLoadOption()
         {
-            return (0 != _fillLoadOption);
+            return (0 != this._fillLoadOption);
         }
 
-        [
-        DefaultValue(System.Data.MissingMappingAction.Passthrough),
-        CategoryAttribute("Settings"),
-        DescriptionAttribute("Missing mapping action"),
-        ]
+        [DefaultValue(MissingMappingAction.Passthrough)]
         public MissingMappingAction MissingMappingAction
         { // V1.0.3300
             get
             {
-                //Bid.Trace("<comm.DataAdapter.get_MissingMappingAction|API> %d#\n", ObjectID);
-                return _missingMappingAction;
+                return this._missingMappingAction;
             }
             set
             {
@@ -197,8 +138,7 @@ namespace AsyncDataAdapter
                     case MissingMappingAction.Passthrough:
                     case MissingMappingAction.Ignore:
                     case MissingMappingAction.Error:
-                        _missingMappingAction = value;
-                        //Bid.Trace("<comm.DataAdapter.set_MissingMappingAction|API> %d#, %d{ds.MissingMappingAction}\n", ObjectID, (int)value);
+                        this._missingMappingAction = value;
                         break;
                     default:
                         throw ADP.InvalidMissingMappingAction(value);
@@ -206,17 +146,12 @@ namespace AsyncDataAdapter
             }
         }
 
-        [
-        DefaultValue(MissingSchemaAction.Add),
-        CategoryAttribute("Settings"),
-        DescriptionAttribute("Missing schema action"),
-        ]
+        [DefaultValue(MissingSchemaAction.Add),]
         public MissingSchemaAction MissingSchemaAction
-        { // V1.0.3300
+        {
             get
             {
-                //Bid.Trace("<comm.DataAdapter.get_MissingSchemaAction|API> %d#\n", ObjectID);
-                return _missingSchemaAction;
+                return this._missingSchemaAction;
             }
             set
             {
@@ -226,8 +161,7 @@ namespace AsyncDataAdapter
                     case MissingSchemaAction.Ignore:
                     case MissingSchemaAction.Error:
                     case MissingSchemaAction.AddWithKey:
-                        _missingSchemaAction = value;
-                        //Bid.Trace("<comm.DataAdapter.set_MissingSchemaAction|API> %d#, %d{MissingSchemaAction}\n", ObjectID, (int)value);
+                        this._missingSchemaAction = value;
                         break;
                     default:
                         throw ADP.InvalidMissingSchemaAction(value);
@@ -235,117 +169,106 @@ namespace AsyncDataAdapter
             }
         }
 
-        internal int ObjectID
-        {
-            get
-            {
-                return _objectID;
-            }
-        }
-
         /// <summary>When <see langword="true"/> then <see cref="DbDataReader.GetProviderSpecificFieldType"/> and <see cref="DbDataReader.GetProviderSpecificValue"/> will be used instead of <see cref="DbDataReader.GetFieldType(int)"/> and <see cref="DbDataReader.GetValue(int)"/>.</summary>
         [DefaultValue( value: false )]
         public virtual bool ReturnProviderSpecificTypes { get; set; } = false;
 
-        [
-        DesignerSerializationVisibility(DesignerSerializationVisibility.Content),
-        CategoryAttribute("Settings"),
-        DescriptionAttribute("Table mappings"),
-        ]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
         public DataTableMappingCollection TableMappings
-        { // V1.0.3300
+        {
             get
             {
-                //Bid.Trace("<comm.DataAdapter.get_TableMappings|API> %d#\n", ObjectID);
-                DataTableMappingCollection mappings = _tableMappings;
+                DataTableMappingCollection mappings = this._tableMappings;
                 if (null == mappings)
                 {
-                    mappings = CreateTableMappings();
+                    mappings = this.CreateTableMappings();
                     if (null == mappings)
                     {
                         mappings = new DataTableMappingCollection();
                     }
-                    _tableMappings = mappings;
+                    this._tableMappings = mappings;
                 }
                 return mappings; // constructed by base class
             }
         }
 
-        //ITableMappingCollection IDataAdapter.TableMappings
-        //{ // V1.0.3300
-        //    get
-        //    {
-        //        return TableMappings;
-        //    }
-        //}
-
-        virtual protected bool ShouldSerializeTableMappings()
+        protected virtual bool ShouldSerializeTableMappings()
         { // V1.0.3300, MDAC 65548
             return true; /*HasTableMappings();*/ // VS7 300569
         }
 
         protected bool HasTableMappings()
         { // V1.2.3300
-            return ((null != _tableMappings) && (0 < this.TableMappings.Count));
+            return ((null != this._tableMappings) && (0 < this.TableMappings.Count));
         }
 
-        [
-        CategoryAttribute("Settings"),
-        DescriptionAttribute("Fill error"),
-        ]
+        #endregion
+
+        #region FillError
+
+        [DefaultValue(false)]
+        public bool HasFillErrorHandler => this.fillErrorHandlersCount > 0;
+
+        private int fillErrorHandlersCount = 0;
+
         public event FillErrorEventHandler FillError
-        { // V1.2.3300, DbDataADapter V1.0.3300
+        {
             add
             {
-                _hasFillErrorHandler = true;
-                Events.AddHandler(EventFillError, value);
+                this.Events.AddHandler(EventFillError, value);
+                if( value != null )
+                {
+                    ++this.fillErrorHandlersCount; // This is crude and easily broken. I'm surprised .NET ever shipped with events-lists that cannot be introspected.
+                }
             }
             remove
             {
-                Events.RemoveHandler(EventFillError, value);
-            }
-        }
-
-        [Obsolete("CloneInternals() has been deprecated.  Use the DataAdapter(DataAdapter from) constructor.  http://go.microsoft.com/fwlink/?linkid=14202")] // V1.1.3300, MDAC 81448
-        // [System.Security.Permissions.PermissionSetAttribute(System.Security.Permissions.SecurityAction.Demand, Name = "FullTrust")] // MDAC 82936
-        virtual protected AdaDataAdapter CloneInternals()
-        { // V1.0.3300
-            AdaDataAdapter clone = (AdaDataAdapter)Activator.CreateInstance(GetType(), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance, null, null, CultureInfo.InvariantCulture, null);
-            clone.CloneFrom(this);
-            return clone;
-        }
-
-        private void CloneFrom(AdaDataAdapter from)
-        {
-            _acceptChangesDuringUpdate = from._acceptChangesDuringUpdate;
-            _acceptChangesDuringUpdateAfterInsert = from._acceptChangesDuringUpdateAfterInsert;
-            _continueUpdateOnError = from._continueUpdateOnError;
-            this.ReturnProviderSpecificTypes = from.ReturnProviderSpecificTypes;
-            _acceptChangesDuringFill = from._acceptChangesDuringFill;
-            _fillLoadOption = from._fillLoadOption;
-            _missingMappingAction = from._missingMappingAction;
-            _missingSchemaAction = from._missingSchemaAction;
-
-            if ((null != from._tableMappings) && (0 < from.TableMappings.Count))
-            {
-                DataTableMappingCollection parameters = this.TableMappings;
-                foreach (object parameter in from.TableMappings)
+                this.Events.RemoveHandler(EventFillError, value);
+                if( value != null && this.fillErrorHandlersCount > 0 )
                 {
-                    _ = parameters.Add((parameter is ICloneable) ? ((ICloneable)parameter).Clone() : parameter);
+                    --this.fillErrorHandlersCount;
                 }
             }
         }
 
+        protected virtual void OnFillError(FillErrorEventArgs args)
+        {
+            FillErrorEventHandler handler = (FillErrorEventHandler)this.Events[EventFillError];
+            handler?.Invoke(this, args);
+        }
+
+        private void OnFillErrorHandler(Exception ex, DataTable dataTable, object[] dataValues)
+        {
+            FillErrorEventArgs fillErrorEvent = new FillErrorEventArgs( dataTable, dataValues )
+            {
+                Errors = ex
+            };
+
+            this.OnFillError(fillErrorEvent);
+
+            if (!fillErrorEvent.Continue)
+            {
+                if (fillErrorEvent.Errors != null)
+                {
+                    throw fillErrorEvent.Errors;
+                }
+
+                throw ex;
+            }
+        }
+
+        #endregion
+
         protected virtual DataTableMappingCollection CreateTableMappings()
-        { // V1.0.3300
+        {
             return new DataTableMappingCollection();
         }
 
         protected override void Dispose(bool disposing)
-        { // V1.0.3300, MDAC 65459
+        {
             if (disposing)
             { // release mananged objects
-                _tableMappings = null;
+                this._tableMappings = null;
             }
             // release unmanaged objects
 
@@ -354,9 +277,9 @@ namespace AsyncDataAdapter
 
         #region FillSchemaAsync
 
-        public abstract Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, CancellationToken cancellationToken = default);
+        public abstract Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, CancellationToken cancellationToken );
 
-        protected virtual async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, string srcTable, DbDataReader dataReader)
+        protected virtual async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, string srcTable, DbDataReader dataReader, CancellationToken cancellationToken )
         {
             if (null == dataSet) throw new ArgumentNullException(nameof(dataSet));
             if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType)) throw ADP.InvalidSchemaType(schemaType);
@@ -364,10 +287,10 @@ namespace AsyncDataAdapter
             if ((null == dataReader) || dataReader.IsClosed) throw ADP.FillRequires("dataReader");
 
             // user must Close/Dispose of the dataReader
-            return await FillSchemaFromReaderAsync(dataSet, null, schemaType, srcTable, dataReader).ConfigureAwait(false);
+            return await this.FillSchemaFromReaderAsync( dataSet, singleDataTable: null, schemaType, srcTable, dataReader, cancellationToken ).ConfigureAwait(false);
         }
 
-        protected virtual async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType, DbDataReader dataReader)
+        protected virtual async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType, DbDataReader dataReader, CancellationToken cancellationToken )
         {
             if (null == dataTable) throw new ArgumentNullException(nameof(dataTable));
             if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType)) throw ADP.InvalidSchemaType(schemaType);
@@ -375,32 +298,31 @@ namespace AsyncDataAdapter
 
             // user must Close/Dispose of the dataReader
             // user will have to call NextResult to access remaining results
-            DataTable[] singleTable = await this.FillSchemaFromReaderAsync(null, dataTable, schemaType, null, dataReader).ConfigureAwait(false);
-            if( singleTable != null ) return singleTable[0];
+            DataTable[] singleTable = await this.FillSchemaFromReaderAsync( dataset: null, singleDataTable: dataTable, schemaType, srcTable: null, dataReader, cancellationToken ).ConfigureAwait(false);
+            if( singleTable is DataTable[] arr && arr.Length == 1 ) return singleTable[0];
             return null;
         }
 
-        internal async Task<DataTable[]> FillSchemaFromReaderAsync(DataSet dataset, DataTable singleDataTable, SchemaType schemaType, string srcTable, DbDataReader dataReader)
+        internal async Task<DataTable[]> FillSchemaFromReaderAsync( DataSet dataset, DataTable singleDataTable, SchemaType schemaType, string srcTable, DbDataReader dataReader, CancellationToken cancellationToken )
         {
             DataTable[] dataTables = null;
             int schemaCount = 0;
             do
             {
                 AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dataReader, useProviderSpecificDataReader: this.ReturnProviderSpecificTypes );
-
-                AssertReaderHandleFieldCount(readerHandler);
                 if (0 >= readerHandler.FieldCount)
                 {
                     continue;
                 }
-                string tmp = null;
+
+                string sourceTableName = null;
                 if (null != dataset)
                 {
-                    tmp = AdaDataAdapter.GetSourceTableName(srcTable, schemaCount);
+                    sourceTableName = AdaDataAdapter.GetSourceTableName(srcTable, schemaCount);
                     schemaCount++; // don't increment if no SchemaTable ( a non-row returning result )
                 }
 
-                AdaSchemaMapping mapping = new AdaSchemaMapping(this, dataset, singleDataTable, readerHandler, true, schemaType, tmp, false, null, null);
+                AdaSchemaMapping mapping = new AdaSchemaMapping( adapter: this, dataset, singleDataTable, dataReader: readerHandler, keyInfo: true, schemaType, sourceTableName, gettingData: false, parentChapterColumn: null, parentChapterValue: null );
 
                 if (singleDataTable != null)
                 {
@@ -419,7 +341,7 @@ namespace AsyncDataAdapter
                     }
                 }
             }
-            while (await dataReader.NextResultAsync().ConfigureAwait(false)); // FillSchema does not capture errors for FillError event
+            while ( await dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false) ); // FillSchema does not capture errors for FillError event
 
             if( dataTables is null && singleDataTable is null )
             {
@@ -433,30 +355,20 @@ namespace AsyncDataAdapter
 
         #endregion
 
-        public abstract Task<int> FillAsync( DataSet dataSet, CancellationToken cancellationToken );
+        #region FillAsync
+
+        public abstract Task<int> FillAsync( DataSet dataSet, CancellationToken cancellationToken = default );
 
         protected virtual async Task<int> FillAsync( DataSet dataSet, string srcTable, DbDataReader dataReader, int startRecord, int maxRecords, CancellationToken cancellationToken )
         {
-            if (null == dataSet)
-            {
-                throw ADP.FillRequires("dataSet");
-            }
-            if (string.IsNullOrEmpty(srcTable))
-            {
-                throw ADP.FillRequiresSourceTableName("srcTable");
-            }
-            if (null == dataReader)
-            {
-                throw ADP.FillRequires("dataReader");
-            }
-            if (startRecord < 0)
-            {
-                throw ADP.InvalidStartRecord("startRecord", startRecord);
-            }
-            if (maxRecords < 0)
-            {
-                throw ADP.InvalidMaxRecords("maxRecords", maxRecords);
-            }
+            if (null == dataSet) throw ADP.FillRequires("dataSet");
+            if (string.IsNullOrEmpty(srcTable)) throw ADP.FillRequiresSourceTableName("srcTable");
+            if (null == dataReader) throw ADP.FillRequires("dataReader");
+            if (startRecord < 0) throw ADP.InvalidStartRecord("startRecord", startRecord);
+            if (maxRecords < 0) throw ADP.InvalidMaxRecords("maxRecords", maxRecords);
+
+            //
+
             if (dataReader.IsClosed)
             {
                 return 0;
@@ -509,15 +421,10 @@ namespace AsyncDataAdapter
 
                         if (dataReader.IsClosed)
                         {
-#if DEBUG
-                            Debug.Assert(!_debugHookNonEmptySelectCommand, "Debug hook asserts data reader should be open");
-#endif
                             break;
                         }
 
                         AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dataReader, useProviderSpecificDataReader: this.ReturnProviderSpecificTypes );
-                        AssertReaderHandleFieldCount(readerHandler);
-                       
                         if (readerHandler.FieldCount <= 0)
                         {
                             if (i == 0)
@@ -576,7 +483,6 @@ namespace AsyncDataAdapter
             int schemaCount = 0;
             do
             {
-                AssertReaderHandleFieldCount(dataReader);
                 if (0 >= dataReader.FieldCount)
                 {
                     continue; // loop to next result
@@ -584,8 +490,6 @@ namespace AsyncDataAdapter
 
                 AdaSchemaMapping mapping = this.FillMapping( dataset, datatable, srcTable, dataReader, schemaCount, parentChapterColumn, parentChapterValue );
                 schemaCount++; // don't increment if no SchemaTable ( a non-row returning result )
-
-                AssertSchemaMapping(mapping);
 
                 if (null == mapping)
                 {
@@ -614,7 +518,7 @@ namespace AsyncDataAdapter
                         int count = await this.FillLoadDataRowAsync( mapping, cancellationToken ).ConfigureAwait(false);
 
                         if (1 == schemaCount)
-                        { // MDAC 71347
+                        {
                             // only return LoadDataRow count for first resultset
                             // not secondary or chaptered results
                             rowsAddedToDataSet = count;
@@ -654,7 +558,7 @@ namespace AsyncDataAdapter
             {
                 while ((rowsAddedToDataSet < maxRecords) && await dataReader.ReadAsync( cancellationToken ).ConfigureAwait(false))
                 {
-                    if (_hasFillErrorHandler)
+                    if (this.HasFillErrorHandler)
                     {
                         try
                         {
@@ -668,7 +572,7 @@ namespace AsyncDataAdapter
                             {
                                 throw;
                             }
-                            OnFillErrorHandler(e, mapping.DataTable, mapping.DataValues);
+                            this.OnFillErrorHandler(e, mapping.DataTable, mapping.DataValues);
                         }
                     }
                     else
@@ -681,7 +585,7 @@ namespace AsyncDataAdapter
             }
             else
             {
-                rowsAddedToDataSet = await FillLoadDataRowAsync( mapping, cancellationToken ).ConfigureAwait(false);
+                rowsAddedToDataSet = await this.FillLoadDataRowAsync( mapping, cancellationToken ).ConfigureAwait(false);
             }
             return rowsAddedToDataSet;
         }
@@ -690,7 +594,7 @@ namespace AsyncDataAdapter
         {
             int rowsAddedToDataSet = 0;
             AdaDataReaderContainer dataReader = mapping.DataReader;
-            if (_hasFillErrorHandler)
+            if (this.HasFillErrorHandler)
             {
                 while (await dataReader.ReadAsync( cancellationToken ).ConfigureAwait(false))
                 { // read remaining rows of first and subsequent resultsets
@@ -739,7 +643,7 @@ namespace AsyncDataAdapter
         private AdaSchemaMapping FillMapping(DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int schemaCount, DataColumn parentChapterColumn, object parentChapterValue)
         {
             AdaSchemaMapping mapping = null;
-            if (_hasFillErrorHandler)
+            if (this.HasFillErrorHandler)
             {
                 try
                 {
@@ -763,10 +667,10 @@ namespace AsyncDataAdapter
             return mapping;
         }
 
-        private async Task<bool> FillNextResultAsync(AdaDataReaderContainer dataReader, CancellationToken cancellationToken )
+        private async Task<bool> FillNextResultAsync( AdaDataReaderContainer dataReader, CancellationToken cancellationToken )
         {
             bool result = true;
-            if (_hasFillErrorHandler)
+            if (this.HasFillErrorHandler)
             {
                 try
                 {
@@ -791,59 +695,34 @@ namespace AsyncDataAdapter
             return result;
         }
 
-        [EditorBrowsableAttribute(EditorBrowsableState.Advanced)] // MDAC 69508
-        virtual public IDataParameter[] GetFillParameters()
-        { // V1.0.3300
-            return new IDataParameter[0];
-        }
+        #endregion
+
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        public abstract IDataParameter[] GetFillParameters();
 
         internal DataTableMapping GetTableMappingBySchemaAction(string sourceTableName, string dataSetTableName, MissingMappingAction mappingAction)
         {
-            return DataTableMappingCollection.GetTableMappingBySchemaAction(_tableMappings, sourceTableName, dataSetTableName, mappingAction);
+            return DataTableMappingCollection.GetTableMappingBySchemaAction(this._tableMappings, sourceTableName, dataSetTableName, mappingAction);
         }
 
         internal int IndexOfDataSetTable(string dataSetTable)
         {
-            if (null != _tableMappings)
+            if (null != this._tableMappings)
             {
-                return TableMappings.IndexOfDataSetTable(dataSetTable);
+                return this.TableMappings.IndexOfDataSetTable( dataSetTable );
             }
             return -1;
         }
 
-        virtual protected void OnFillError(FillErrorEventArgs value)
-        { // V1.2.3300, DbDataAdapter V1.0.3300
-            FillErrorEventHandler handler = (FillErrorEventHandler)Events[EventFillError];
-            if (null != handler)
-            {
-                handler(this, value);
-            }
-        }
-
-        private void OnFillErrorHandler(Exception e, DataTable dataTable, object[] dataValues)
-        {
-            FillErrorEventArgs fillErrorEvent = new FillErrorEventArgs(dataTable, dataValues);
-            fillErrorEvent.Errors = e;
-            OnFillError(fillErrorEvent);
-
-            if (!fillErrorEvent.Continue)
-            {
-                if (null != fillErrorEvent.Errors)
-                {
-                    throw fillErrorEvent.Errors;
-                }
-                throw e;
-            }
-        }
-
-        public abstract Task<int> UpdateAsync(DataSet dataSet, CancellationToken cancellationToken = default);
+        public abstract Task<int> UpdateAsync(DataSet dataSet, CancellationToken cancellationToken );
 
         // used by FillSchema which returns an array of datatables added to the dataset
-        static private DataTable[] AddDataTableToArray(DataTable[] tables, DataTable newTable)
+        private static DataTable[] AddDataTableToArray(DataTable[] tables, DataTable newTable)
         {
             for (int i = 0; i < tables.Length; ++i)
-            { // search for duplicates
-                if (tables[i] == newTable)
+            {
+                // search for duplicates:
+                if (Object.ReferenceEquals( tables[i], newTable ))
                 {
                     return tables; // duplicate found
                 }
@@ -858,7 +737,7 @@ namespace AsyncDataAdapter
         }
 
         // dynamically generate source table names
-        static private string GetSourceTableName(string srcTable, int index)
+        private static string GetSourceTableName(string srcTable, int index)
         {
             //if ((null != srcTable) && (0 <= index) && (index < srcTable.Length)) {
             if (0 == index)
@@ -867,5 +746,26 @@ namespace AsyncDataAdapter
             }
             return srcTable + index.ToString(CultureInfo.InvariantCulture);
         }
+
+        #region IDataAdapter
+
+        int IDataAdapter.Fill(DataSet dataSet)
+        {
+            throw new NotImplementedException( "Non-async operations are not currently supported." );
+        }
+
+        DataTable[] IDataAdapter.FillSchema(DataSet dataSet, SchemaType schemaType)
+        {
+            throw new NotImplementedException( "Non-async operations are not currently supported." );
+        }
+
+        int IDataAdapter.Update(DataSet dataSet)
+        {
+            throw new NotImplementedException( "Non-async operations are not currently supported." );
+        }
+
+        ITableMappingCollection IDataAdapter.TableMappings => this.TableMappings;
+
+        #endregion
     }
 }

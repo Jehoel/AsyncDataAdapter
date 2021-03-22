@@ -1,11 +1,3 @@
-//------------------------------------------------------------------------------
-// <copyright file="SqlDataAdapter.cs" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
-// <owner current="true" primary="true">[....]</owner>
-// <owner current="true" primary="false">[....]</owner>
-//------------------------------------------------------------------------------
-
 using System;
 using System.ComponentModel;
 using System.Data;
@@ -18,106 +10,89 @@ using Microsoft.Data.SqlClient;
 
 namespace AsyncDataAdapter.SqlClient
 {
-    [
-    DefaultEvent("RowUpdated"),
-    // TODO: ToolboxItem("Microsoft.VSDesigner.Data.VS.SqlDataAdapterToolboxItem, " + AssemblyRef.MicrosoftVSDesigner),
-    // TODO: Designer("Microsoft.VSDesigner.Data.VS.SqlDataAdapterDesigner, " + AssemblyRef.MicrosoftVSDesigner)
-    ]
-    public sealed class AdaSqlDataAdapter : AdaDbDataAdapter, /*IDbDataAdapter, */ICloneable
+    public sealed class AdaSqlDataAdapter : AdaDbDataAdapter
     {
-
-        static private readonly object EventRowUpdated = new object();
-        static private readonly object EventRowUpdating = new object();
+        private static readonly object EventRowUpdated  = new object();
+        private static readonly object EventRowUpdating = new object();
         
         private ISqlCommandSet _commandSet;
         private int _updateBatchSize = 1;
 
-        public AdaSqlDataAdapter() : base()
+        public AdaSqlDataAdapter()
+            : base()
         {
             GC.SuppressFinalize(this);
         }
 
-        public AdaSqlDataAdapter(SqlCommand selectCommand) : this()
+        public AdaSqlDataAdapter(SqlCommand selectCommand)
+            : this()
         {
-            SelectCommand = selectCommand;
+            this.SelectCommand = selectCommand;
         }
 
-        public AdaSqlDataAdapter(string selectCommandText, string selectConnectionString) : this()
+        public AdaSqlDataAdapter(string selectCommandText, string selectConnectionString)
+            : this()
         {
             SqlConnection connection = new SqlConnection(selectConnectionString);
-            SelectCommand = new SqlCommand(selectCommandText, connection);
+            this.SelectCommand = new SqlCommand(selectCommandText, connection);
         }
 
-        public AdaSqlDataAdapter(string selectCommandText, SqlConnection selectConnection) : this()
+        public AdaSqlDataAdapter(string selectCommandText, SqlConnection selectConnection)
+            : this()
         {
-            SelectCommand = new SqlCommand(selectCommandText, selectConnection);
+            this.SelectCommand = new SqlCommand(selectCommandText, selectConnection);
         }
 
-        private AdaSqlDataAdapter(AdaSqlDataAdapter from) : base(from)
-        { // Clone
+        /// <summary>Clone constructor.</summary>
+        private AdaSqlDataAdapter(AdaSqlDataAdapter cloneFrom)
+            : base(cloneFrom)
+        {
             GC.SuppressFinalize(this);
         }
 
-        [
-        DefaultValue(null),
-        // TODO:  Editor("Microsoft.VSDesigner.Data.Design.DBCommandEditor, " + AssemblyRef.MicrosoftVSDesigner, "System.Drawing.Design.UITypeEditor, " + AssemblyRef.SystemDrawing),
-        // TODO:  ResCategoryAttribute(Res.DataCategory_Update),
-        // TODO:  ResDescriptionAttribute(Res.DbDataAdapter_DeleteCommand),
-        ]
-        new public SqlCommand DeleteCommand
+        #region Properties
+
+        [DefaultValue(null)]
+        public new SqlCommand DeleteCommand
         {
             get { return (SqlCommand)base.DeleteCommand; }
             set { base.DeleteCommand = value; }
         }
 
-        //IDbCommand IDbDataAdapter.DeleteCommand
-        //{
-        //    get { return _deleteCommand; }
-        //    set { _deleteCommand = (SqlCommand)value; }
-        //}
-
-        [
-        DefaultValue(null),
-        // TODO: Editor("Microsoft.VSDesigner.Data.Design.DBCommandEditor, " + AssemblyRef.MicrosoftVSDesigner, "System.Drawing.Design.UITypeEditor, " + AssemblyRef.SystemDrawing),
-        // TODO: ResCategoryAttribute(Res.DataCategory_Update),
-        // TODO:  ResDescriptionAttribute(Res.DbDataAdapter_InsertCommand),
-        ]
-        new public SqlCommand InsertCommand
+        [DefaultValue(null)]
+        public new SqlCommand InsertCommand
         {
             get { return (SqlCommand)base.InsertCommand; }
             set { base.InsertCommand = value; }
         }
 
-        //IDbCommand IDbDataAdapter.InsertCommand
-        //{
-        //    get { return _insertCommand; }
-        //    set { _insertCommand = (SqlCommand)value; }
-        //}
-
-        [
-        DefaultValue(null),
-        // TODO:   Editor("Microsoft.VSDesigner.Data.Design.DBCommandEditor, " + AssemblyRef.MicrosoftVSDesigner, "System.Drawing.Design.UITypeEditor, " + AssemblyRef.SystemDrawing),
-        // TODO:  ResCategoryAttribute(Res.DataCategory_Fill),
-        // TODO:  ResDescriptionAttribute(Res.DbDataAdapter_SelectCommand),
-        ]
-        new public SqlCommand SelectCommand
+        [DefaultValue(null)]
+        public new SqlCommand SelectCommand
         {
             get { return (SqlCommand)base.SelectCommand; }
             set { base.SelectCommand = value; }
         }
 
-        //IDbCommand IDbDataAdapter.SelectCommand
-        //{
-        //    get { return _selectCommand; }
-        //    set { _selectCommand = (SqlCommand)value; }
-        //}
+        [DefaultValue(null)]
+        public new SqlCommand UpdateCommand
+        {
+            get { return (SqlCommand)base.UpdateCommand; }
+            set { base.UpdateCommand = value; }
+        }
 
+        #endregion
 
-        override public int UpdateBatchSize
+        /// <summary>This implementation always returns a new <see cref="AdaSqlDataAdapter"/> instance.</summary>
+        public override Object Clone()
+        {
+            return new AdaSqlDataAdapter( cloneFrom: this );
+        }
+
+        public override int UpdateBatchSize
         {
             get
             {
-                return _updateBatchSize;
+                return this._updateBatchSize;
             }
             set
             {
@@ -125,53 +100,27 @@ namespace AsyncDataAdapter.SqlClient
                 { // WebData 98157
                     throw new ArgumentOutOfRangeException(paramName: nameof(value), actualValue: value, message: nameof(this.UpdateBatchSize) + " value must be >= 0." );
                 }
-                _updateBatchSize = value;
+                this._updateBatchSize = value;
             }
         }
 
-        [
-        DefaultValue(null),
-        // TODO: Editor("Microsoft.VSDesigner.Data.Design.DBCommandEditor, " + AssemblyRef.MicrosoftVSDesigner, "System.Drawing.Design.UITypeEditor, " + AssemblyRef.SystemDrawing),
-        // TODO:  ResCategoryAttribute(Res.DataCategory_Update),
-        // TODO:  ResDescriptionAttribute(Res.DbDataAdapter_UpdateCommand),
-        ]
-        new public SqlCommand UpdateCommand
-        {
-            get { return (SqlCommand)base.UpdateCommand; }
-            set { base.UpdateCommand = value; }
-        }
-
-        //IDbCommand IDbDataAdapter.UpdateCommand
-        //{
-        //    get { return _updateCommand; }
-        //    set { _updateCommand = (SqlCommand)value; }
-        //}
-
-        // TODO:[
-        // TODO: ResCategoryAttribute(Res.DataCategory_Update),
-        // TODO: ResDescriptionAttribute(Res.DbDataAdapter_RowUpdated),
-        // TODO: ]
         public event SqlRowUpdatedEventHandler RowUpdated
         {
             add
             {
-                Events.AddHandler(EventRowUpdated, value);
+                this.Events.AddHandler(EventRowUpdated, value);
             }
             remove
             {
-                Events.RemoveHandler(EventRowUpdated, value);
+                this.Events.RemoveHandler(EventRowUpdated, value);
             }
         }
 
-        // TODO: [
-        // TODO: ResCategoryAttribute(Res.DataCategory_Update),
-        // TODO: ResDescriptionAttribute(Res.DbDataAdapter_RowUpdating),
-        // TODO:  ]
         public event SqlRowUpdatingEventHandler RowUpdating
         {
             add
             {
-                SqlRowUpdatingEventHandler handler = (SqlRowUpdatingEventHandler)Events[EventRowUpdating];
+                SqlRowUpdatingEventHandler handler = (SqlRowUpdatingEventHandler)this.Events[EventRowUpdating];
 
                 // MDAC 58177, 64513
                 // prevent someone from registering two different command builders on the adapter by
@@ -181,32 +130,27 @@ namespace AsyncDataAdapter.SqlClient
                     SqlRowUpdatingEventHandler d = (SqlRowUpdatingEventHandler)ADP.FindBuilder(handler);
                     if (null != d)
                     {
-                        Events.RemoveHandler(EventRowUpdating, d);
+                        this.Events.RemoveHandler(EventRowUpdating, d);
                     }
                 }
-                Events.AddHandler(EventRowUpdating, value);
+                this.Events.AddHandler(EventRowUpdating, value);
             }
             remove
             {
-                Events.RemoveHandler(EventRowUpdating, value);
+                this.Events.RemoveHandler(EventRowUpdating, value);
             }
         }
 
         protected override int AddToBatch(DbCommand command)
         {
-            int commandIdentifier = _commandSet.CommandCount;
-            _commandSet.Append((SqlCommand)command);
+            int commandIdentifier = this._commandSet.CommandCount;
+            this._commandSet.Append((SqlCommand)command);
             return commandIdentifier;
         }
 
         protected override void ClearBatch()
         {
-            _commandSet.Clear();
-        }
-
-        object ICloneable.Clone()
-        {
-            return new AdaSqlDataAdapter(this);
+            this._commandSet.Clear();
         }
 
         protected override RowUpdatedEventArgs CreateRowUpdatedEvent(DataRow dataRow, DbCommand command, StatementType statementType, DataTableMapping tableMapping)
@@ -221,52 +165,52 @@ namespace AsyncDataAdapter.SqlClient
 
         protected override Task<int> ExecuteBatchAsync(CancellationToken cancellationToken)
         {
-            Debug.Assert(null != _commandSet && (0 < _commandSet.CommandCount), "no commands");
+            Debug.Assert(null != this._commandSet && (0 < this._commandSet.CommandCount), "no commands");
             // TODO:    Bid.CorrelationTrace("<sc.SqlDataAdapter.ExecuteBatch|Info|Correlation> ObjectID%d#, ActivityID %ls\n", ObjectID);
-            return _commandSet.ExecuteNonQueryAsync( cancellationToken );
+            return this._commandSet.ExecuteNonQueryAsync( cancellationToken );
         }
 
         protected override IDataParameter GetBatchedParameter(int commandIdentifier, int parameterIndex)
         {
-            Debug.Assert(commandIdentifier < _commandSet.CommandCount, "commandIdentifier out of range");
-            Debug.Assert(parameterIndex < _commandSet.GetParameterCount(commandIdentifier), "parameter out of range");
-            IDataParameter parameter = _commandSet.GetParameter(commandIdentifier, parameterIndex);
+            Debug.Assert(commandIdentifier < this._commandSet.CommandCount, "commandIdentifier out of range");
+            Debug.Assert(parameterIndex < this._commandSet.GetParameterCount(commandIdentifier), "parameter out of range");
+            IDataParameter parameter = this._commandSet.GetParameter(commandIdentifier, parameterIndex);
             return parameter;
         }
 
         protected override bool GetBatchedRecordsAffected(int commandIdentifier, out int recordsAffected, out Exception error)
         {
-            Debug.Assert(commandIdentifier < _commandSet.CommandCount, "commandIdentifier out of range");
-            return _commandSet.GetBatchedAffected(commandIdentifier, out recordsAffected, out error);
+            Debug.Assert(commandIdentifier < this._commandSet.CommandCount, "commandIdentifier out of range");
+            return this._commandSet.GetBatchedAffected(commandIdentifier, out recordsAffected, out error);
         }
 
         protected override void InitializeBatching()
         {
-            _commandSet = SqlCommandSetFactory.CreateInstance();
-            SqlCommand command = SelectCommand;
+            this._commandSet = SqlCommandSetFactory.CreateInstance();
+            SqlCommand command = this.SelectCommand;
             if (null == command)
             {
-                command = InsertCommand;
+                command = this.InsertCommand;
                 if (null == command)
                 {
-                    command = UpdateCommand;
+                    command = this.UpdateCommand;
                     if (null == command)
                     {
-                        command = DeleteCommand;
+                        command = this.DeleteCommand;
                     }
                 }
             }
             if (command != null)
             {
-                _commandSet.Connection     = command.Connection;
-                _commandSet.Transaction    = command.Transaction;
-                _commandSet.CommandTimeout = command.CommandTimeout;
+                this._commandSet.Connection     = command.Connection;
+                this._commandSet.Transaction    = command.Transaction;
+                this._commandSet.CommandTimeout = command.CommandTimeout;
             }
         }
 
         protected override void OnRowUpdated(RowUpdatedEventArgs value)
         {
-            SqlRowUpdatedEventHandler handler = (SqlRowUpdatedEventHandler)Events[EventRowUpdated];
+            SqlRowUpdatedEventHandler handler = (SqlRowUpdatedEventHandler)this.Events[EventRowUpdated];
             if ((null != handler) && (value is SqlRowUpdatedEventArgs))
             {
                 handler(this, (SqlRowUpdatedEventArgs)value);
@@ -276,7 +220,7 @@ namespace AsyncDataAdapter.SqlClient
 
         protected override void OnRowUpdating(RowUpdatingEventArgs value)
         {
-            SqlRowUpdatingEventHandler handler = (SqlRowUpdatingEventHandler)Events[EventRowUpdating];
+            SqlRowUpdatingEventHandler handler = (SqlRowUpdatingEventHandler)this.Events[EventRowUpdating];
             if ((null != handler) && (value is SqlRowUpdatingEventArgs))
             {
                 handler(this, (SqlRowUpdatingEventArgs)value);
@@ -286,10 +230,10 @@ namespace AsyncDataAdapter.SqlClient
 
         protected override void TerminateBatching()
         {
-            if (null != _commandSet)
+            if (null != this._commandSet)
             {
-                _commandSet.Dispose();
-                _commandSet = null;
+                this._commandSet.Dispose();
+                this._commandSet = null;
             }
         }
     }
