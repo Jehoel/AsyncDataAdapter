@@ -270,7 +270,6 @@ namespace AsyncDataAdapter
 
         internal void Clear()
         {
-            Bid.Trace("<sc.SqlCommandSet.Clear|API> %d#\n", ObjectID);
             DbCommand batchCommand = BatchCommand;
             if (null != batchCommand)
             {
@@ -286,7 +285,6 @@ namespace AsyncDataAdapter
 
         internal void Dispose()
         {
-            Bid.Trace("<sc.SqlCommandSet.Dispose|API> %d#\n", ObjectID);
             SqlCommand command = _batchCommand;
             _commandList = null;
             _batchCommand = null;

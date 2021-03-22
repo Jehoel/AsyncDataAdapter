@@ -311,25 +311,15 @@ namespace AsyncDataAdapter
 
         public async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.FillSchema|API> %d#, dataTable, schemaType=%d{ds.SchemaType}\n", ObjectID, (int)schemaType);
-            try
             {
                 IDbCommand selectCmd = _IDbDataAdapter.SelectCommand;
                 CommandBehavior cmdBehavior = FillCommandBehavior;
                 return await FillSchemaAsync(dataTable, schemaType, selectCmd, cmdBehavior).ConfigureAwait(false); // MDAC 67666
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         override public async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.FillSchema|API> %d#, dataSet, schemaType=%d{ds.SchemaType}\n", ObjectID, (int)schemaType);
-            try
             {
                 IDbCommand command = _IDbDataAdapter.SelectCommand;
                 if (DesignMode && ((null == command) || (null == command.Connection) || ADP.IsEmpty(command.CommandText)))
@@ -339,33 +329,19 @@ namespace AsyncDataAdapter
                 CommandBehavior cmdBehavior = FillCommandBehavior;
                 return await FillSchemaAsync(dataSet, schemaType, command, DbDataAdapter.DefaultSourceTableName, cmdBehavior).ConfigureAwait(false);
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         public async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, string srcTable)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.FillSchema|API> %d#, dataSet, schemaType=%d{ds.SchemaType}, srcTable=%ls%\n", ObjectID, (int)schemaType, srcTable);
-            try
             {
                 IDbCommand selectCmd = _IDbDataAdapter.SelectCommand;
                 CommandBehavior cmdBehavior = FillCommandBehavior;
                 return await FillSchemaAsync(dataSet, schemaType, selectCmd, srcTable, cmdBehavior).ConfigureAwait(false);
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         virtual async protected Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, IDbCommand command, string srcTable, CommandBehavior behavior)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.FillSchema|API> %d#, dataSet, schemaType, command, srcTable, behavior=%d{ds.CommandBehavior}\n", ObjectID, (int)behavior);
-            try
             {
                 if (null == dataSet)
                 {
@@ -385,17 +361,10 @@ namespace AsyncDataAdapter
                 }
                 return (DataTable[]) await FillSchemaInternalAsync(dataSet, null, schemaType, command, srcTable, behavior).ConfigureAwait(false);
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         virtual protected async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType, IDbCommand command, CommandBehavior behavior)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.FillSchema|API> %d#, dataTable, schemaType, command, behavior=%d{ds.CommandBehavior}\n", ObjectID, (int)behavior);
-            try
             {
                 if (null == dataTable)
                 {
@@ -416,10 +385,6 @@ namespace AsyncDataAdapter
                     srcTableName = TableMappings[index].SourceTable;
                 }
                 return (DataTable) await FillSchemaInternalAsync(null, dataTable, schemaType, command, srcTableName, behavior | CommandBehavior.SingleResult).ConfigureAwait(false);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
             }
         }
 
@@ -465,25 +430,16 @@ namespace AsyncDataAdapter
 
         override public async Task<int> FillAsync(DataSet dataSet)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, dataSet\n", ObjectID);
-            try
             {
                 // delegate to Fill4
                 IDbCommand selectCmd = _IDbDataAdapter.SelectCommand;
                 CommandBehavior cmdBehavior = FillCommandBehavior;
                 return await FillAsync(dataSet, 0, 0, DbDataAdapter.DefaultSourceTableName, selectCmd, cmdBehavior).ConfigureAwait(false);
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         public async Task<int> FillAsync(DataSet dataSet, string srcTable)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, dataSet, srcTable='%ls'\n", ObjectID, srcTable);
             try
             {
                 // delegate to Fill4
@@ -493,14 +449,11 @@ namespace AsyncDataAdapter
             }
             finally
             {
-                Bid.ScopeLeave(ref hscp);
             }
         }
 
         public async Task<int> FillAsync(DataSet dataSet, int startRecord, int maxRecords, string srcTable)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, dataSet, startRecord=%d, maxRecords=%d, srcTable='%ls'\n", ObjectID, startRecord, maxRecords, srcTable);
             try
             {
                 // delegate to Fill4
@@ -510,15 +463,11 @@ namespace AsyncDataAdapter
             }
             finally
             {
-                Bid.ScopeLeave(ref hscp);
             }
         }
 
         virtual protected async Task<int> FillAsync(DataSet dataSet, int startRecord, int maxRecords, string srcTable, IDbCommand command, CommandBehavior behavior)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, dataSet, startRecord, maxRecords, srcTable, command, behavior=%d{ds.CommandBehavior}\n", ObjectID, (int)behavior);
-            try
             {
                 if (null == dataSet)
                 {
@@ -542,19 +491,11 @@ namespace AsyncDataAdapter
                 }
                 return await FillInternalAsync(dataSet, null, startRecord, maxRecords, srcTable, command, behavior).ConfigureAwait(false);
             }
-            finally
-            {
-
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
 
         public async Task<int> FillAsync(DataTable dataTable)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, dataTable\n", ObjectID);
-            try
             {
                 // delegate to Fill8
                 DataTable[] dataTables = new DataTable[1] { dataTable };
@@ -562,50 +503,29 @@ namespace AsyncDataAdapter
                 CommandBehavior cmdBehavior = FillCommandBehavior;
                 return await FillAsync(dataTables, 0, 0, selectCmd, cmdBehavior).ConfigureAwait(false);
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         public async Task<int> FillAsync(int startRecord, int maxRecords, params DataTable[] dataTables)
         { // V1.2.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, startRecord=%d, maxRecords=%d, dataTable[]\n", ObjectID, startRecord, maxRecords);
-            try
             {
                 // delegate to Fill8
                 IDbCommand selectCmd = _IDbDataAdapter.SelectCommand;
                 CommandBehavior cmdBehavior = FillCommandBehavior;
                 return await FillAsync(dataTables, startRecord, maxRecords, selectCmd, cmdBehavior).ConfigureAwait(false);
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         virtual protected async Task<int> FillAsync(DataTable dataTable, IDbCommand command, CommandBehavior behavior)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> dataTable, command, behavior=%d{ds.CommandBehavior}%d#\n", ObjectID, (int)behavior);
-            try
             {
                 // delegate to Fill8
                 DataTable[] dataTables = new DataTable[1] { dataTable };
                 return await FillAsync(dataTables, 0, 0, command, behavior).ConfigureAwait(false);
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         virtual protected async Task<int> FillAsync(DataTable[] dataTables, int startRecord, int maxRecords, IDbCommand command, CommandBehavior behavior)
         { // V1.2.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Fill|API> %d#, dataTables[], startRecord, maxRecords, command, behavior=%d{ds.CommandBehavior}\n", ObjectID, (int)behavior);
-            try
             {
                 if ((null == dataTables) || (0 == dataTables.Length) || (null == dataTables[0]))
                 {
@@ -632,10 +552,6 @@ namespace AsyncDataAdapter
                     behavior |= CommandBehavior.SingleResult;
                 }
                 return await FillInternalAsync(null, dataTables, startRecord, maxRecords, null, command, behavior).ConfigureAwait(false);
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
             }
         }
 
@@ -884,9 +800,6 @@ namespace AsyncDataAdapter
 
         public async Task<int> UpdateAsync(DataRow[] dataRows)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Update|API> %d#, dataRows[]\n", ObjectID);
-            try
             {
                 int rowsAffected = 0;
                 if (null == dataRows)
@@ -915,17 +828,10 @@ namespace AsyncDataAdapter
                 }
                 return rowsAffected;
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         public async Task<int> UpdateAsync(DataTable dataTable)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Update|API> %d#, dataTable", ObjectID);
-            try
             {
                 if (null == dataTable)
                 {
@@ -948,17 +854,10 @@ namespace AsyncDataAdapter
                 }
                 return await UpdateFromDataTableAsync(dataTable, tableMapping).ConfigureAwait(false);
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         public async Task<int> UpdateAsync(DataSet dataSet, string srcTable)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Update|API> %d#, dataSet, srcTable='%ls'", ObjectID, srcTable);
-            try
             {
                 if (null == dataSet)
                 {
@@ -993,17 +892,10 @@ namespace AsyncDataAdapter
                 }
                 return rowsAffected;
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         virtual protected async Task<int> UpdateAsync(DataRow[] dataRows, DataTableMapping tableMapping)
         { // V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DbDataAdapter.Update|API> %d#, dataRows[], tableMapping", ObjectID);
-            try
             {
                 Debug.Assert((null != dataRows) && (0 < dataRows.Length), "Update: bad dataRows");
                 Debug.Assert(null != tableMapping, "Update: bad DataTableMapping");
@@ -1101,8 +993,6 @@ namespace AsyncDataAdapter
                                 {
                                     throw;
                                 }
-
-                                ADP.TraceExceptionForCapture(e);
 
                                 rowUpdatingEvent.Errors = e;
                                 rowUpdatingEvent.Status = UpdateStatus.ErrorsOccurred;
@@ -1211,7 +1101,6 @@ namespace AsyncDataAdapter
                                         throw;
                                     }
 
-                                    ADP.TraceExceptionForCapture(e);
                                     errors = e;
                                 }
 
@@ -1294,8 +1183,6 @@ namespace AsyncDataAdapter
                                     throw;
                                 }
 
-                                ADP.TraceExceptionForCapture(e);
-
                                 rowUpdatedEvent.Errors = e;
                                 rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
                             }
@@ -1376,8 +1263,6 @@ namespace AsyncDataAdapter
                                     throw;
                                 }
 
-                                ADP.TraceExceptionForCapture(e);
-
                                 rowUpdatedEvent.Errors = e;
                                 rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
                             }
@@ -1412,10 +1297,6 @@ namespace AsyncDataAdapter
                 }
                 return cumulativeDataRowsAffected;
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         private void UpdateBatchExecute(BatchCommandInfo[] batchCommands, int commandCount, RowUpdatedEventArgs rowUpdatedEvent)
@@ -1429,7 +1310,6 @@ namespace AsyncDataAdapter
             catch (DbException e)
             {
                 // an exception was thrown be but some part of the batch may have been succesfull
-                ADP.TraceExceptionForCapture(e);
                 rowUpdatedEvent.Errors = e;
                 rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
             }

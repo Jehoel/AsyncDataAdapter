@@ -361,7 +361,6 @@ namespace AsyncDataAdapter
 
         virtual protected DataTableMappingCollection CreateTableMappings()
         { // V1.0.3300
-            Bid.Trace("<comm.DataAdapter.CreateTableMappings|API> %d#\n", ObjectID);
             return new DataTableMappingCollection();
         }
 
@@ -383,9 +382,6 @@ namespace AsyncDataAdapter
 
         virtual protected async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, string srcTable, DbDataReader dataReader)
         { // V1.2.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DataAdapter.FillSchema|API> %d#, dataSet, schemaType=%d{ds.SchemaType}, srcTable, dataReader\n", ObjectID, (int)schemaType);
-            try
             {
                 if (null == dataSet)
                 {
@@ -407,17 +403,10 @@ namespace AsyncDataAdapter
                 object value = await FillSchemaFromReaderAsync(dataSet, null, schemaType, srcTable, dataReader).ConfigureAwait(false);
                 return (DataTable[])value;
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         virtual protected async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType, DbDataReader dataReader)
         { // V1.2.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DataAdapter.FillSchema|API> %d#, dataTable, schemaType, dataReader\n", ObjectID);
-            try
             {
                 if (null == dataTable)
                 {
@@ -435,10 +424,6 @@ namespace AsyncDataAdapter
                 // user will have to call NextResult to access remaining results
                 object value = await FillSchemaFromReaderAsync(null, dataTable, schemaType, null, dataReader).ConfigureAwait(false);
                 return (DataTable)value;
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
             }
         }
 
@@ -497,9 +482,6 @@ namespace AsyncDataAdapter
 
         virtual protected async Task<int> FillAsync(DataSet dataSet, string srcTable, IDataReader dataReader, int startRecord, int maxRecords)
         { // V1.2.3300, DbDataAdapter V1.0.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DataAdapter.Fill|API> %d#, dataSet, srcTable, dataReader, startRecord, maxRecords\n", ObjectID);
-            try
             {
                 if (null == dataSet)
                 {
@@ -529,10 +511,6 @@ namespace AsyncDataAdapter
                 DataReaderContainer readerHandler = DataReaderContainer.Create(dataReader, ReturnProviderSpecificTypes);
                 return await FillFromReaderAsync(dataSet, null, srcTable, readerHandler, startRecord, maxRecords, null, null).ConfigureAwait(false);
             }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
-            }
         }
 
         virtual protected async Task<int> FillAsync(DataTable dataTable, IDataReader dataReader)
@@ -543,9 +521,6 @@ namespace AsyncDataAdapter
 
         virtual protected async Task<int> FillAsync(DataTable[] dataTables, IDataReader dataReader, int startRecord, int maxRecords)
         { // V1.2.3300
-            IntPtr hscp;
-            Bid.ScopeEnter(out hscp, "<comm.DataAdapter.Fill|API> %d#, dataTables[], dataReader, startRecord, maxRecords\n", ObjectID);
-            try
             {
                 ADP.CheckArgumentLength(dataTables, "tables");
                 if ((null == dataTables) || (0 == dataTables.Length) || (null == dataTables[0]))
@@ -630,10 +605,6 @@ namespace AsyncDataAdapter
                     }
                 }
                 return result;
-            }
-            finally
-            {
-                Bid.ScopeLeave(ref hscp);
             }
         }
 
@@ -732,7 +703,6 @@ namespace AsyncDataAdapter
                             {
                                 throw;
                             }
-                            ADP.TraceExceptionForCapture(e);
                             OnFillErrorHandler(e, mapping.DataTable, mapping.DataValues);
                         }
                     }
@@ -773,7 +743,6 @@ namespace AsyncDataAdapter
                         {
                             throw;
                         }
-                        ADP.TraceExceptionForCapture(e);
                         OnFillErrorHandler(e, mapping.DataTable, mapping.DataValues);
                     }
                 }
@@ -818,7 +787,6 @@ namespace AsyncDataAdapter
                     {
                         throw;
                     }
-                    ADP.TraceExceptionForCapture(e);
                     OnFillErrorHandler(e, null, null);
                 }
             }
@@ -847,7 +815,6 @@ namespace AsyncDataAdapter
                     {
                         throw;
                     }
-                    ADP.TraceExceptionForCapture(e);
                     OnFillErrorHandler(e, null, null);
                 }
             }

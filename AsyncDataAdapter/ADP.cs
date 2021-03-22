@@ -39,188 +39,72 @@ namespace AsyncDataAdapter
 
     internal static class ADP
     {
-
-        // The class ADP defines the exceptions that are specific to the Adapters.f
-        // The class contains functions that take the proper informational variables and then construct
-        // the appropriate exception with an error string obtained from the resource Framework.txt.
-        // The exception is then returned to the caller, so that the caller may then throw from its
-        // location so that the catcher of the exception will have the appropriate call stack.
-        // This class is used so that there will be compile time checking of error messages.
-        // The resource Framework.txt will ensure proper string text based on the appropriate
-        // locale.
-
-        //static internal Task<T> CreatedTaskWithException<T>(Exception ex)
-        //{
-        //    TaskCompletionSource<T> completion = new TaskCompletionSource<T>();
-        //    completion.SetException(ex);
-        //    return completion.Task;
-        //}
-
-        //static internal Task<T> CreatedTaskWithCancellation<T>()
-        //{
-        //    TaskCompletionSource<T> completion = new TaskCompletionSource<T>();
-        //    completion.SetCanceled();
-        //    return completion.Task;
-        //}
-
-        //static internal Exception ExceptionWithStackTrace(Exception e)
-        //{
-        //    try
-        //    {
-        //        throw e;
-        //    }
-        //    catch (Exception caught)
-        //    {
-        //        return caught;
-        //    }
-        //}
-
-        //// NOTE: Initializing a Task in SQL CLR requires the "UNSAFE" permission set (http://msdn.microsoft.com/en-us/library/ms172338.aspx)
-        //// Therefore we are lazily initializing these Tasks to avoid forcing customers to use the "UNSAFE" set when they are actually using no Async features (See Dev11 Bug #193253)
-        //static private Task<bool> _trueTask = null;
-        //static internal Task<bool> TrueTask
-        //{
-        //    get
-        //    {
-        //        if (_trueTask == null)
-        //        {
-        //            _trueTask = Task.FromResult<bool>(true);
-        //        }
-        //        return _trueTask;
-        //    }
-        //}
-
-        //static private Task<bool> _falseTask = null;
-        //static internal Task<bool> FalseTask
-        //{
-        //    get
-        //    {
-        //        if (_falseTask == null)
-        //        {
-        //            _falseTask = Task.FromResult<bool>(false);
-        //        }
-        //        return _falseTask;
-        //    }
-        //}
-
-        // [BidMethod] // this method accepts BID format as an argument, this attribute allows FXCopBid rule to validate calls to it
-        static private void TraceException(
-                string trace,
-                /*[BidArgumentType(typeof(String))] */ Exception e)
-        {
-            Debug.Assert(null != e, "TraceException: null Exception");
-            if (null != e)
-            {
-                Bid.Trace(trace, e.ToString()); // will include callstack if permission is available
-            }
-        }
-
-        static internal void TraceExceptionAsReturnValue(Exception e)
-        {
-            TraceException("<comm.ADP.TraceException|ERR|THROW> '%ls'\n", e);
-        }
-        static internal void TraceExceptionForCapture(Exception e)
-        {
-            Debug.Assert(ADP.IsCatchableExceptionType(e), "Invalid exception type, should have been re-thrown!");
-            TraceException("<comm.ADP.TraceException|ERR|CATCH> '%ls'\n", e);
-        }
-        static internal void TraceExceptionWithoutRethrow(Exception e)
-        {
-            Debug.Assert(ADP.IsCatchableExceptionType(e), "Invalid exception type, should have been re-thrown!");
-            TraceException("<comm.ADP.TraceException|ERR|CATCH> '%ls'\n", e);
-        }
-
         //
         // COM+ exceptions
         //
         static internal ArgumentException Argument(string error)
         {
             ArgumentException e = new ArgumentException(error);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal ArgumentException Argument(string error, Exception inner)
         {
             ArgumentException e = new ArgumentException(error, inner);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal ArgumentException Argument(string error, string parameter)
         {
             ArgumentException e = new ArgumentException(error, parameter);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal ArgumentException Argument(string error, string parameter, Exception inner)
         {
             ArgumentException e = new ArgumentException(error, parameter, inner);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal ArgumentNullException ArgumentNull(string parameter)
         {
             ArgumentNullException e = new ArgumentNullException(parameter);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal ArgumentNullException ArgumentNull(string parameter, string error)
         {
             ArgumentNullException e = new ArgumentNullException(parameter, error);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal ArgumentOutOfRangeException ArgumentOutOfRange(string parameterName)
         {
             ArgumentOutOfRangeException e = new ArgumentOutOfRangeException(parameterName);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal ArgumentOutOfRangeException ArgumentOutOfRange(string message, string parameterName)
         {
             ArgumentOutOfRangeException e = new ArgumentOutOfRangeException(parameterName, message);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal ArgumentOutOfRangeException ArgumentOutOfRange(string message, string parameterName, object value)
         {
             ArgumentOutOfRangeException e = new ArgumentOutOfRangeException(parameterName, value, message);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
-        //static internal ConfigurationException Configuration(string message)
-        //{
-        //    ConfigurationException e = new ConfigurationErrorsException(message);
-        //    TraceExceptionAsReturnValue(e);
-        //    return e;
-        //}
-        //static internal ConfigurationException Configuration(string message, XmlNode node)
-        //{
-        //    ConfigurationException e = new ConfigurationErrorsException(message, node);
-        //    TraceExceptionAsReturnValue(e);
-        //    return e;
-        //}
         static internal DataException Data(string message)
         {
             DataException e = new DataException(message);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal IndexOutOfRangeException IndexOutOfRange(int value)
         {
             IndexOutOfRangeException e = new IndexOutOfRangeException(value.ToString(CultureInfo.InvariantCulture));
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal IndexOutOfRangeException IndexOutOfRange(string error)
         {
             IndexOutOfRangeException e = new IndexOutOfRangeException(error);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal IndexOutOfRangeException IndexOutOfRange()
         {
             IndexOutOfRangeException e = new IndexOutOfRangeException();
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal InvalidCastException InvalidCast(string error)
@@ -230,13 +114,11 @@ namespace AsyncDataAdapter
         static internal InvalidCastException InvalidCast(string error, Exception inner)
         {
             InvalidCastException e = new InvalidCastException(error, inner);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal InvalidOperationException InvalidOperation(string error)
         {
             InvalidOperationException e = new InvalidOperationException(error);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         //static internal TimeoutException TimeoutException(string error)
@@ -248,7 +130,6 @@ namespace AsyncDataAdapter
         static internal InvalidOperationException InvalidOperation(string error, Exception inner)
         {
             InvalidOperationException e = new InvalidOperationException(error, inner);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         //static internal NotImplementedException NotImplemented(string error)
@@ -260,7 +141,6 @@ namespace AsyncDataAdapter
         static internal NotSupportedException NotSupported()
         {
             NotSupportedException e = new NotSupportedException();
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         //static internal NotSupportedException NotSupported(string error)
@@ -294,19 +174,16 @@ namespace AsyncDataAdapter
         static internal InvalidCastException InvalidCast()
         {
             InvalidCastException e = new InvalidCastException();
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal IOException IO(string error)
         {
             IOException e = new IOException(error);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal IOException IO(string error, Exception inner)
         {
             IOException e = new IOException(error, inner);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
         static internal InvalidOperationException DataAdapter(string error)
@@ -324,7 +201,6 @@ namespace AsyncDataAdapter
         static internal ObjectDisposedException ObjectDisposed(object instance)
         {
             ObjectDisposedException e = new ObjectDisposedException(instance.GetType().Name);
-            TraceExceptionAsReturnValue(e);
             return e;
         }
 
@@ -1572,7 +1448,6 @@ namespace AsyncDataAdapter
             }
             // TODO: 
             DBConcurrencyException exception = new DBConcurrencyException(string.Format(resource, affected.ToString(CultureInfo.InvariantCulture), expected.ToString(CultureInfo.InvariantCulture)), null, dataRows);
-            TraceExceptionAsReturnValue(exception);
             return exception;
         }
 
