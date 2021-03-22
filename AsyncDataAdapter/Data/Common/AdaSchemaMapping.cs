@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
+using System.Threading;
 using System.Threading.Tasks;
 
 using AsyncDataAdapter.Internal;
@@ -391,44 +392,46 @@ namespace AsyncDataAdapter.Internal
             return _mappedDataValues;
         }
 
-        internal async Task LoadDataRowWithClear()
+        internal async Task LoadDataRowWithClearAsync( CancellationToken cancellationToken )
         {
             // for FillErrorEvent to ensure no values leftover from previous row
-            for (int i = 0; i < _readerDataValues.Length; ++i)
+            for (int i = 0; i < this._readerDataValues.Length; ++i)
             {
-                _readerDataValues[i] = null;
+                this._readerDataValues[i] = null;
             }
-            await LoadDataRow().ConfigureAwait(false);
+
+            await this.LoadDataRowAsync( cancellationToken ).ConfigureAwait(false);
         }
 
-        internal async Task LoadDataRow()
+        internal async Task LoadDataRowAsync( CancellationToken cancellationToken )
         {
             try
             {
-                _dataReader.GetValues(_readerDataValues);
-                object[] mapped = GetMappedValues();
+                _ = this._dataReader.GetValues( _readerDataValues );
+                object[] mapped = this.GetMappedValues();
 
                 DataRow dataRow;
-                switch (_loadOption)
+                switch (this._loadOption)
                 {
                     case LoadOption.OverwriteChanges:
                     case LoadOption.PreserveChanges:
                     case LoadOption.Upsert:
-                        dataRow = _dataTable.LoadDataRow(mapped, _loadOption);
+                        dataRow = this._dataTable.LoadDataRow(mapped, _loadOption);
                         break;
                     case (LoadOption)4: // true
-                        dataRow = _dataTable.LoadDataRow(mapped, true);
+                        dataRow = this._dataTable.LoadDataRow(mapped, true);
                         break;
                     case (LoadOption)5: // false
-                        dataRow = _dataTable.LoadDataRow(mapped, false);
+                        dataRow = this._dataTable.LoadDataRow(mapped, false);
                         break;
                     default:
                         Debug.Assert(false, "unexpected LoadOption");
-                        throw ADP.InvalidLoadOption(_loadOption);
+                        throw ADP.InvalidLoadOption(this._loadOption);
                 }
-                if ((null != _chapterMap) && (null != _dataSet))
+
+                if ((null != this._chapterMap) && (null != this._dataSet))
                 {
-                    await LoadDataRowChaptersAsync(dataRow).ConfigureAwait(false); // MDAC 70772
+                    await LoadDataRowChaptersAsync( dataRow, cancellationToken ).ConfigureAwait(false); // MDAC 70772
                 }
             }
             finally
@@ -456,7 +459,7 @@ namespace AsyncDataAdapter.Internal
             }
         }
 
-        internal async Task<int> LoadDataRowChaptersAsync(DataRow dataRow)
+        internal async Task<int> LoadDataRowChaptersAsync( DataRow dataRow, CancellationToken cancellationToken )
         {
             int datarowadded = 0;
 
@@ -467,40 +470,56 @@ namespace AsyncDataAdapter.Internal
                 {
                     object readerValue = _readerDataValues[i];
                     if ((null != readerValue) && !Convert.IsDBNull(readerValue))
-                    { // MDAC 70441
+                    {
                         _readerDataValues[i] = null;
 
-                        using (IDataReader nestedReader = (IDataReader)readerValue)
+                        if( readerValue is IDataReader nestedDataReader )
                         {
-                            if (!nestedReader.IsClosed)
-                            {
-                                Debug.Assert(null != _dataSet, "if chapters, then Fill(DataSet,...) not Fill(DataTable,...)");
-
-                                object parentChapterValue;
-                                DataColumn parentChapterColumn;
-                                if (null == _indexMap)
-                                {
-                                    parentChapterColumn = _dataTable.Columns[i];
-                                    parentChapterValue = dataRow[parentChapterColumn];
-                                }
-                                else
-                                {
-                                    parentChapterColumn = _dataTable.Columns[_indexMap[i]];
-                                    parentChapterValue = dataRow[parentChapterColumn];
-                                }
-
-                                // correct on Fill, not FillFromReader
-                                string chapterTableName = _tableMapping.SourceTable + _fieldNames[i]; // MDAC 70908
-
-                                AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create(nestedReader, _dataReader.ReturnProviderSpecificTypes);
-                                var fillFromReaderResult = await _adapter.FillFromReaderAsync(_dataSet, null, chapterTableName, readerHandler, 0, 0, parentChapterColumn, parentChapterValue).ConfigureAwait(false);
-                                datarowadded += fillFromReaderResult;
-                            }
+                            Int32 added = await this.LoadDataRowChaptersNestedReaderAsync( dataRow, i, nestedDataReader, cancellationToken ).ConfigureAwait(false);
+                            datarowadded += added;
                         }
                     }
                 }
             }
+
             return datarowadded;
+        }
+
+        private async Task<Int32> LoadDataRowChaptersNestedReaderAsync( DataRow dataRow, Int32 i, IDataReader nestedDataReader, CancellationToken cancellationToken )
+        {
+            using( nestedDataReader )
+            {
+                if( nestedDataReader.IsClosed ) return 0;
+                if( nestedDataReader is DbDataReader dbDataReader )
+                {
+                    Debug.Assert(null != _dataSet, "if chapters, then Fill(DataSet,...) not Fill(DataTable,...)");
+
+                    object parentChapterValue;
+                    DataColumn parentChapterColumn;
+                    if (null == _indexMap)
+                    {
+                        parentChapterColumn = _dataTable.Columns[i];
+                        parentChapterValue = dataRow[parentChapterColumn];
+                    }
+                    else
+                    {
+                        parentChapterColumn = _dataTable.Columns[_indexMap[i]];
+                        parentChapterValue = dataRow[parentChapterColumn];
+                    }
+
+                    // correct on Fill, not FillFromReader
+                    string chapterTableName = _tableMapping.SourceTable + _fieldNames[i]; // MDAC 70908
+
+                    AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dbDataReader );
+
+                    var fillFromReaderResult = await _adapter.FillFromReaderAsync( _dataSet, null, chapterTableName, readerHandler, 0, 0, parentChapterColumn, parentChapterValue, cancellationToken ).ConfigureAwait(false);
+                    return fillFromReaderResult;
+                }
+                else
+                {
+                    throw new InvalidOperationException( "Encountered an " + nameof(IDataReader) + " which is not a subclass of " + nameof(DbDataReader) + ". A " + nameof(DbDataReader) + " subclass is required for async operations." );
+                }
+            }
         }
 
         private int[] CreateIndexMap(int count, int index)

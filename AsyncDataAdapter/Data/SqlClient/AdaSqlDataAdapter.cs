@@ -190,14 +190,14 @@ namespace AsyncDataAdapter.SqlClient
             }
         }
 
-        override protected int AddToBatch(IDbCommand command)
+        protected override int AddToBatch(DbCommand command)
         {
             int commandIdentifier = _commandSet.CommandCount;
             _commandSet.Append((SqlCommand)command);
             return commandIdentifier;
         }
 
-        override protected void ClearBatch()
+        protected override void ClearBatch()
         {
             _commandSet.Clear();
         }
@@ -207,24 +207,24 @@ namespace AsyncDataAdapter.SqlClient
             return new AdaSqlDataAdapter(this);
         }
 
-        override protected RowUpdatedEventArgs CreateRowUpdatedEvent(DataRow dataRow, IDbCommand command, StatementType statementType, DataTableMapping tableMapping)
+        protected override RowUpdatedEventArgs CreateRowUpdatedEvent(DataRow dataRow, DbCommand command, StatementType statementType, DataTableMapping tableMapping)
         {
             return new SqlRowUpdatedEventArgs(dataRow, command, statementType, tableMapping);
         }
 
-        override protected RowUpdatingEventArgs CreateRowUpdatingEvent(DataRow dataRow, IDbCommand command, StatementType statementType, DataTableMapping tableMapping)
+        protected override RowUpdatingEventArgs CreateRowUpdatingEvent(DataRow dataRow, DbCommand command, StatementType statementType, DataTableMapping tableMapping)
         {
             return new SqlRowUpdatingEventArgs(dataRow, command, statementType, tableMapping);
         }
 
-        override protected int ExecuteBatch()
+        protected override int ExecuteBatch()
         {
             Debug.Assert(null != _commandSet && (0 < _commandSet.CommandCount), "no commands");
             // TODO:    Bid.CorrelationTrace("<sc.SqlDataAdapter.ExecuteBatch|Info|Correlation> ObjectID%d#, ActivityID %ls\n", ObjectID);
             return _commandSet.ExecuteNonQuery();
         }
 
-        override protected IDataParameter GetBatchedParameter(int commandIdentifier, int parameterIndex)
+        protected override IDataParameter GetBatchedParameter(int commandIdentifier, int parameterIndex)
         {
             Debug.Assert(commandIdentifier < _commandSet.CommandCount, "commandIdentifier out of range");
             Debug.Assert(parameterIndex < _commandSet.GetParameterCount(commandIdentifier), "parameter out of range");
@@ -232,13 +232,13 @@ namespace AsyncDataAdapter.SqlClient
             return parameter;
         }
 
-        override protected bool GetBatchedRecordsAffected(int commandIdentifier, out int recordsAffected, out Exception error)
+        protected override bool GetBatchedRecordsAffected(int commandIdentifier, out int recordsAffected, out Exception error)
         {
             Debug.Assert(commandIdentifier < _commandSet.CommandCount, "commandIdentifier out of range");
             return _commandSet.GetBatchedAffected(commandIdentifier, out recordsAffected, out error);
         }
 
-        override protected void InitializeBatching()
+        protected override void InitializeBatching()
         {
             _commandSet = SqlCommandSetFactory.CreateInstance();
             SqlCommand command = SelectCommand;
@@ -262,7 +262,7 @@ namespace AsyncDataAdapter.SqlClient
             }
         }
 
-        override protected void OnRowUpdated(RowUpdatedEventArgs value)
+        protected override void OnRowUpdated(RowUpdatedEventArgs value)
         {
             SqlRowUpdatedEventHandler handler = (SqlRowUpdatedEventHandler)Events[EventRowUpdated];
             if ((null != handler) && (value is SqlRowUpdatedEventArgs))
@@ -272,7 +272,7 @@ namespace AsyncDataAdapter.SqlClient
             base.OnRowUpdated(value);
         }
 
-        override protected void OnRowUpdating(RowUpdatingEventArgs value)
+        protected override void OnRowUpdating(RowUpdatingEventArgs value)
         {
             SqlRowUpdatingEventHandler handler = (SqlRowUpdatingEventHandler)Events[EventRowUpdating];
             if ((null != handler) && (value is SqlRowUpdatingEventArgs))
@@ -282,7 +282,7 @@ namespace AsyncDataAdapter.SqlClient
             base.OnRowUpdating(value);
         }
 
-        override protected void TerminateBatching()
+        protected override void TerminateBatching()
         {
             if (null != _commandSet)
             {
