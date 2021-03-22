@@ -1,22 +1,15 @@
-﻿//------------------------------------------------------------------------------
-// <copyright file="SchemaMapping.cs" company="Microsoft">
-//      Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
-// <owner current="true" primary="true">[....]</owner>
-//------------------------------------------------------------------------------
-
 using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
+using System.Diagnostics;
+using System.Globalization;
 using System.Threading.Tasks;
+
+using AsyncDataAdapter.Internal;
 
 namespace AsyncDataAdapter
 {
-
-    using System.Collections.Generic;
-    using System.Data;
-    using System.Data.Common;
-    using System.Diagnostics;
-    using System.Globalization;
-
     sealed internal class SchemaMapping
     {
 
@@ -595,7 +588,7 @@ namespace AsyncDataAdapter
             try
             {
                 DataColumnCollection columnCollection = _dataTable.Columns;
-                columnCollection.EnsureAdditionalCapacity(count + (chapterValue != null ? 1 : 0));
+                columnCollection.EnsureAdditionalCapacity_(count + (chapterValue != null ? 1 : 0));
                 // We can always just create column if there are no existing column or column mappings, and the mapping action is passthrough
                 bool alwaysCreateColumns = ((_dataTable.Columns.Count == 0) && ((_tableMapping.ColumnMappings == null) || (_tableMapping.ColumnMappings.Count == 0)) && (mappingAction == MissingMappingAction.Passthrough));
 
@@ -641,7 +634,7 @@ namespace AsyncDataAdapter
                     DataColumn dataColumn;
                     if (alwaysCreateColumns)
                     {
-                        dataColumn = Helpers.CreateDataColumnBySchemaAction(_fieldNames[i], _fieldNames[i], _dataTable, fieldType, schemaAction);
+                        dataColumn = DataColumnReflection.CreateDataColumnBySchemaAction_(_fieldNames[i], _fieldNames[i], _dataTable, fieldType, schemaAction);
                     }
                     else
                     {
@@ -966,7 +959,7 @@ namespace AsyncDataAdapter
                         }
                         if (4 <= (int)_loadOption)
                         {
-                            if (schemaRow.IsAutoIncrement && Helpers.IsAutoIncrementType(fieldType))
+                            if (schemaRow.IsAutoIncrement && DataColumnReflection.IsAutoIncrementType_(fieldType))
                             {
                                 // 
 

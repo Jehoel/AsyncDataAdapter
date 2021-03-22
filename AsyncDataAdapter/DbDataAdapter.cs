@@ -1,4 +1,4 @@
-﻿//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // <copyright file="DbDataAdapter.cs" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
@@ -6,21 +6,18 @@
 // <owner current="true" primary="false">[....]</owner>
 //------------------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Threading.Tasks;
+
+using AsyncDataAdapter.Internal;
 
 namespace AsyncDataAdapter
 {
-
-    using System;
-    using System.ComponentModel;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Data;
-    using System.Diagnostics;
-    using System.Reflection;
-    using System.Threading;
-
     public abstract class DbDataAdapter : DataAdapter, /* IDbDataAdapter, */ ICloneable
     { // V1.0.3300, MDAC 69629
         public const string DefaultSourceTableName = "Table"; // V1.0.3300
@@ -1127,7 +1124,7 @@ namespace AsyncDataAdapter
                                     IDbConnection connection = DbDataAdapter.GetConnection1(this);
 
                                     ConnectionState state = await UpdateConnectionOpenAsync(connection, StatementType.Batch, connections, connectionStates, useSelectConnectionState).ConfigureAwait(false);
-                                    rowUpdatedEvent.AdapterInit(rowBatch);
+                                    rowUpdatedEvent.AdapterInit_(rowBatch);
 
                                     if (ConnectionState.Open == state)
                                     {
@@ -1231,7 +1228,7 @@ namespace AsyncDataAdapter
                                     finalRowBatch = new DataRow[commandCount];
                                     Array.Copy(rowBatch, finalRowBatch, commandCount);
                                 }
-                                rowUpdatedEvent.AdapterInit(finalRowBatch);
+                                rowUpdatedEvent.AdapterInit_(finalRowBatch);
 
                                 if (ConnectionState.Open == state)
                                 {
@@ -1294,7 +1291,7 @@ namespace AsyncDataAdapter
             {
                 // the batch execution may succeed, partially succeed and throw an exception (or not), or totally fail
                 int recordsAffected = ExecuteBatch();
-                rowUpdatedEvent.AdapterInit(recordsAffected);
+                rowUpdatedEvent.AdapterInit_(recordsAffected);
             }
             catch (DbException e)
             {
@@ -1338,9 +1335,9 @@ namespace AsyncDataAdapter
                             {
                                 rows = new List<DataRow>();
                             }
-                            batchCommands[bc].Errors = ADP.UpdateConcurrencyViolation(batchCommands[bc].StatementType, 0, 1, new DataRow[] { rowUpdatedEvent.GetRows(bc) });
+                            batchCommands[bc].Errors = ADP.UpdateConcurrencyViolation(batchCommands[bc].StatementType, 0, 1, new DataRow[] { rowUpdatedEvent.GetRow_(bc) });
                             hasConcurrencyViolation = true;
-                            rows.Add(rowUpdatedEvent.GetRows(bc));
+                            rows.Add(rowUpdatedEvent.GetRow_(bc));
                         }
                     }
 
@@ -1352,7 +1349,7 @@ namespace AsyncDataAdapter
                         { // MDAC 64199
                             // AcceptChanges for 'added' rows so backend generated keys that are returned
                             // propagte into the datatable correctly.
-                            rowUpdatedEvent.GetRows(bc).AcceptChanges();
+                            rowUpdatedEvent.GetRow_(bc).AcceptChanges();
                         }
 
                         for (int i = 0; i < batchCommand.ParameterCount; ++i)
@@ -1374,7 +1371,7 @@ namespace AsyncDataAdapter
                     {
                         // bug50526, an exception if no records affected and attempted an Update/Delete
                         Debug.Assert(null == rowUpdatedEvent.Errors, "Continue - but contains an exception");
-                        DataRow[] rowsInError = (null != rows) ? rows.ToArray() : rowUpdatedEvent.GetRows();
+                        DataRow[] rowsInError = (null != rows) ? rows.ToArray() : rowUpdatedEvent.GetRows_();
                         rowUpdatedEvent.Errors = ADP.UpdateConcurrencyViolation(StatementType.Batch, commandCount - rowsInError.Length, commandCount, rowsInError); // MDAC 55735
                         rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
                     }
@@ -1428,7 +1425,7 @@ namespace AsyncDataAdapter
             if ((StatementType.Delete == cmdIndex) || (0 == (UpdateRowSource.FirstReturnedRecord & updatedRowSource)))
             {
                 int recordsAffected = dataCommand.ExecuteNonQuery(); // MDAC 88441
-                rowUpdatedEvent.AdapterInit(recordsAffected);
+                rowUpdatedEvent.AdapterInit_(recordsAffected);
             }
             else if ((StatementType.Insert == cmdIndex) || (StatementType.Update == cmdIndex))
             {
@@ -1475,7 +1472,7 @@ namespace AsyncDataAdapter
 
                         // RecordsAffected is available after Close, but don't trust it after Dispose
                         int recordsAffected = dataReader.RecordsAffected;
-                        rowUpdatedEvent.AdapterInit(recordsAffected);
+                        rowUpdatedEvent.AdapterInit_(recordsAffected);
                     }
                 }
             }
