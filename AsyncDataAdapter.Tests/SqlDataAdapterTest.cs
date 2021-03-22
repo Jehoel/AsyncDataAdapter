@@ -14,10 +14,9 @@ namespace AsyncDataAdapter.Tests
     [TestFixture]
     public class SqlDataAdapterTest
     {
-//      private const string _ConnectionString = @"server=.\sqlexpress;database=AsyncDataReaderTest;Trusted_Connection=Yes";
-        private const string _ConnectionString = @"server=.\SQL2017;database=AsyncDataReaderTest;Trusted_Connection=Yes";
-
         private const Int32 COMMAND_TIMEOUT = 30; // `SqlCommand.CommandTimeou` is valued in seconds, not milliseconds!
+
+        private static readonly String _ConnectionString = TestConfiguration.Instance.ConnectionString;
 
         #region Utility
         private static async Task<SqlConnection> CreateOpenConnectionAsync(CancellationToken cancellationToken = default)
@@ -264,7 +263,7 @@ namespace AsyncDataAdapter.Tests
             }
         }
 
-        private void AssertDataTableContent(DataTable dt)
+        private static void AssertDataTableContent(DataTable dt)
         {
             int i = 1;
 
@@ -292,7 +291,8 @@ namespace AsyncDataAdapter.Tests
                 Assert.AreEqual(st, ast);
                 Assert.AreEqual(txt, atxt);
                 i++;
-            } while (i < dt.Rows.Count);
+            }
+            while (i < dt.Rows.Count);
         }
 
         #endregion
