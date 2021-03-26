@@ -1,4 +1,3 @@
-
 using System;
 using System.ComponentModel;
 using System.Data;
@@ -12,7 +11,7 @@ using AsyncDataAdapter.Internal;
 
 namespace AsyncDataAdapter
 {
-    public abstract class AdaDataAdapter : Component, IUpdatingAsyncDataAdapter
+    public abstract class AdaDataAdapter : Component, IUpdatingAsyncDataAdapter, IAdaSchemaMappingAdapter
     {
         private static          Int32  _objectInstanceCount;
         private static readonly Object _fillErrorEventKey = new Object();
@@ -173,6 +172,25 @@ namespace AsyncDataAdapter
 
         #endregion
 
+        #region IAdaSchemaMappingAdapter
+
+        DataTableMapping IAdaSchemaMappingAdapter.GetTableMappingBySchemaAction( string sourceTableName, string dataSetTableName, MissingMappingAction mappingAction )
+        {
+            return this.GetTableMappingBySchemaAction( sourceTableName, dataSetTableName, mappingAction );
+        }
+
+        int IAdaSchemaMappingAdapter.IndexOfDataSetTable(string dataSetTable)
+        {
+            return this.IndexOfDataSetTable( dataSetTable );
+        }
+
+        Task<int> IAdaSchemaMappingAdapter.FillFromReaderAsync( DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int startRecord, int maxRecords, DataColumn parentChapterColumn, object parentChapterValue, CancellationToken cancellationToken )
+        {
+            return this.FillFromReaderAsync( dataset, datatable, srcTable, dataReader, startRecord, maxRecords, parentChapterColumn, parentChapterValue, cancellationToken );
+        }
+
+        #endregion
+
         #region FillError
 
         [DefaultValue(false)]
@@ -204,6 +222,11 @@ namespace AsyncDataAdapter
         {
             FillErrorEventHandler handler = (FillErrorEventHandler)this.Events[_fillErrorEventKey];
             handler?.Invoke(this, args);
+        }
+
+        private void OnFillErrorHandler(Exception ex)
+        {
+            this.OnFillErrorHandler( ex, null, null );
         }
 
         private void OnFillErrorHandler(Exception ex, DataTable dataTable, object[] dataValues)
@@ -355,313 +378,54 @@ namespace AsyncDataAdapter
             return await this.FillAsync( dataTables, dataReader, startRecord: 0, maxRecords: 0, cancellationToken ).ConfigureAwait(false);
         }
 
-        protected virtual async Task<int> FillAsync( DataTable[] dataTables, DbDataReader dataReader, int startRecord, int maxRecords, CancellationToken cancellationToken )
+        protected virtual Task<int> FillAsync( DataTable[] dataTables, DbDataReader dataReader, int startRecord, int maxRecords, CancellationToken cancellationToken )
         {
-            if (dataTables is null) throw new ArgumentNullException(paramName: nameof(dataTables));
-            if (0 == dataTables.Length) throw new ArgumentException(string.Format("Argument is empty: {0}", nameof(dataTables)), paramName: nameof(dataTables));
+            Action<Exception, DataTable, Object[]> onFillError = this.GetCurrentFillErrorHandler();
 
-            {
-                if (null == dataTables[0])
-                {
-                    throw ADP.FillRequires("dataTable");
-                }
-                if (null == dataReader)
-                {
-                    throw ADP.FillRequires("dataReader");
-                }
-                if ((1 < dataTables.Length) && ((0 != startRecord) || (0 != maxRecords)))
-                {
-                    throw new NotSupportedException(); // FillChildren is not supported with FillPage
-                }
-
-                int result = 0;
-                bool enforceContraints = false;
-                DataSet commonDataSet = dataTables[0].DataSet;
-                try
-                {
-                    if (null != commonDataSet)
-                    {
-                        enforceContraints = commonDataSet.EnforceConstraints;
-                        commonDataSet.EnforceConstraints = false;
-                    }
-                    for (int i = 0; i < dataTables.Length; ++i)
-                    {
-                        Debug.Assert(null != dataTables[i], "null DataTable Fill");
-
-                        if (dataReader.IsClosed)
-                        {
-                            break;
-                        }
-
-                        AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dataReader, useProviderSpecificDataReader: this.ReturnProviderSpecificTypes );
-                        if (readerHandler.FieldCount <= 0)
-                        {
-                            if (i == 0)
-                            {
-                                bool lastFillNextResult;
-                                do
-                                {
-                                    lastFillNextResult = await this.FillNextResultAsync( readerHandler, cancellationToken ).ConfigureAwait(false);
-                                }
-                                while (lastFillNextResult && readerHandler.FieldCount <= 0);
-                                
-                                if (!lastFillNextResult)
-                                {
-                                    break;
-                                }
-                            }
-                            else
-                            {
-                                continue;
-                            }
-                        }
-                       
-                        if ((0 < i) && !await this.FillNextResultAsync( readerHandler, cancellationToken ).ConfigureAwait(false))
-                        {
-                            break;
-                        }
-                        // user must Close/Dispose of the dataReader
-                        // user will have to call NextResult to access remaining results
-                        int count = await this.FillFromReaderAsync( null, dataTables[i], null, readerHandler, startRecord, maxRecords, null, null, cancellationToken ).ConfigureAwait(false);
-                        if (0 == i)
-                        {
-                            result = count;
-                        }
-                    }
-                }
-                catch (ConstraintException)
-                {
-                    enforceContraints = false;
-                    throw;
-                }
-                finally
-                {
-                    if (enforceContraints)
-                    {
-                        commonDataSet.EnforceConstraints = true;
-                    }
-                }
-
-                return result;
-            }
+            return AsyncDataReaderMethods.FillAsync( onFillError, this, this.ReturnProviderSpecificTypes, dataTables, dataReader, startRecord, maxRecords, cancellationToken );
         }
 
-        internal async Task<int> FillFromReaderAsync( DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int startRecord, int maxRecords, DataColumn parentChapterColumn, object parentChapterValue, CancellationToken cancellationToken )
+        internal Task<int> FillFromReaderAsync( DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int startRecord, int maxRecords, DataColumn parentChapterColumn, object parentChapterValue, CancellationToken cancellationToken )
         {
-            int rowsAddedToDataSet = 0;
-            int schemaCount = 0;
-            do
-            {
-                if (0 >= dataReader.FieldCount)
-                {
-                    continue; // loop to next result
-                }
+            Action<Exception, DataTable, Object[]> onFillError = this.GetCurrentFillErrorHandler();
 
-                AdaSchemaMapping mapping = this.FillMapping( dataset, datatable, srcTable, dataReader, schemaCount, parentChapterColumn, parentChapterValue );
-                schemaCount++; // don't increment if no SchemaTable ( a non-row returning result )
-
-                if (null == mapping)
-                {
-                    continue; // loop to next result
-                }
-                if (null == mapping.DataValues)
-                {
-                    continue; // loop to next result
-                }
-                if (null == mapping.DataTable)
-                {
-                    continue; // loop to next result
-                }
-
-                mapping.DataTable.BeginLoadData();
-
-                try
-                {
-                    // startRecord and maxRecords only apply to the first resultset
-                    if ((1 == schemaCount) && ((0 < startRecord) || (0 < maxRecords)))
-                    {
-                        rowsAddedToDataSet = await this.FillLoadDataRowChunkAsync( mapping, startRecord, maxRecords, cancellationToken ).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        int count = await this.FillLoadDataRowAsync( mapping, cancellationToken ).ConfigureAwait(false);
-
-                        if (1 == schemaCount)
-                        {
-                            // only return LoadDataRow count for first resultset
-                            // not secondary or chaptered results
-                            rowsAddedToDataSet = count;
-                        }
-                    }
-                }
-                finally
-                {
-                    mapping.DataTable.EndLoadData();
-                }
-                if (null != datatable)
-                {
-                    break; // do not read remaining results in single DataTable case
-                }
-            }
-            while (await this.FillNextResultAsync( dataReader, cancellationToken ).ConfigureAwait(false));
-
-            return rowsAddedToDataSet;
+            return AsyncDataReaderMethods.FillFromReaderAsync( onFillError, this, dataset, datatable, srcTable, dataReader, startRecord, maxRecords, parentChapterColumn, parentChapterValue, cancellationToken );
         }
 
-        private async Task<int> FillLoadDataRowChunkAsync( AdaSchemaMapping mapping, int startRecord, int maxRecords, CancellationToken cancellationToken )
+        public Task<int> FillLoadDataRowChunkAsync( AdaSchemaMapping mapping, int startRecord, int maxRecords, CancellationToken cancellationToken )
         {
-            AdaDataReaderContainer dataReader = mapping.DataReader;
+            Action<Exception, DataTable, Object[]> onFillError2 = this.GetCurrentFillErrorHandler();
 
-            while (0 < startRecord)
-            {
-                if (!await dataReader.ReadAsync( cancellationToken ).ConfigureAwait(false))
-                {
-                    // there are no more rows on first resultset
-                    return 0;
-                }
-                --startRecord;
-            }
-
-            int rowsAddedToDataSet = 0;
-            if (0 < maxRecords)
-            {
-                while ((rowsAddedToDataSet < maxRecords) && await dataReader.ReadAsync( cancellationToken ).ConfigureAwait(false))
-                {
-                    if (this.HasFillErrorHandler)
-                    {
-                        try
-                        {
-                            await mapping.LoadDataRowWithClearAsync( cancellationToken ).ConfigureAwait(false);
-                            rowsAddedToDataSet++;
-                        }
-                        catch (Exception e)
-                        {
-                            // 
-                            if (!ADP.IsCatchableExceptionType(e))
-                            {
-                                throw;
-                            }
-                            this.OnFillErrorHandler(e, mapping.DataTable, mapping.DataValues);
-                        }
-                    }
-                    else
-                    {
-                        await mapping.LoadDataRowAsync( cancellationToken ).ConfigureAwait(false);
-                        rowsAddedToDataSet++;
-                    }
-                }
-                // skip remaining rows of the first resultset
-            }
-            else
-            {
-                rowsAddedToDataSet = await this.FillLoadDataRowAsync( mapping, cancellationToken ).ConfigureAwait(false);
-            }
-            return rowsAddedToDataSet;
-        }
-
-        private async Task<int> FillLoadDataRowAsync( AdaSchemaMapping mapping, CancellationToken cancellationToken )
-        {
-            int rowsAddedToDataSet = 0;
-            AdaDataReaderContainer dataReader = mapping.DataReader;
-            if (this.HasFillErrorHandler)
-            {
-                while (await dataReader.ReadAsync( cancellationToken ).ConfigureAwait(false))
-                { // read remaining rows of first and subsequent resultsets
-                    try
-                    {
-                        // only try-catch if a FillErrorEventHandler is registered so that
-                        // in the default case we get the full callstack from users
-                        await mapping.LoadDataRowWithClearAsync( cancellationToken ).ConfigureAwait(false);
-                        rowsAddedToDataSet++;
-                    }
-                    catch (Exception e)
-                    {
-                        // 
-                        if (!ADP.IsCatchableExceptionType(e))
-                        {
-                            throw;
-                        }
-                        this.OnFillErrorHandler(e, mapping.DataTable, mapping.DataValues);
-                    }
-                }
-            }
-            else
-            {
-                while (await dataReader.ReadAsync( cancellationToken ).ConfigureAwait(false))
-                {
-                    // read remaining rows of first and subsequent resultset
-                    await mapping.LoadDataRowAsync( cancellationToken ).ConfigureAwait(false);
-                    rowsAddedToDataSet++;
-                }
-            }
-            return rowsAddedToDataSet;
+            return AsyncDataReaderMethods.FillLoadDataRowChunkAsync( onFillError2, mapping, startRecord, maxRecords, cancellationToken );
         }
 
         private AdaSchemaMapping FillMappingInternal(DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int schemaCount, DataColumn parentChapterColumn, object parentChapterValue)
         {
-            bool withKeyInfo = (MissingSchemaAction.AddWithKey == this.MissingSchemaAction);
-            string tmp = null;
-            if (dataset != null)
-            {
-                tmp = AdaDataAdapter.GetSourceTableName(srcTable, schemaCount);
-            }
-
-            return new AdaSchemaMapping( this, dataset, datatable, dataReader, withKeyInfo, SchemaType.Mapped, tmp, true, parentChapterColumn, parentChapterValue );
+            return AsyncDataReaderMethods.FillMappingInternal( this, dataset, datatable, srcTable, dataReader, schemaCount, parentChapterColumn, parentChapterValue );
         }
 
         private AdaSchemaMapping FillMapping(DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int schemaCount, DataColumn parentChapterColumn, object parentChapterValue)
         {
-            AdaSchemaMapping mapping = null;
-            if (this.HasFillErrorHandler)
-            {
-                try
-                {
-                    // only try-catch if a FillErrorEventHandler is registered so that
-                    // in the default case we get the full callstack from users
-                    mapping = this.FillMappingInternal( dataset, datatable, srcTable, dataReader, schemaCount, parentChapterColumn, parentChapterValue );
-                }
-                catch (Exception e)
-                {
-                    if (!ADP.IsCatchableExceptionType(e))
-                    {
-                        throw;
-                    }
-                    this.OnFillErrorHandler(e, null, null);
-                }
-            }
-            else
-            {
-                mapping = this.FillMappingInternal( dataset, datatable, srcTable, dataReader, schemaCount, parentChapterColumn, parentChapterValue );
-            }
-            return mapping;
+            Action<Exception, DataTable, Object[]> onFillError = this.GetCurrentFillErrorHandler();
+
+            return AsyncDataReaderMethods.FillMapping( onFillError, this, dataset, datatable, srcTable, dataReader, schemaCount, parentChapterColumn, parentChapterValue );
         }
 
         private async Task<bool> FillNextResultAsync( AdaDataReaderContainer dataReader, CancellationToken cancellationToken )
         {
-            bool result = true;
-            if (this.HasFillErrorHandler)
+            Action<Exception, DataTable, Object[]> onFillError = this.GetCurrentFillErrorHandler();
+
+            return await AsyncDataReaderMethods.FillNextResultAsync( onFillError, dataReader, cancellationToken ).ConfigureAwait(false);
+        }
+
+        private Action<Exception, DataTable, Object[]> GetCurrentFillErrorHandler()
+        {
+            if( this.HasFillErrorHandler )
             {
-                try
-                {
-                    // only try-catch if a FillErrorEventHandler is registered so that
-                    // in the default case we get the full callstack from users
-                    result = await dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
-                    if (!ADP.IsCatchableExceptionType(e))
-                    {
-                        throw;
-                    }
-                    this.OnFillErrorHandler(e, null, null);
-                }
-            }
-            else
-            {
-                result = await dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false);
+                return this.OnFillErrorHandler;
             }
 
-            return result;
+            return null;
         }
 
         #endregion

@@ -7,11 +7,27 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
-using AsyncDataAdapter.Internal;
-
 namespace AsyncDataAdapter.Internal
 {
-    internal sealed class AdaSchemaMapping
+    public interface IAdaSchemaMappingAdapter
+    {
+        LoadOption FillLoadOption { get; }
+
+        Boolean AcceptChangesDuringFill { get; }
+
+        MissingMappingAction MissingMappingAction { get; }
+        MissingSchemaAction  MissingSchemaAction  { get; }
+
+        DataTableMappingCollection TableMappings { get; }
+
+        DataTableMapping GetTableMappingBySchemaAction( string sourceTableName, string dataSetTableName, MissingMappingAction mappingAction );
+
+        int IndexOfDataSetTable(string dataSetTable);
+
+        Task<int> FillFromReaderAsync( DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int startRecord, int maxRecords, DataColumn parentChapterColumn, object parentChapterValue, CancellationToken cancellationToken );
+    }
+
+    public sealed class AdaSchemaMapping
     {
 
         // DataColumns match in length and name order as the DataReader, no chapters
@@ -38,7 +54,7 @@ namespace AsyncDataAdapter.Internal
         private readonly DataSet _dataSet; // the current dataset, may be null if we are only filling a DataTable
         private DataTable _dataTable; // the current DataTable, should never be null
 
-        private readonly AdaDataAdapter _adapter;
+        private readonly IAdaSchemaMappingAdapter _adapter;
         private readonly AdaDataReaderContainer _dataReader;
         private readonly DataTable _schemaTable;  // will be null if Fill without schema
         private readonly DataTableMapping _tableMapping;
@@ -59,7 +75,7 @@ namespace AsyncDataAdapter.Internal
 
         private readonly LoadOption _loadOption;
 
-        internal AdaSchemaMapping(AdaDataAdapter adapter, DataSet dataset, DataTable datatable, AdaDataReaderContainer dataReader, bool keyInfo,
+        internal AdaSchemaMapping(IAdaSchemaMappingAdapter adapter, DataSet dataset, DataTable datatable, AdaDataReaderContainer dataReader, bool keyInfo,
                                     SchemaType schemaType, string sourceTableName, bool gettingData,
                                     DataColumn parentChapterColumn, object parentChapterValue)
         {

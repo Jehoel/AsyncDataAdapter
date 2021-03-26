@@ -32,32 +32,18 @@ namespace AsyncDataAdapter.Internal
 
 namespace AsyncDataAdapter
 {
-
-
     public abstract partial class ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> : IUpdatingAsyncDbDataAdapter
     {
         protected virtual Task<Int32> FillAsync( DataTable[] dataTables, int startRecord, int maxRecords, TDbCommand command, CommandBehavior behavior, CancellationToken cancellationToken )
         {
-            if (dataTables == null || dataTables.Length == 0 || dataTables[0] == null)
-		    {
-			    throw ADP.FillRequires("dataTable");
-		    }
-		    if (startRecord < 0)
-		    {
-			    throw ADP.InvalidStartRecord("startRecord", startRecord);
-		    }
-		    if (maxRecords < 0)
-		    {
-			    throw ADP.InvalidMaxRecords("maxRecords", maxRecords);
-		    }
-		    if (1 < dataTables.Length && (startRecord != 0 || maxRecords != 0))
-		    {
-			    throw ADP.OnlyOneTableForStartRecordOrMaxRecords();
-		    }
-		    if (command == null)
-		    {
-			    throw ADP.MissingSelectCommand("Fill");
-		    }
+            if (dataTables == null || dataTables.Length == 0 || dataTables[0] == null) throw ADP.FillRequires("dataTable");
+		    if (startRecord < 0) throw ADP.InvalidStartRecord("startRecord", startRecord);
+		    if (maxRecords < 0) throw ADP.InvalidMaxRecords("maxRecords", maxRecords);
+		    if (1 < dataTables.Length && (startRecord != 0 || maxRecords != 0)) throw ADP.OnlyOneTableForStartRecordOrMaxRecords();
+		    if (command == null) throw ADP.MissingSelectCommand("Fill");
+
+            //
+
 		    if (1 == dataTables.Length)
 		    {
 			    behavior |= CommandBehavior.SingleResult;
@@ -86,11 +72,11 @@ namespace AsyncDataAdapter
                 {
                     if (datatables != null)
 				    {
-					    return await this.FillAsync( datatables, dataReader, startRecord, maxRecords, cancellationToken );
+					    return await this.FillAsync( datatables, dataReader, startRecord, maxRecords, cancellationToken ).ConfigureAwait(false);
 				    }
                     else
                     {
-                        return await this.FillAsync( dataset, srcTable, dataReader, startRecord, maxRecords, cancellationToken );
+                        return await this.FillAsync( dataset, srcTable, dataReader, startRecord, maxRecords, cancellationToken ).ConfigureAwait(false);
                     }
                 }
 		    }
@@ -102,19 +88,10 @@ namespace AsyncDataAdapter
 
         protected virtual async Task<Int32> FillAsync( DataTable[] dataTables, IDataReader dataReader, int startRecord, int maxRecords, CancellationToken cancellationToken )
         {
-            ADP.CheckArgumentLength(dataTables, "tables");
-		    if (dataTables == null || dataTables.Length == 0 || dataTables[0] == null)
-		    {
-			    throw ADP.FillRequires("dataTable");
-		    }
-		    if (dataReader == null)
-		    {
-			    throw ADP.FillRequires("dataReader");
-		    }
-		    if (1 < dataTables.Length && (startRecord != 0 || maxRecords != 0))
-		    {
-			    throw ADP.NotSupported();
-		    }
+		    if (dataTables == null || dataTables.Length == 0 || dataTables[0] == null) throw ADP.FillRequires("dataTable");
+		    if (dataReader == null) throw ADP.FillRequires("dataReader");
+		    if (1 < dataTables.Length && (startRecord != 0 || maxRecords != 0)) throw ADP.NotSupported();
+
 		    int result = 0;
 		    bool flag = false;
 		    DataSet dataSet = dataTables[0].DataSet;
@@ -198,6 +175,7 @@ namespace AsyncDataAdapter
 		    {
 			    return 0;
 		    }
+
 		    DataReaderContainer dataReader2 = DataReaderContainer.Create(dataReader, ReturnProviderSpecificTypes);
 		    return FillFromReader(dataSet, null, srcTable, dataReader2, startRecord, maxRecords, null, null);
         }
