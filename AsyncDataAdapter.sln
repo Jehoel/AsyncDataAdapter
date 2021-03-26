@@ -19,6 +19,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AsyncDataAdapter.Tests", "AsyncDataAdapter.Tests\AsyncDataAdapter.Tests.csproj", "{F53AB0CC-DFBC-4D41-A0E6-B670FDABF67A}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AsyncDataAdapter.Microsoft.Data.SqlClient", "AsyncDataAdapter.Microsoft.Data.SqlClient\AsyncDataAdapter.Microsoft.Data.SqlClient.csproj", "{C3734C27-227B-4CB1-9D5C-5930885A37DE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AsyncDataAdapter.System.Data.SqlClient", "AsyncDataAdapter.System.Data.SqlClient\AsyncDataAdapter.System.Data.SqlClient.csproj", "{FD614642-CD23-4B1A-B5FC-3F5E28EB29E9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +37,14 @@ Global
 		{F53AB0CC-DFBC-4D41-A0E6-B670FDABF67A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F53AB0CC-DFBC-4D41-A0E6-B670FDABF67A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F53AB0CC-DFBC-4D41-A0E6-B670FDABF67A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3734C27-227B-4CB1-9D5C-5930885A37DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3734C27-227B-4CB1-9D5C-5930885A37DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3734C27-227B-4CB1-9D5C-5930885A37DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3734C27-227B-4CB1-9D5C-5930885A37DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD614642-CD23-4B1A-B5FC-3F5E28EB29E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD614642-CD23-4B1A-B5FC-3F5E28EB29E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD614642-CD23-4B1A-B5FC-3F5E28EB29E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD614642-CD23-4B1A-B5FC-3F5E28EB29E9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

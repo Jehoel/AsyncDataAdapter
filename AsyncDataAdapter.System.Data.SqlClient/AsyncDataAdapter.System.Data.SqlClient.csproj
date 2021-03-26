@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>StrongName.snk.pfx</AssemblyOriginatorKeyFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <NoWarn>1591</NoWarn>
+    
+    <!-- https://docs.microsoft.com/en-us/nuget/create-packages/symbol-packages-snupkg -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- BEGIN NuGet: -->
+    <PackageId>Jehoel.AsyncDataAdapter.System.Data.SqlClient</PackageId>
+    <RepositoryUrl>https://github.com/Jehoel/AsyncDataAdapter/</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Jehoel/AsyncDataAdapter/</PackageProjectUrl>
+    <Copyright>Microsoft Corporation, Vladimir Kloz &lt;vladimir.kloz@gmail.com&gt;; Jeremy Kruer; Dai Rees;</Copyright>
+    <Version>3.0.0</Version>
+    <Authors>Vladimir Kloz; Jeremy Kruer; Dai Rees;</Authors>
+    <Company />
+    <Description>Jehoel.AsyncDataAdapter builds on Vladimir Kloz' original AsyncDataAdapter package, with support for .NET Standard 2.0, and numerous other improvements. The original implementation is based on Microsoft's MIT-licensed implementation of DataReader, DbDataReader, and SqlDataReader.</Description>
+    <PackageTags>DataAdapter DbDataAdapter SqlDataAdapter AsyncDataAdapter AdaDataAdapter AsyncSqlDataAdapter SqlAsyncDataAdapter FillAsync FillSchemaAsync UpdateAsync</PackageTags>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <!-- END NuGet -->
+    
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputPath>bin\Release</OutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputPath>bin\Debug</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../AsyncDataAdapter/AsyncDataAdapter.snk" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+</Project>
