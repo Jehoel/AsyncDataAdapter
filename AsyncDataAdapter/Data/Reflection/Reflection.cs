@@ -1,9 +1,9 @@
 using System;
 using System.Reflection;
 
-namespace AsyncDataAdapter
+namespace AsyncDataAdapter.Internal
 {
-    internal static class Reflection
+    public static class Reflection
 	{
         #region MethodInfo
 

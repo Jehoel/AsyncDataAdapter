@@ -539,7 +539,7 @@ namespace AsyncDataAdapter.Internal
             {
                 fieldNames[i] = dataReader.GetName(i);
             }
-            ADP.BuildSchemaTableInfoTableNames(fieldNames);
+            Utility.BuildSchemaTableInfoTableNames(fieldNames);
             return fieldNames;
         }
 

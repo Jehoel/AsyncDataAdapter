@@ -503,7 +503,7 @@ namespace AsyncDataAdapter
                         if( parameter is DbParameter p2 && p2.SourceColumnNullMapping )
                         {
                             Debug.Assert(DbType.Int32 == parameter.DbType, "unexpected DbType");
-                            parameter.Value = ADP.IsNull( parameter.Value ) ? ParameterValueNullValue : ParameterValueNonNullValue;
+                            parameter.Value = Utility.IsNull( parameter.Value ) ? ParameterValueNullValue : ParameterValueNonNullValue;
                         }
                     }
                 }
@@ -1203,7 +1203,7 @@ namespace AsyncDataAdapter
         private async Task<int> UpdateFromDataTableAsync(DataTable dataTable, DataTableMapping tableMapping, CancellationToken cancellationToken )
         {
             int rowsAffected = 0;
-            DataRow[] dataRows = ADP.SelectAdapterRows(dataTable, false);
+            DataRow[] dataRows = Utility.SelectAdapterRows(dataTable, false);
             if ((null != dataRows) && (0 < dataRows.Length))
             {
                 rowsAffected = await this.UpdateAsync( dataRows, tableMapping, cancellationToken ).ConfigureAwait(false);
@@ -1512,9 +1512,10 @@ namespace AsyncDataAdapter
             Debug.Assert(null != command, "GetConnection3: null command");
             Debug.Assert(!string.IsNullOrEmpty(method), "missing method name");
             DbConnection connection = command.Connection;
-            if (null == connection)
+            if (connection is null)
             {
-                throw ADP.ConnectionRequired_Res(method);
+                string message = method + " requires a non-null " + nameof(DbConnection) + " reference in the " + nameof(DbCommand) + "." + nameof(DbCommand.Connection) + " property.";
+                throw new InvalidOperationException(message);
             }
             return connection;
         }
