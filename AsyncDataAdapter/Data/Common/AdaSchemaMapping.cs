@@ -79,7 +79,7 @@ namespace AsyncDataAdapter.Internal
                 _schemaTable = dataReader.GetSchemaTable();
             }
 
-            if (adapter.ShouldSerializeFillLoadOption())
+            if (adapter.FillLoadOption != 0)
             {
                 _loadOption = adapter.FillLoadOption;
             }

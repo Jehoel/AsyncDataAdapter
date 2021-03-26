@@ -12,24 +12,22 @@ using AsyncDataAdapter.Internal;
 
 namespace AsyncDataAdapter
 {
-    public abstract class AdaDataAdapter : Component, IDataAdapter3
+    public abstract class AdaDataAdapter : Component, IUpdatingAsyncDataAdapter
     {
-        private static readonly object EventFillError = new object();
+        private static          Int32  _objectInstanceCount;
+        private static readonly Object _fillErrorEventKey = new Object();
 
-        private LoadOption _fillLoadOption;
+        private LoadOption fillLoadOption; // This is initialized to zero, which is undefined on the `enum LoadOption` btw.
 
-        private MissingMappingAction _missingMappingAction = MissingMappingAction.Passthrough;
-        private MissingSchemaAction  _missingSchemaAction  = MissingSchemaAction.Add;
+        private MissingMappingAction missingMappingAction = MissingMappingAction.Passthrough;
+        private MissingSchemaAction  missingSchemaAction  = MissingSchemaAction.Add;
 
-        private DataTableMappingCollection _tableMappings;
-
-        private static int _objectTypeCount;
+        private DataTableMappingCollection tableMappings;
 
         /// <summary>Normal constructor.</summary>
         protected AdaDataAdapter()
             : base()
         {
-            GC.SuppressFinalize(this); // <-- whaaaaa, is this right?
         }
 
         /// <summary>Clone constructor.</summary>
@@ -45,11 +43,11 @@ namespace AsyncDataAdapter
             this.ContinueUpdateOnError                = cloneFrom.ContinueUpdateOnError;
             this.ReturnProviderSpecificTypes          = cloneFrom.ReturnProviderSpecificTypes;
             this.AcceptChangesDuringFill              = cloneFrom.AcceptChangesDuringFill;
-            this._fillLoadOption                      = cloneFrom._fillLoadOption;
-            this._missingMappingAction                = cloneFrom._missingMappingAction;
-            this._missingSchemaAction                 = cloneFrom._missingSchemaAction;
+            this.fillLoadOption                      = cloneFrom.fillLoadOption;
+            this.missingMappingAction                = cloneFrom.missingMappingAction;
+            this.missingSchemaAction                 = cloneFrom.missingSchemaAction;
 
-            if ((null != cloneFrom._tableMappings) && (0 < cloneFrom.TableMappings.Count))
+            if ((null != cloneFrom.tableMappings) && (0 < cloneFrom.TableMappings.Count))
             {
                 DataTableMappingCollection parameters = this.TableMappings;
                 foreach (object parameter in cloneFrom.TableMappings)
@@ -68,7 +66,7 @@ namespace AsyncDataAdapter
 
         #region Properties and trivial getters
 
-        internal int ObjectId { get; } = Interlocked.Increment(ref _objectTypeCount);
+        internal int ObjectId { get; } = Interlocked.Increment(ref _objectInstanceCount);
 
         [DefaultValue(true)]
         public bool AcceptChangesDuringFill { get; set; } = true;
@@ -87,8 +85,8 @@ namespace AsyncDataAdapter
         {
             get
             {
-                LoadOption fillLoadOption = this._fillLoadOption;
-                return ((0 != fillLoadOption) ? this._fillLoadOption : LoadOption.OverwriteChanges);
+                LoadOption fillLoadOption = this.fillLoadOption;
+                return ((0 != fillLoadOption) ? this.fillLoadOption : LoadOption.OverwriteChanges);
             }
             set
             {
@@ -98,7 +96,7 @@ namespace AsyncDataAdapter
                     case LoadOption.OverwriteChanges:
                     case LoadOption.PreserveChanges:
                     case LoadOption.Upsert:
-                        this._fillLoadOption = value;
+                        this.fillLoadOption = value;
                         break;
                     default:
                         throw ADP.InvalidLoadOption(value);
@@ -106,39 +104,21 @@ namespace AsyncDataAdapter
             }
         }
 
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public virtual bool ShouldSerializeAcceptChangesDuringFill()
-        {
-            return (0 == this._fillLoadOption);
-        }
-
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public void ResetFillLoadOption()
-        {
-            this._fillLoadOption = 0;
-        }
-
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public virtual bool ShouldSerializeFillLoadOption()
-        {
-            return (0 != this._fillLoadOption);
-        }
-
         [DefaultValue(MissingMappingAction.Passthrough)]
         public MissingMappingAction MissingMappingAction
-        { // V1.0.3300
+        {
             get
             {
-                return this._missingMappingAction;
+                return this.missingMappingAction;
             }
             set
             {
                 switch (value)
-                { // @perfnote: Enum.IsDefined
+                {
                     case MissingMappingAction.Passthrough:
                     case MissingMappingAction.Ignore:
                     case MissingMappingAction.Error:
-                        this._missingMappingAction = value;
+                        this.missingMappingAction = value;
                         break;
                     default:
                         throw ADP.InvalidMissingMappingAction(value);
@@ -146,22 +126,22 @@ namespace AsyncDataAdapter
             }
         }
 
-        [DefaultValue(MissingSchemaAction.Add),]
+        [DefaultValue(MissingSchemaAction.Add)]
         public MissingSchemaAction MissingSchemaAction
         {
             get
             {
-                return this._missingSchemaAction;
+                return this.missingSchemaAction;
             }
             set
             {
                 switch (value)
-                { // @perfnote: Enum.IsDefined
+                {
                     case MissingSchemaAction.Add:
                     case MissingSchemaAction.Ignore:
                     case MissingSchemaAction.Error:
                     case MissingSchemaAction.AddWithKey:
-                        this._missingSchemaAction = value;
+                        this.missingSchemaAction = value;
                         break;
                     default:
                         throw ADP.InvalidMissingSchemaAction(value);
@@ -178,28 +158,17 @@ namespace AsyncDataAdapter
         {
             get
             {
-                DataTableMappingCollection mappings = this._tableMappings;
-                if (null == mappings)
+                if (this.tableMappings is null)
                 {
-                    mappings = this.CreateTableMappings();
-                    if (null == mappings)
-                    {
-                        mappings = new DataTableMappingCollection();
-                    }
-                    this._tableMappings = mappings;
+                    this.tableMappings = this.CreateTableMappings() ?? new DataTableMappingCollection();
                 }
-                return mappings; // constructed by base class
+                return this.tableMappings;
             }
         }
 
-        protected virtual bool ShouldSerializeTableMappings()
-        { // V1.0.3300, MDAC 65548
-            return true; /*HasTableMappings();*/ // VS7 300569
-        }
-
         protected bool HasTableMappings()
-        { // V1.2.3300
-            return ((null != this._tableMappings) && (0 < this.TableMappings.Count));
+        {
+            return ( this.tableMappings?.Count ?? 0 ) > 0;
         }
 
         #endregion
@@ -215,7 +184,7 @@ namespace AsyncDataAdapter
         {
             add
             {
-                this.Events.AddHandler(EventFillError, value);
+                this.Events.AddHandler(_fillErrorEventKey, value);
                 if( value != null )
                 {
                     ++this.fillErrorHandlersCount; // This is crude and easily broken. I'm surprised .NET ever shipped with events-lists that cannot be introspected.
@@ -223,7 +192,7 @@ namespace AsyncDataAdapter
             }
             remove
             {
-                this.Events.RemoveHandler(EventFillError, value);
+                this.Events.RemoveHandler(_fillErrorEventKey, value);
                 if( value != null && this.fillErrorHandlersCount > 0 )
                 {
                     --this.fillErrorHandlersCount;
@@ -233,7 +202,7 @@ namespace AsyncDataAdapter
 
         protected virtual void OnFillError(FillErrorEventArgs args)
         {
-            FillErrorEventHandler handler = (FillErrorEventHandler)this.Events[EventFillError];
+            FillErrorEventHandler handler = (FillErrorEventHandler)this.Events[_fillErrorEventKey];
             handler?.Invoke(this, args);
         }
 
@@ -268,7 +237,7 @@ namespace AsyncDataAdapter
         {
             if (disposing)
             { // release mananged objects
-                this._tableMappings = null;
+                this.tableMappings = null;
             }
             // release unmanaged objects
 
@@ -702,12 +671,12 @@ namespace AsyncDataAdapter
 
         internal DataTableMapping GetTableMappingBySchemaAction(string sourceTableName, string dataSetTableName, MissingMappingAction mappingAction)
         {
-            return DataTableMappingCollection.GetTableMappingBySchemaAction(this._tableMappings, sourceTableName, dataSetTableName, mappingAction);
+            return DataTableMappingCollection.GetTableMappingBySchemaAction(this.tableMappings, sourceTableName, dataSetTableName, mappingAction);
         }
 
         internal int IndexOfDataSetTable(string dataSetTable)
         {
-            if (null != this._tableMappings)
+            if (null != this.tableMappings)
             {
                 return this.TableMappings.IndexOfDataSetTable( dataSetTable );
             }
