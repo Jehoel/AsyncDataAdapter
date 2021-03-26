@@ -7,8 +7,6 @@ using System.Threading.Tasks;
 
 namespace AsyncDataAdapter
 {
-    // NOTE: This type is completely unconcerned with anything "DbData..." related - including IDbDataAdapter, DbDataAdapter, and so on.
-
     public abstract partial class ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> : /*ProxyDataAdapter*/ DbDataAdapter, IDbDataAdapter
         where TDbDataAdapter : DbDataAdapter
         where TDbConnection  : DbConnection
