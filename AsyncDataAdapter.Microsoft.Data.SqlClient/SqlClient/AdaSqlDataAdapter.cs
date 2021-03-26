@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
+using AsyncDataAdapter.Internal;
+
 using Microsoft.Data.SqlClient;
 
 namespace AsyncDataAdapter.SqlClient
@@ -127,7 +129,7 @@ namespace AsyncDataAdapter.SqlClient
                 // silently removing the old one
                 if ((null != handler) && (value.Target is DbCommandBuilder))
                 {
-                    SqlRowUpdatingEventHandler d = (SqlRowUpdatingEventHandler)ADP.FindBuilder(handler);
+                    SqlRowUpdatingEventHandler d = (SqlRowUpdatingEventHandler)Utility.FindBuilder(handler);
                     if (null != d)
                     {
                         this.Events.RemoveHandler(EventRowUpdating, d);
