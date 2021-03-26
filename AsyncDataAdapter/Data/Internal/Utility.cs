@@ -13,14 +13,16 @@ namespace AsyncDataAdapter.Internal
     public static partial class Utility
     {
         public static Delegate FindBuilder(MulticastDelegate mcd)
-        { // V1.2.3300
+        {
             if (null != mcd)
             {
                 Delegate[] d = mcd.GetInvocationList();
                 for (int i = 0; i < d.Length; i++)
                 {
                     if (d[i].Target is DbCommandBuilder)
+                    {
                         return d[i];
+                    }
                 }
             }
 

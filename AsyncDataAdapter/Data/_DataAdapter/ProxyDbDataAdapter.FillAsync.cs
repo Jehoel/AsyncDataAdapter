@@ -7,33 +7,42 @@ using System.Threading.Tasks;
 
 using AsyncDataAdapter.Internal;
 
-namespace AsyncDataAdapter.Internal
-{
-    public class SchemaMapping2
-    {
-        private readonly Object instance;
-
-        public SchemaMapping2( Object instance )
-        {
-            this.instance = instance ?? throw new ArgumentNullException(nameof(instance)); 
-        }
-    }
-
-    public class DataReaderContainer2
-    {
-        private readonly Object instance;
-
-        public DataReaderContainer2( Object instance )
-        {
-            this.instance = instance ?? throw new ArgumentNullException(nameof(instance)); 
-        }
-    }
-}
-
 namespace AsyncDataAdapter
 {
-    public abstract partial class ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> : IUpdatingAsyncDbDataAdapter
+    public abstract partial class ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> : IUpdatingAsyncDbDataAdapter, IAdaSchemaMappingAdapter
     {
+        #region IAdaSchemaMappingAdapter
+
+        DataTableMapping IAdaSchemaMappingAdapter.GetTableMappingBySchemaAction( string sourceTableName, string dataSetTableName, MissingMappingAction mappingAction )
+        {
+            return DataTableMappingCollection.GetTableMappingBySchemaAction( this.TableMappings, sourceTableName, dataSetTableName, mappingAction );
+        }
+
+        int IAdaSchemaMappingAdapter.IndexOfDataSetTable(string dataSetTable)
+        {
+            return this.TableMappings?.IndexOfDataSetTable( dataSetTable ) ?? -1;
+        }
+
+        Task<int> IAdaSchemaMappingAdapter.FillFromReaderAsync( DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int startRecord, int maxRecords, DataColumn parentChapterColumn, object parentChapterValue, CancellationToken cancellationToken )
+        {
+            Action<Exception, DataTable, Object[]> onFillError = this.GetCurrentFillErrorHandler();
+
+            return AsyncDataReaderMethods.FillFromReaderAsync( onFillError, this, dataset, datatable, srcTable, dataReader, startRecord, maxRecords, parentChapterColumn, parentChapterValue, cancellationToken );
+        }
+
+        #endregion
+
+        protected virtual Task<Int32> FillAsync(DataSet dataSet, int startRecord, int maxRecords, string srcTable, TDbCommand command, CommandBehavior behavior, CancellationToken cancellationToken )
+        {
+		    if (dataSet == null) throw ADP.FillRequires("dataSet");
+		    if (startRecord < 0) throw ADP.InvalidStartRecord("startRecord", startRecord);
+		    if (maxRecords < 0) throw ADP.InvalidMaxRecords("maxRecords", maxRecords);
+		    if (String.IsNullOrEmpty(srcTable)) throw ADP.FillRequiresSourceTableName("srcTable");
+		    if (command == null) throw ADP.MissingSelectCommand("Fill");
+
+		    return this.FillInternalAsync( dataSet, datatables: null, startRecord: startRecord, maxRecords: maxRecords, srcTable, command, behavior, cancellationToken );
+        }
+
         protected virtual Task<Int32> FillAsync( DataTable[] dataTables, int startRecord, int maxRecords, TDbCommand command, CommandBehavior behavior, CancellationToken cancellationToken )
         {
             if (dataTables == null || dataTables.Length == 0 || dataTables[0] == null) throw ADP.FillRequires("dataTable");
@@ -86,152 +95,44 @@ namespace AsyncDataAdapter
 		    }
         }
 
-        protected virtual async Task<Int32> FillAsync( DataTable[] dataTables, IDataReader dataReader, int startRecord, int maxRecords, CancellationToken cancellationToken )
+        protected virtual Task<Int32> FillAsync( DataTable[] dataTables, DbDataReader dataReader, int startRecord, int maxRecords, CancellationToken cancellationToken )
         {
-		    if (dataTables == null || dataTables.Length == 0 || dataTables[0] == null) throw ADP.FillRequires("dataTable");
-		    if (dataReader == null) throw ADP.FillRequires("dataReader");
-		    if (1 < dataTables.Length && (startRecord != 0 || maxRecords != 0)) throw ADP.NotSupported();
-
-		    int result = 0;
-		    bool flag = false;
-		    DataSet dataSet = dataTables[0].DataSet;
-		    try
-		    {
-			    if (dataSet != null)
-			    {
-				    flag = dataSet.EnforceConstraints;
-				    dataSet.EnforceConstraints = false;
-			    }
-			    for (int i = 0; i < dataTables.Length && !dataReader.IsClosed; i++)
-			    {
-				    DataReaderContainer dataReaderContainer = DataReaderContainer.Create(dataReader, ReturnProviderSpecificTypes);
-				    if (dataReaderContainer.FieldCount <= 0)
-				    {
-					    if (i != 0)
-					    {
-						    continue;
-					    }
-					    bool flag2;
-					    do
-					    {
-						    flag2 = FillNextResult(dataReaderContainer);
-					    }
-					    while (flag2 && dataReaderContainer.FieldCount <= 0);
-					    if (!flag2)
-					    {
-						    break;
-					    }
-				    }
-				    if (0 >= i || FillNextResult(dataReaderContainer))
-				    {
-					    int num = FillFromReader(null, dataTables[i], null, dataReaderContainer, startRecord, maxRecords, null, null);
-					    if (i == 0)
-					    {
-						    result = num;
-					    }
-					    continue;
-				    }
-				    break;
-			    }
-		    }
-		    catch (ConstraintException)
-		    {
-			    flag = false;
-			    throw;
-		    }
-		    finally
-		    {
-			    if (flag)
-			    {
-				    dataSet.EnforceConstraints = true;
-			    }
-		    }
-		    return result;
+		    return AsyncDataReaderMethods.FillAsync( onFillError: null, adapter: this, this.ReturnProviderSpecificTypes, dataTables, dataReader, startRecord, maxRecords: maxRecords, cancellationToken );
         }
 
-        protected virtual async Task<Int32> FillAsync( DataSet dataSet, string srcTable, IDataReader dataReader, int startRecord, int maxRecords, CancellationToken cancellationToken )
+        protected virtual Task<Int32> FillAsync( DataSet dataSet, string srcTable, DbDataReader dataReader, int startRecord, int maxRecords, CancellationToken cancellationToken )
         {
-            if (dataSet == null)
-		    {
-			    throw ADP.FillRequires("dataSet");
-		    }
-		    if (ADP.IsEmpty(srcTable))
-		    {
-			    throw ADP.FillRequiresSourceTableName("srcTable");
-		    }
-		    if (dataReader == null)
-		    {
-			    throw ADP.FillRequires("dataReader");
-		    }
-		    if (startRecord < 0)
-		    {
-			    throw ADP.InvalidStartRecord("startRecord", startRecord);
-		    }
-		    if (maxRecords < 0)
-		    {
-			    throw ADP.InvalidMaxRecords("maxRecords", maxRecords);
-		    }
-		    if (dataReader.IsClosed)
-		    {
-			    return 0;
-		    }
+            if (null == dataSet) throw ADP.FillRequires("dataSet");
+            if (string.IsNullOrEmpty(srcTable)) throw ADP.FillRequiresSourceTableName("srcTable");
+            if (null == dataReader) throw ADP.FillRequires("dataReader");
+            if (startRecord < 0) throw ADP.InvalidStartRecord("startRecord", startRecord);
+            if (maxRecords < 0) throw ADP.InvalidMaxRecords("maxRecords", maxRecords);
 
-		    DataReaderContainer dataReader2 = DataReaderContainer.Create(dataReader, ReturnProviderSpecificTypes);
-		    return FillFromReader(dataSet, null, srcTable, dataReader2, startRecord, maxRecords, null, null);
+            //
+
+            if (dataReader.IsClosed)
+            {
+                return Task.FromResult( 0 );
+            }
+
+            // user must Close/Dispose of the dataReader
+            AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dataReader, useProviderSpecificDataReader: this.ReturnProviderSpecificTypes );
+
+            return this.FillFromReaderAsync( dataSet, null, srcTable, readerHandler, startRecord, maxRecords, null, null, cancellationToken );
         }
 
         //
 
-        internal async Task<Int32> FillFromReaderAsync( DataSet dataset, DataTable datatable, string srcTable, DataReaderContainer dataReader, int startRecord, int maxRecords, DataColumn parentChapterColumn, object parentChapterValue, CancellationToken cancellationToken )
+        internal Task<Int32> FillFromReaderAsync( DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int startRecord, int maxRecords, DataColumn parentChapterColumn, object parentChapterValue, CancellationToken cancellationToken )
         {
-	        int result = 0;
-	        int num = 0;
-	        do
-	        {
-		        if (0 >= dataReader.FieldCount)
-		        {
-			        continue;
-		        }
-		        SchemaMapping schemaMapping = FillMapping(dataset, datatable, srcTable, dataReader, num, parentChapterColumn, parentChapterValue);
-		        num++;
-		        if (schemaMapping == null || schemaMapping.DataValues == null || schemaMapping.DataTable == null)
-		        {
-			        continue;
-		        }
-		        schemaMapping.DataTable.BeginLoadData();
-		        try
-		        {
-			        if (1 == num && (0 < startRecord || 0 < maxRecords))
-			        {
-				        result = FillLoadDataRowChunk(schemaMapping, startRecord, maxRecords);
-			        }
-			        else
-			        {
-				        int num2 = FillLoadDataRow(schemaMapping);
-				        if (1 == num)
-				        {
-					        result = num2;
-				        }
-			        }
-		        }
-		        finally
-		        {
-			        schemaMapping.DataTable.EndLoadData();
-		        }
-		        if (datatable != null)
-		        {
-			        break;
-		        }
-	        }
-	        while (FillNextResult(dataReader));
-	        return result;
+	        return AsyncDataReaderMethods.FillFromReaderAsync( onFillError: null, adapter: this, dataset, datatable, srcTable, dataReader, startRecord, maxRecords: maxRecords, parentChapterColumn, parentChapterValue, cancellationToken );
         }
 
-        private static readonly MethodInfo _fillMapping = Reflection.GetInstanceMethod<TDbDataAdapter>( name: nameof(FillMapping), typeof(DataSet), typeof(DataTable), typeof(String), typeof(DataReaderContainer), typeof(Int32), typeof(DataColumn), typeof(Object) );
-
-        private SchemaMapping2 FillMapping(DataSet dataset, DataTable datatable, string srcTable, DataReaderContainer dataReader, int schemaCount, DataColumn parentChapterColumn, object parentChapterValue)
+        private AdaSchemaMapping FillMapping(DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int schemaCount, DataColumn parentChapterColumn, object parentChapterValue)
         {
+            Action<Exception, DataTable, Object[]> onFillError = this.GetCurrentFillErrorHandler();
 
+            return AsyncDataReaderMethods.FillMapping( onFillError, this, dataset, datatable, srcTable, dataReader, schemaCount, parentChapterColumn, parentChapterValue );
         }
     }
 }

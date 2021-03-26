@@ -8,7 +8,7 @@ namespace AsyncDataAdapter
 {
     // NOTE: This type is completely unconcerned with anything "DbData..." related - including IDbDataAdapter, DbDataAdapter, and so on.
 
-    public abstract class ProxyDataAdapter : DataAdapter, IDataAdapter
+    public abstract partial class ProxyDataAdapter : DataAdapter, IDataAdapter
     {
         protected readonly DataAdapter subject;
 

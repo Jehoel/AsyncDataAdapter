@@ -218,44 +218,30 @@ namespace AsyncDataAdapter
 
         private async Task<DataTable[]> FillSchemaInternalAsync(DataSet dataset, DataTable datatable, SchemaType schemaType, DbCommand command, string srcTable, CommandBehavior behavior, CancellationToken cancellationToken )
         {
-            DataTable[] dataTables = null;
-            bool restoreNullConnection = (null == command.Connection);
+            DbConnection activeConnection = AdaDbDataAdapter.GetConnection3(command, "FillSchema");
+            ConnectionState originalState = ConnectionState.Open;
+
             try
             {
-                DbConnection activeConnection = AdaDbDataAdapter.GetConnection3(command, "FillSchema");
-                ConnectionState originalState = ConnectionState.Open;
-
-                try
+                originalState = await QuietOpenAsync( activeConnection, cancellationToken ).ConfigureAwait(false);
+                using (DbDataReader dataReader = await command.ExecuteReaderAsync( behavior | CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo, cancellationToken ).ConfigureAwait(false) )
                 {
-                    originalState = await QuietOpenAsync( activeConnection, cancellationToken ).ConfigureAwait(false);
-                    using (DbDataReader dataReader = await command.ExecuteReaderAsync( behavior | CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo, cancellationToken ).ConfigureAwait(false) )
+                    if (null != datatable)
                     {
-                        if (null != datatable)
-                        { // delegate to next set of protected FillSchema methods
-                            DataTable singleTable = await this.FillSchemaAsync( datatable, schemaType, dataReader, cancellationToken ).ConfigureAwait(false);
-                            dataTables = new[] { singleTable };
-                        }
-                        else
-                        {
-                            dataTables = await this.FillSchemaAsync( dataset, schemaType, srcTable, dataReader, cancellationToken ).ConfigureAwait(false);
-                        }
+                        // delegate to next set of protected FillSchema methods
+                        DataTable singleTable = await this.FillSchemaAsync( datatable, schemaType, dataReader, cancellationToken ).ConfigureAwait(false);
+                        return new[] { singleTable };
                     }
-                }
-                finally
-                {
-                    QuietClose( activeConnection, originalState);
+                    else
+                    {
+                        return await this.FillSchemaAsync( dataset, schemaType, srcTable, dataReader, cancellationToken ).ConfigureAwait(false);
+                    }
                 }
             }
             finally
             {
-                if (restoreNullConnection)
-                {
-                    command.Transaction = null;
-                    command.Connection = null;
-                }
+                QuietClose( activeConnection, originalState);
             }
-
-            return dataTables;
         }
 
         #endregion

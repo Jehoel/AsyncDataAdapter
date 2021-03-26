@@ -224,11 +224,6 @@ namespace AsyncDataAdapter
             handler?.Invoke(this, args);
         }
 
-        private void OnFillErrorHandler(Exception ex)
-        {
-            this.OnFillErrorHandler( ex, null, null );
-        }
-
         private void OnFillErrorHandler(Exception ex, DataTable dataTable, object[] dataValues)
         {
             FillErrorEventArgs fillErrorEvent = new FillErrorEventArgs( dataTable, dataValues )
@@ -271,78 +266,14 @@ namespace AsyncDataAdapter
 
         public abstract Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, CancellationToken cancellationToken );
 
-        protected virtual async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, string srcTable, DbDataReader dataReader, CancellationToken cancellationToken )
+        protected virtual Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, string srcTable, DbDataReader dataReader, CancellationToken cancellationToken )
         {
-            if (null == dataSet) throw new ArgumentNullException(nameof(dataSet));
-            if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType)) throw ADP.InvalidSchemaType(schemaType);
-            if (string.IsNullOrEmpty(srcTable)) throw ADP.FillSchemaRequiresSourceTableName("srcTable");
-            if ((null == dataReader) || dataReader.IsClosed) throw ADP.FillRequires("dataReader");
-
-            // user must Close/Dispose of the dataReader
-            return await this.FillSchemaFromReaderAsync( dataSet, singleDataTable: null, schemaType, srcTable, dataReader, cancellationToken ).ConfigureAwait(false);
+            return AsyncDataReaderMethods.FillSchemaAsync( adapter: this, this.ReturnProviderSpecificTypes, dataSet: dataSet, schemaType, srcTable, dataReader, cancellationToken );
         }
 
-        protected virtual async Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType, DbDataReader dataReader, CancellationToken cancellationToken )
+        protected virtual Task<DataTable> FillSchemaAsync(DataTable dataTable, SchemaType schemaType, DbDataReader dataReader, CancellationToken cancellationToken )
         {
-            if (null == dataTable) throw new ArgumentNullException(nameof(dataTable));
-            if ((SchemaType.Source != schemaType) && (SchemaType.Mapped != schemaType)) throw ADP.InvalidSchemaType(schemaType);
-            if ((null == dataReader) || dataReader.IsClosed)throw ADP.FillRequires("dataReader");
-
-            // user must Close/Dispose of the dataReader
-            // user will have to call NextResult to access remaining results
-            DataTable[] singleTable = await this.FillSchemaFromReaderAsync( dataset: null, singleDataTable: dataTable, schemaType, srcTable: null, dataReader, cancellationToken ).ConfigureAwait(false);
-            if( singleTable is DataTable[] arr && arr.Length == 1 ) return singleTable[0];
-            return null;
-        }
-
-        internal async Task<DataTable[]> FillSchemaFromReaderAsync( DataSet dataset, DataTable singleDataTable, SchemaType schemaType, string srcTable, DbDataReader dataReader, CancellationToken cancellationToken )
-        {
-            DataTable[] dataTables = null;
-            int schemaCount = 0;
-            do
-            {
-                AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dataReader, useProviderSpecificDataReader: this.ReturnProviderSpecificTypes );
-                if (0 >= readerHandler.FieldCount)
-                {
-                    continue;
-                }
-
-                string sourceTableName = null;
-                if (null != dataset)
-                {
-                    sourceTableName = AdaDataAdapter.GetSourceTableName(srcTable, schemaCount);
-                    schemaCount++; // don't increment if no SchemaTable ( a non-row returning result )
-                }
-
-                AdaSchemaMapping mapping = new AdaSchemaMapping( adapter: this, dataset, singleDataTable, dataReader: readerHandler, keyInfo: true, schemaType, sourceTableName, gettingData: false, parentChapterColumn: null, parentChapterValue: null );
-
-                if (singleDataTable != null)
-                {
-                    // do not read remaining results in single DataTable case
-                    return new DataTable[] { mapping.DataTable };
-                }
-                else if (null != mapping.DataTable)
-                {
-                    if (null == dataTables)
-                    {
-                        dataTables = new DataTable[1] { mapping.DataTable };
-                    }
-                    else
-                    {
-                        dataTables = AdaDataAdapter.AddDataTableToArray(dataTables, mapping.DataTable);
-                    }
-                }
-            }
-            while ( await dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false) ); // FillSchema does not capture errors for FillError event
-
-            if( dataTables is null && singleDataTable is null )
-            {
-                return Array.Empty<DataTable>();
-            }
-            else
-            {
-                return dataTables;
-            }
+            return AsyncDataReaderMethods.FillSchemaAsync( adapter: this, this.ReturnProviderSpecificTypes, dataTable: dataTable, schemaType, dataReader, cancellationToken );
         }
 
         #endregion
@@ -452,21 +383,7 @@ namespace AsyncDataAdapter
         // used by FillSchema which returns an array of datatables added to the dataset
         private static DataTable[] AddDataTableToArray(DataTable[] tables, DataTable newTable)
         {
-            for (int i = 0; i < tables.Length; ++i)
-            {
-                // search for duplicates:
-                if (Object.ReferenceEquals( tables[i], newTable ))
-                {
-                    return tables; // duplicate found
-                }
-            }
-            DataTable[] newTables = new DataTable[tables.Length + 1]; // add unique data table
-            for (int i = 0; i < tables.Length; ++i)
-            {
-                newTables[i] = tables[i];
-            }
-            newTables[tables.Length] = newTable;
-            return newTables;
+            return AsyncDataReaderMethods.AddDataTableToArray( tables, newTable );
         }
 
         // dynamically generate source table names

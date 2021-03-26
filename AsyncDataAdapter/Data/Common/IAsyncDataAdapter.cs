@@ -27,6 +27,7 @@ namespace AsyncDataAdapter
     {
     }
 
+#if NOT_NOW
     public static class AsyncDataAdapterExtensions
     {
         // `DataAdapter` only defines 1 public overload of Fill, FillSchema, and Update - so we don't need to supply overloads for IAsyncDataAdapter, fwiw.
@@ -114,4 +115,5 @@ namespace AsyncDataAdapter
             throw new NotImplementedException();
         }
     }
+#endif
 }

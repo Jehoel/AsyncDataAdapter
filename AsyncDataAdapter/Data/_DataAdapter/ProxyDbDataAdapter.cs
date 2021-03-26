@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Threading;
@@ -19,15 +20,22 @@ namespace AsyncDataAdapter
             return self?.Subject;
         }
 
-        protected ProxyDbDataAdapter( TDbDataAdapter subject )
+        /// <summary></summary>
+        /// <param name="subject"></param>
+        /// <param name="batchingAdapter">Can be null. This feature is not required.</param>
+        protected ProxyDbDataAdapter( TDbDataAdapter subject, IBatchingAdapter batchingAdapter )
             : base( adapter: subject ?? throw new ArgumentNullException(nameof(subject)) ) // The `adapter` clone ctor copies state over. Which is fine as that sets initial state.
         {
-            this.Subject = subject;
+            this.Subject         = subject;
+            this.BatchingAdapter = batchingAdapter;
 
             this.Subject.FillError += this.OnSubjectFillError;
         }
 
         protected TDbDataAdapter Subject { get; }
+
+        [DefaultValue(null)]
+        protected IBatchingAdapter BatchingAdapter { get; }
 
         #region TDbCommands
 
