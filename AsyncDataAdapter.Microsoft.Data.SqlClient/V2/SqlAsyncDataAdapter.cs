@@ -8,31 +8,32 @@ using Microsoft.Data.SqlClient;
 
 namespace AsyncDataAdapter
 {
-    public sealed class SqlAsyncDbDataAdapter2 : ProxyDbDataAdapter
-        <
-            SqlDataAdapter,
-            SqlConnection,
-            SqlCommand,
-            SqlDataReader
-        >
+    using ProxyDbDataAdapterForSqlClient = ProxyDbDataAdapter<
+        SqlDataAdapter,
+        SqlConnection,
+        SqlCommand,
+        SqlDataReader
+    >;
+
+    public sealed class SqlAsyncDbDataAdapter2 : ProxyDbDataAdapterForSqlClient
     {
         public SqlAsyncDbDataAdapter2()
-            : base( subject: new SqlDataAdapter() )
+            : base( batchingAdapter: null, subject: new SqlDataAdapter() )
         {
         }
 
         public SqlAsyncDbDataAdapter2( SqlCommand selectCommand )
-            : base( subject: new SqlDataAdapter( selectCommand ) )
+            : base( batchingAdapter: null, subject: new SqlDataAdapter( selectCommand ) )
         {
         }
 
         public SqlAsyncDbDataAdapter2( String selectCommandText, SqlConnection connection )
-            : base( subject: new SqlDataAdapter( selectCommandText, connection ) )
+            : base( batchingAdapter: null, subject: new SqlDataAdapter( selectCommandText, connection ) )
         {
         }
 
         public SqlAsyncDbDataAdapter2( String selectCommandText, String connectionString )
-            : base( subject: new SqlDataAdapter( selectCommandText, connectionString ) )
+            : base( batchingAdapter: null, subject: new SqlDataAdapter( selectCommandText, connectionString ) )
         {
         }
     }

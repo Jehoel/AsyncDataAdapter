@@ -10,6 +10,11 @@ namespace AsyncDataAdapter
 {
     public interface IBatchingAdapter
     {
+        MissingMappingAction UpdateMappingAction { get; }
+        MissingSchemaAction  UpdateSchemaAction  { get; }
+
+        int UpdateBatchSize { get; }
+
         /// <summary>Called to add a single command to the batch of commands that need to be executed as a batch, when batch updates are requested.  It must return an identifier that can be used to identify the command to GetBatchedParameter later.</summary>
         int AddToBatch( DbCommand command );
 
@@ -29,5 +34,11 @@ namespace AsyncDataAdapter
 
         /// <summary>Called when batch updates are requested to prepare for processing of a batch of commands.</summary>
         void InitializeBatching();
+    }
+
+    public interface IUpdatedRowOptions
+    {
+        Boolean AcceptChangesDuringUpdate { get; }
+        Boolean ContinueUpdateOnError     { get; }
     }
 }

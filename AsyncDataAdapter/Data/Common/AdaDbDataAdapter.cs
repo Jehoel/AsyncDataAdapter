@@ -11,40 +11,33 @@ using AsyncDataAdapter.Internal;
 
 namespace AsyncDataAdapter
 {
-    public abstract class AdaDbDataAdapter : AdaDataAdapter, ICloneable
+    using static AsyncDataReaderConnectionMethods;
+
+    public abstract class AdaDbDataAdapter : AdaDataAdapter, ICloneable, IUpdatedRowOptions, IBatchingAdapter, ICanUpdateAsync
     {
         public const string DefaultSourceTableName = "Table";
 
-        internal static readonly object ParameterValueNonNullValue = 0;
-        internal static readonly object ParameterValueNullValue = 1;
-
         private CommandBehavior _fillCommandBehavior;
-
-        private struct BatchCommandInfo
-        {
-            internal int             CommandIdentifier;     // whatever AddToBatch returns, so we can reference the command later in GetBatchedParameter
-            internal int             ParameterCount;        // number of parameters on the command, so we know how many to loop over when processing output parameters
-            internal DataRow         Row;                   // the row that the command is intended to update
-            internal StatementType   StatementType;         // the statement type of the command, needed for accept changes
-            internal UpdateRowSource UpdatedRowSource;      // the UpdatedRowSource value from the command, to know whether we need to look for output parameters or not
-            internal int?            RecordsAffected;
-            internal Exception       Errors;
-        }
+        
+        private readonly IBatchingAdapter batchingAdapter;
 
         /// <summary>Normal constructor.</summary>
-        protected AdaDbDataAdapter()
+        protected AdaDbDataAdapter( IBatchingAdapter batchingAdapter )
             : base()
         {
+            this.batchingAdapter = batchingAdapter;
         }
 
         /// <summary>Clone constructor.</summary>
-        protected AdaDbDataAdapter( AdaDbDataAdapter cloneFrom )
+        protected AdaDbDataAdapter( IBatchingAdapter batchingAdapter, AdaDbDataAdapter cloneFrom )
             : base( cloneFrom )
         {
             this.SelectCommand = CloneCommand( cloneFrom.SelectCommand );
             this.InsertCommand = CloneCommand( cloneFrom.InsertCommand );
             this.UpdateCommand = CloneCommand( cloneFrom.UpdateCommand );
             this.DeleteCommand = CloneCommand( cloneFrom.DeleteCommand );
+
+            this.batchingAdapter = batchingAdapter;
         }
 
         #region Properties
@@ -110,6 +103,45 @@ namespace AsyncDataAdapter
                 }
                 return MissingSchemaAction.Error;
             }
+        }
+
+        #endregion
+
+        #region IBatchingAdapter
+
+        MissingMappingAction IBatchingAdapter.UpdateMappingAction                                                                            => this.batchingAdapter.UpdateMappingAction;
+        MissingSchemaAction  IBatchingAdapter.UpdateSchemaAction                                                                             => this.batchingAdapter.UpdateSchemaAction;
+        int                  IBatchingAdapter.AddToBatch(DbCommand command)                                                                  => this.batchingAdapter.AddToBatch(command);
+        void                 IBatchingAdapter.ClearBatch()                                                                                   => this.batchingAdapter.ClearBatch();
+        Task<int>            IBatchingAdapter.ExecuteBatchAsync(CancellationToken cancellationToken)                                         => this.batchingAdapter.ExecuteBatchAsync(cancellationToken);
+        void                 IBatchingAdapter.TerminateBatching()                                                                            => this.batchingAdapter.TerminateBatching();
+        IDataParameter       IBatchingAdapter.GetBatchedParameter(int commandIdentifier, int parameterIndex)                                 => this.batchingAdapter.GetBatchedParameter(commandIdentifier, parameterIndex);
+        bool                 IBatchingAdapter.GetBatchedRecordsAffected(int commandIdentifier, out int recordsAffected, out Exception error) => this.batchingAdapter.GetBatchedRecordsAffected(commandIdentifier, out recordsAffected, out error);
+        void                 IBatchingAdapter.InitializeBatching()                                                                           => this.batchingAdapter.InitializeBatching();
+
+        #endregion
+
+        #region ICanUpdateAsync
+
+        void ICanUpdateAsync.OnRowUpdating( RowUpdatingEventArgs e ) => this.OnRowUpdating( e );
+        void ICanUpdateAsync.OnRowUpdated ( RowUpdatedEventArgs  e ) => this.OnRowUpdated( e );
+
+        DbConnection ICanUpdateAsync.GetConnection() => this.UpdateCommand?.Connection;
+
+        RowUpdatingEventArgs ICanUpdateAsync.CreateRowUpdatingEvent( DataRow dataRow, DbCommand command, StatementType statementType, DataTableMapping tableMapping ) => this.CreateRowUpdatingEvent( dataRow, command, statementType, tableMapping );
+        RowUpdatedEventArgs  ICanUpdateAsync.CreateRowUpdatedEvent ( DataRow dataRow, DbCommand command, StatementType statementType, DataTableMapping tableMapping ) => this.CreateRowUpdatedEvent ( dataRow, command, statementType, tableMapping );
+
+        void ICanUpdateAsync.UpdatingRowStatusErrors(RowUpdatingEventArgs e, DataRow row                                      ) => this.UpdatingRowStatusErrors( e, row );
+        int  ICanUpdateAsync.UpdatedRowStatus       (RowUpdatedEventArgs e, BatchCommandInfo[] batchCommands, int commandCount) => this.UpdatedRowStatus( e, batchCommands, commandCount );
+
+        Task ICanUpdateAsync.UpdateRowExecuteAsync(RowUpdatedEventArgs rowUpdatedEvent, DbCommand dataCommand, StatementType cmdIndex, CancellationToken cancellationToken)
+        {
+            return this.UpdateRowExecuteAsync( rowUpdatedEvent, dataCommand, cmdIndex, cancellationToken );
+        }
+
+        Task<ConnectionState> ICanUpdateAsync.UpdateConnectionOpenAsync(DbConnection connection, StatementType statementType, DbConnection[] connections, ConnectionState[] connectionStates, bool useSelectConnectionState, CancellationToken cancellationToken)
+        {
+            return AsyncDataReaderUpdateMethods.UpdateConnectionOpenAsync( connection, statementType, connections, connectionStates, useSelectConnectionState, cancellationToken );
         }
 
         #endregion
@@ -463,87 +495,12 @@ namespace AsyncDataAdapter
 
         private void ParameterInput(IDataParameterCollection parameters, StatementType typeIndex, DataRow row, DataTableMapping mappings)
         {
-            MissingMappingAction missingMapping = this.UpdateMappingAction;
-            MissingSchemaAction missingSchema = this.UpdateSchemaAction;
-
-            foreach (IDataParameter parameter in parameters)
-            {
-                if ((null != parameter) && (0 != (ParameterDirection.Input & parameter.Direction)))
-                {
-
-                    string columnName = parameter.SourceColumn;
-                    if (!string.IsNullOrEmpty(columnName))
-                    {
-
-                        DataColumn dataColumn = mappings.GetDataColumn( sourceColumn: columnName, dataType: null, dataTable: row.Table, missingMapping, missingSchema );
-                        if (null != dataColumn)
-                        {
-                            DataRowVersion version = AdaDbDataAdapter.GetParameterSourceVersion(typeIndex, parameter);
-                            parameter.Value = row[dataColumn, version];
-                        }
-                        else
-                        {
-                            parameter.Value = null;
-                        }
-
-                        if( parameter is DbParameter p2 && p2.SourceColumnNullMapping )
-                        {
-                            Debug.Assert(DbType.Int32 == parameter.DbType, "unexpected DbType");
-                            parameter.Value = Utility.IsNull( parameter.Value ) ? ParameterValueNullValue : ParameterValueNonNullValue;
-                        }
-                    }
-                }
-            }
+            ParameterMethods.ParameterInput( this.UpdateMappingAction, this.UpdateSchemaAction, parameters, typeIndex, row, mappings );
         }
 
         private void ParameterOutput(IDataParameterCollection parameters, DataRow row, DataTableMapping mappings)
         {
-            MissingMappingAction missingMapping = this.UpdateMappingAction;
-            MissingSchemaAction  missingSchema  = this.UpdateSchemaAction;
-
-            foreach (IDataParameter parameter in parameters)
-            {
-                if (null != parameter)
-                {
-                    ParameterOutput( parameter, row, mappings, missingMapping, missingSchema );
-                }
-            }
-        }
-
-        private static void ParameterOutput(IDataParameter parameter, DataRow row, DataTableMapping mappings, MissingMappingAction missingMapping, MissingSchemaAction missingSchema)
-        {
-            if (0 != (ParameterDirection.Output & parameter.Direction))
-            {
-                object value = parameter.Value;
-                if (null != value)
-                {
-                    // null means default, meaning we leave the current DataRow value alone
-                    string columnName = parameter.SourceColumn;
-                    if (!string.IsNullOrEmpty(columnName))
-                    {
-                        DataColumn dataColumn = mappings.GetDataColumn( sourceColumn: columnName, dataType: null, dataTable: row.Table, missingMapping, missingSchema );
-                        if (null != dataColumn)
-                        {
-                            if (dataColumn.ReadOnly)
-                            {
-                                try
-                                {
-                                    dataColumn.ReadOnly = false;
-                                    row[dataColumn] = value;
-                                }
-                                finally
-                                {
-                                    dataColumn.ReadOnly = true;
-                                }
-                            }
-                            else
-                            {
-                                row[dataColumn] = value;
-                            }
-                        }
-                    }
-                }
-            }
+            ParameterMethods.ParameterOutput( this.UpdateMappingAction, this.UpdateSchemaAction, parameters, row, mappings );
         }
 
         #region UpdateAsync
@@ -648,7 +605,7 @@ namespace AsyncDataAdapter
             {
                 rowsAffected = await this.UpdateFromDataTableAsync(dataTable, tableMapping, cancellationToken ).ConfigureAwait(false);
             }
-            else if (!this.HasTableMappings() || (-1 == this.TableMappings.IndexOf(tableMapping)))
+            else if ( (this.TableMappings?.Count ?? 0) == 0 || (-1 == this.TableMappings.IndexOf(tableMapping)))
             {
                 //throw error since the user didn't explicitly map this tableName to Ignore.
                 throw new InvalidOperationException(string.Format("Update unable to find TableMapping['{0}'] or DataTable '{0}'.", srcTable));
@@ -656,410 +613,9 @@ namespace AsyncDataAdapter
             return rowsAffected;
         }
 
-        protected virtual async Task<int> UpdateAsync(DataRow[] dataRows, DataTableMapping tableMapping, CancellationToken cancellationToken)
+        protected virtual Task<int> UpdateAsync(DataRow[] dataRows, DataTableMapping tableMapping, CancellationToken cancellationToken)
         {
-            {
-                Debug.Assert((null != dataRows) && (0 < dataRows.Length), "Update: bad dataRows");
-                Debug.Assert(null != tableMapping, "Update: bad DataTableMapping");
-
-                // If records were affected, increment row count by one - that is number of rows affected in dataset.
-                int cumulativeDataRowsAffected = 0;
-
-                DbConnection[] connections = new DbConnection[5]; // one for each statementtype
-                ConnectionState[] connectionStates = new ConnectionState[5]; // closed by default (== 0)
-
-                bool useSelectConnectionState = false; // MDAC 58710
-                DbCommand tmpcmd = this.SelectCommand;
-                if (null != tmpcmd)
-                {
-                    connections[0] = tmpcmd.Connection;
-                    if (null != connections[0])
-                    {
-                        connectionStates[0] = connections[0].State;
-                        useSelectConnectionState = true;
-                    }
-                }
-
-                int maxBatchCommands = Math.Min(this.UpdateBatchSize, dataRows.Length);
-
-                if (maxBatchCommands < 1)
-                {  // batch size of zero indicates one batch, no matter how large...
-                    maxBatchCommands = dataRows.Length;
-                }
-
-                BatchCommandInfo[] batchCommands = new BatchCommandInfo[maxBatchCommands];
-                DataRow[] rowBatch = new DataRow[maxBatchCommands];
-                int commandCount = 0;
-
-                // the outer try/finally is for closing any connections we may have opened
-                try
-                {
-                    try
-                    {
-                        if (1 != maxBatchCommands)
-                        {
-                            this.InitializeBatching();
-                        }
-                        StatementType statementType = StatementType.Select;
-                        DbCommand dataCommand = null;
-
-                        // for each row which is either insert, update, or delete
-                        foreach (DataRow dataRow in dataRows)
-                        {
-                            if (null == dataRow)
-                            {
-                                continue; // foreach DataRow
-                            }
-                            bool isCommandFromRowUpdating = false;
-
-                            // obtain the appropriate command
-                            switch (dataRow.RowState)
-                            {
-                                case DataRowState.Detached:
-                                case DataRowState.Unchanged:
-                                    continue; // foreach DataRow
-                                case DataRowState.Added:
-                                    statementType = StatementType.Insert;
-                                    dataCommand = this.InsertCommand;
-                                    break;
-                                case DataRowState.Deleted:
-                                    statementType = StatementType.Delete;
-                                    dataCommand = this.DeleteCommand;
-                                    break;
-                                case DataRowState.Modified:
-                                    statementType = StatementType.Update;
-                                    dataCommand = this.UpdateCommand;
-                                    break;
-                                default:
-                                    Debug.Assert(false, "InvalidDataRowState");
-                                    throw ADP.InvalidDataRowState(dataRow.RowState); // out of Update without completing batch
-                            }
-
-                            // setup the event to be raised
-                            RowUpdatingEventArgs rowUpdatingEvent = this.CreateRowUpdatingEvent(dataRow, dataCommand, statementType, tableMapping);
-
-                            // this try/catch for any exceptions during the parameter initialization
-                            try
-                            {
-                                dataRow.RowError = null; // MDAC 67185
-                                if (null != dataCommand)
-                                {
-                                    // prepare the parameters for the user who then can modify them during OnRowUpdating
-                                    this.ParameterInput(dataCommand.Parameters, statementType, dataRow, tableMapping);
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                // 
-                                if (!ADP.IsCatchableExceptionType(e))
-                                {
-                                    throw;
-                                }
-
-                                rowUpdatingEvent.Errors = e;
-                                rowUpdatingEvent.Status = UpdateStatus.ErrorsOccurred;
-                            }
-
-                            this.OnRowUpdating(rowUpdatingEvent); // user may throw out of Update without completing batch
-
-                            if( rowUpdatingEvent.Command is DbCommand tmpCommand )
-                            {
-                                isCommandFromRowUpdating = (dataCommand != tmpCommand);
-                                dataCommand = tmpCommand;
-                            }
-                            
-                            // handle the status from RowUpdating event
-                            UpdateStatus rowUpdatingStatus = rowUpdatingEvent.Status;
-                            if (UpdateStatus.Continue != rowUpdatingStatus)
-                            {
-                                if (UpdateStatus.ErrorsOccurred == rowUpdatingStatus)
-                                {
-                                    this.UpdatingRowStatusErrors(rowUpdatingEvent, dataRow);
-                                    continue; // foreach DataRow
-                                }
-                                else if (UpdateStatus.SkipCurrentRow == rowUpdatingStatus)
-                                {
-                                    if (DataRowState.Unchanged == dataRow.RowState)
-                                    { // MDAC 66286
-                                        cumulativeDataRowsAffected++;
-                                    }
-                                    continue; // foreach DataRow
-                                }
-                                else if (UpdateStatus.SkipAllRemainingRows == rowUpdatingStatus)
-                                {
-                                    if (DataRowState.Unchanged == dataRow.RowState)
-                                    { // MDAC 66286
-                                        cumulativeDataRowsAffected++;
-                                    }
-                                    break; // execute existing batch and return
-                                }
-                                else
-                                {
-                                    throw ADP.InvalidUpdateStatus(rowUpdatingStatus);  // out of Update
-                                }
-                            }
-                            // else onward to Append/ExecuteNonQuery/ExecuteReader
-
-                            rowUpdatingEvent = null;
-                            RowUpdatedEventArgs rowUpdatedEvent = null;
-
-                            if (1 == maxBatchCommands)
-                            {
-                                if (null != dataCommand)
-                                {
-                                    batchCommands[0].CommandIdentifier = 0;
-                                    batchCommands[0].ParameterCount = dataCommand.Parameters.Count;
-                                    batchCommands[0].StatementType = statementType;
-                                    batchCommands[0].UpdatedRowSource = dataCommand.UpdatedRowSource;
-                                }
-                                batchCommands[0].Row = dataRow;
-                                rowBatch[0] = dataRow; // not doing a batch update, just simplifying code...
-                                commandCount = 1;
-                            }
-                            else
-                            {
-                                Exception errors = null;
-
-                                try
-                                {
-                                    if (null != dataCommand)
-                                    {
-                                        if (0 == (UpdateRowSource.FirstReturnedRecord & dataCommand.UpdatedRowSource))
-                                        {
-                                            // append the command to the commandset. If an exception
-                                            // occurs, then the user must append and continue
-
-                                            batchCommands[commandCount].CommandIdentifier = this.AddToBatch(dataCommand);
-                                            batchCommands[commandCount].ParameterCount = dataCommand.Parameters.Count;
-                                            batchCommands[commandCount].Row = dataRow;
-                                            batchCommands[commandCount].StatementType = statementType;
-                                            batchCommands[commandCount].UpdatedRowSource = dataCommand.UpdatedRowSource;
-
-                                            rowBatch[commandCount] = dataRow;
-                                            commandCount++;
-
-                                            if (commandCount < maxBatchCommands)
-                                            {
-                                                continue; // foreach DataRow
-                                            }
-                                            // else onward execute the batch
-                                        }
-                                        else
-                                        {
-                                            // do not allow the expectation that returned results will be used
-                                            errors = new InvalidOperationException("When batching, the command's UpdatedRowSource property value of UpdateRowSource.FirstReturnedRecord or UpdateRowSource.Both is invalid.");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // null Command will force RowUpdatedEvent with ErrorsOccured without completing batch
-                                        errors = ADP.UpdateRequiresCommand(statementType, isCommandFromRowUpdating);
-                                    }
-                                }
-                                catch (Exception e)
-                                { // try/catch for RowUpdatedEventArgs
-                                    // 
-                                    if (!ADP.IsCatchableExceptionType(e))
-                                    {
-                                        throw;
-                                    }
-
-                                    errors = e;
-                                }
-
-                                if (null != errors)
-                                {
-                                    rowUpdatedEvent = this.CreateRowUpdatedEvent(dataRow, dataCommand, StatementType.Batch, tableMapping);
-                                    rowUpdatedEvent.Errors = errors;
-                                    rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
-
-                                    this.OnRowUpdated(rowUpdatedEvent); // user may throw out of Update
-                                    if (errors != rowUpdatedEvent.Errors)
-                                    { // user set the error msg and we will use it
-                                        for (int i = 0; i < batchCommands.Length; ++i)
-                                        {
-                                            batchCommands[i].Errors = null;
-                                        }
-                                    }
-
-                                    cumulativeDataRowsAffected += this.UpdatedRowStatus(rowUpdatedEvent, batchCommands, commandCount);
-                                    if (UpdateStatus.SkipAllRemainingRows == rowUpdatedEvent.Status)
-                                    {
-                                        break;
-                                    }
-                                    continue; // foreach datarow
-                                }
-                            }
-
-                            rowUpdatedEvent = this.CreateRowUpdatedEvent(dataRow, dataCommand, statementType, tableMapping);
-
-                            // this try/catch for any exceptions during the execution, population, output parameters
-                            try
-                            {
-                                if (1 != maxBatchCommands)
-                                {
-                                    DbConnection connection = AdaDbDataAdapter.GetConnection1(this);
-
-                                    ConnectionState state = await this.UpdateConnectionOpenAsync( connection, StatementType.Batch, connections, connectionStates, useSelectConnectionState, cancellationToken ).ConfigureAwait(false);
-                                    rowUpdatedEvent.AdapterInit_(rowBatch);
-
-                                    if (ConnectionState.Open == state)
-                                    {
-                                        await this.UpdateBatchExecuteAsync( batchCommands, commandCount, rowUpdatedEvent, cancellationToken ).ConfigureAwait(false);
-                                    }
-                                    else
-                                    {
-                                        // null Connection will force RowUpdatedEvent with ErrorsOccured without completing batch
-                                        rowUpdatedEvent.Errors = ADP.UpdateOpenConnectionRequired(StatementType.Batch, false, state);
-                                        rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
-                                    }
-                                }
-                                else if (null != dataCommand)
-                                {
-                                    DbConnection connection = AdaDbDataAdapter.GetConnection4(dataCommand, statementType, isCommandFromRowUpdating);
-                                    ConnectionState state = await this.UpdateConnectionOpenAsync( connection, statementType, connections, connectionStates, useSelectConnectionState, cancellationToken ).ConfigureAwait(false);
-                                    if (ConnectionState.Open == state)
-                                    {
-                                        await this.UpdateRowExecuteAsync( rowUpdatedEvent, dataCommand, statementType, cancellationToken ).ConfigureAwait(false);
-                                        batchCommands[0].RecordsAffected = rowUpdatedEvent.RecordsAffected;
-                                        batchCommands[0].Errors = null;
-                                    }
-                                    else
-                                    {
-                                        // null Connection will force RowUpdatedEvent with ErrorsOccured without completing batch
-                                        rowUpdatedEvent.Errors = ADP.UpdateOpenConnectionRequired(statementType, isCommandFromRowUpdating, state);
-                                        rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
-                                    }
-                                }
-                                else
-                                {
-                                    // null Command will force RowUpdatedEvent with ErrorsOccured without completing batch
-                                    rowUpdatedEvent.Errors = ADP.UpdateRequiresCommand(statementType, isCommandFromRowUpdating);
-                                    rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
-                                }
-                            }
-                            catch (Exception e)
-                            { // try/catch for RowUpdatedEventArgs
-                                // 
-                                if (!ADP.IsCatchableExceptionType(e))
-                                {
-                                    throw;
-                                }
-
-                                rowUpdatedEvent.Errors = e;
-                                rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
-                            }
-                            bool clearBatchOnSkipAll = (UpdateStatus.ErrorsOccurred == rowUpdatedEvent.Status);
-
-                            {
-                                Exception errors = rowUpdatedEvent.Errors;
-                                this.OnRowUpdated(rowUpdatedEvent); // user may throw out of Update
-                                // NOTE: the contents of rowBatch are now tainted...
-                                if (errors != rowUpdatedEvent.Errors)
-                                { // user set the error msg and we will use it
-                                    for (int i = 0; i < batchCommands.Length; ++i)
-                                    {
-                                        batchCommands[i].Errors = null;
-                                    }
-                                }
-                            }
-                            cumulativeDataRowsAffected += this.UpdatedRowStatus(rowUpdatedEvent, batchCommands, commandCount);
-
-                            if (UpdateStatus.SkipAllRemainingRows == rowUpdatedEvent.Status)
-                            {
-                                if (clearBatchOnSkipAll && 1 != maxBatchCommands)
-                                {
-                                    this.ClearBatch();
-                                    commandCount = 0;
-                                }
-                                break; // from update
-                            }
-
-                            if (1 != maxBatchCommands)
-                            {
-                                this.ClearBatch();
-                                commandCount = 0;
-                            }
-                            for (int i = 0; i < batchCommands.Length; ++i)
-                            {
-                                batchCommands[i] = default(BatchCommandInfo);
-                            }
-                            commandCount = 0;
-                        } // foreach DataRow
-
-                        // must handle the last batch
-                        if (1 != maxBatchCommands && 0 < commandCount)
-                        {
-                            RowUpdatedEventArgs rowUpdatedEvent = this.CreateRowUpdatedEvent(null, dataCommand, statementType, tableMapping);
-
-                            try
-                            {
-                                DbConnection connection = AdaDbDataAdapter.GetConnection1(this);
-
-                                ConnectionState state = await this.UpdateConnectionOpenAsync( connection, StatementType.Batch, connections, connectionStates, useSelectConnectionState, cancellationToken ).ConfigureAwait(false);
-
-                                DataRow[] finalRowBatch = rowBatch;
-
-                                if (commandCount < rowBatch.Length)
-                                {
-                                    finalRowBatch = new DataRow[commandCount];
-                                    Array.Copy(rowBatch, finalRowBatch, commandCount);
-                                }
-                                rowUpdatedEvent.AdapterInit_(finalRowBatch);
-
-                                if (ConnectionState.Open == state)
-                                {
-                                    await this.UpdateBatchExecuteAsync( batchCommands, commandCount, rowUpdatedEvent, cancellationToken );
-                                }
-                                else
-                                {
-                                    // null Connection will force RowUpdatedEvent with ErrorsOccured without completing batch
-                                    rowUpdatedEvent.Errors = ADP.UpdateOpenConnectionRequired(StatementType.Batch, false, state);
-                                    rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
-                                }
-                            }
-                            catch (Exception e)
-                            { // try/catch for RowUpdatedEventArgs
-                                // 
-                                if (!ADP.IsCatchableExceptionType(e))
-                                {
-                                    throw;
-                                }
-
-                                rowUpdatedEvent.Errors = e;
-                                rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
-                            }
-                            Exception errors = rowUpdatedEvent.Errors;
-                            this.OnRowUpdated(rowUpdatedEvent); // user may throw out of Update
-                            // NOTE: the contents of rowBatch are now tainted...
-                            if (errors != rowUpdatedEvent.Errors)
-                            { // user set the error msg and we will use it
-                                for (int i = 0; i < batchCommands.Length; ++i)
-                                {
-                                    batchCommands[i].Errors = null;
-                                }
-                            }
-
-                            cumulativeDataRowsAffected += this.UpdatedRowStatus(rowUpdatedEvent, batchCommands, commandCount);
-                        }
-                    }
-                    finally
-                    {
-                        if (1 != maxBatchCommands)
-                        {
-                            this.TerminateBatching();
-                        }
-                    }
-                }
-                finally
-                { // try/finally for connection cleanup
-                    for (int i = 0; i < connections.Length; ++i)
-                    {
-                        QuietClose((DbConnection)connections[i], connectionStates[i]);
-                    }
-                }
-                return cumulativeDataRowsAffected;
-            }
+            return AsyncDataReaderUpdateMethods.UpdateAsync( this, dataRows, tableMapping, cancellationToken );
         }
 
         private async Task UpdateBatchExecuteAsync(BatchCommandInfo[] batchCommands, int commandCount, RowUpdatedEventArgs rowUpdatedEvent, CancellationToken cancellationToken )
@@ -1137,7 +693,7 @@ namespace AsyncDataAdapter
                         for (int i = 0; i < batchCommand.ParameterCount; ++i)
                         {
                             IDataParameter parameter = this.GetBatchedParameter(batchCommand.CommandIdentifier, i);
-                            ParameterOutput( parameter, batchCommand.Row, rowUpdatedEvent.TableMapping, missingMapping, missingSchema );
+                            ParameterMethods.ParameterOutput( parameter, batchCommand.Row, rowUpdatedEvent.TableMapping, missingMapping, missingSchema );
                         }
                     }
                 }
@@ -1161,305 +717,39 @@ namespace AsyncDataAdapter
             }
         }
 
-        private async Task<ConnectionState> UpdateConnectionOpenAsync( DbConnection connection, StatementType statementType, DbConnection[] connections, ConnectionState[] connectionStates, bool useSelectConnectionState, CancellationToken cancellationToken )
+        private Task<int> UpdateFromDataTableAsync(DataTable dataTable, DataTableMapping tableMapping, CancellationToken cancellationToken )
         {
-            Debug.Assert(null != connection, "unexpected null connection");
-            Debug.Assert(null != connection, "unexpected null connection");
-            int index = (int)statementType;
-            if (connection != connections[index])
-            {
-                // if the user has changed the connection on the command object
-                // and we had opened that connection, close that connection
-                QuietClose((DbConnection)connections[index], connectionStates[index]);
-
-                connections[index] = connection;
-                connectionStates[index] = ConnectionState.Closed; // required, open may throw
-
-                connectionStates[index] = await QuietOpenAsync( connection, cancellationToken ).ConfigureAwait(false);
-
-                if (useSelectConnectionState && (connections[0] == connection))
-                {
-                    connectionStates[index] = connections[0].State;
-                }
-            }
-
-            return connection.State;
+            return AsyncDataReaderUpdateMethods.UpdateFromDataTableAsync( this, dataTable, tableMapping, cancellationToken );
         }
 
-        private async Task<int> UpdateFromDataTableAsync(DataTable dataTable, DataTableMapping tableMapping, CancellationToken cancellationToken )
+        private Task UpdateRowExecuteAsync( RowUpdatedEventArgs rowUpdatedEvent, DbCommand dataCommand, StatementType cmdIndex, CancellationToken cancellationToken )
         {
-            int rowsAffected = 0;
-            DataRow[] dataRows = Utility.SelectAdapterRows(dataTable, false);
-            if ((null != dataRows) && (0 < dataRows.Length))
-            {
-                rowsAffected = await this.UpdateAsync( dataRows, tableMapping, cancellationToken ).ConfigureAwait(false);
-            }
-            return rowsAffected;
+            return AsyncDataReaderUpdateMethods.UpdateRowExecuteAsync( this, this.ReturnProviderSpecificTypes, rowUpdatedEvent, dataCommand, cmdIndex, cancellationToken );
         }
 
-        private async Task UpdateRowExecuteAsync( RowUpdatedEventArgs rowUpdatedEvent, DbCommand dataCommand, StatementType cmdIndex, CancellationToken cancellationToken )
+        private int UpdatedRowStatus( RowUpdatedEventArgs rowUpdatedEvent, BatchCommandInfo[] batchCommands, int commandCount )
         {
-            Debug.Assert(null != rowUpdatedEvent, "null rowUpdatedEvent");
-            Debug.Assert(null != dataCommand, "null dataCommand");
-            Debug.Assert(rowUpdatedEvent.Command == dataCommand, "dataCommand differs from rowUpdatedEvent");
-
-            bool insertAcceptChanges = true;
-            UpdateRowSource updatedRowSource = dataCommand.UpdatedRowSource;
-           
-            if ((StatementType.Delete == cmdIndex) || (0 == (UpdateRowSource.FirstReturnedRecord & updatedRowSource)))
-            {
-                int recordsAffected = await dataCommand.ExecuteNonQueryAsync().ConfigureAwait(false);
-
-                rowUpdatedEvent.AdapterInit_( recordsAffected );
-            }
-            else if ((StatementType.Insert == cmdIndex) || (StatementType.Update == cmdIndex))
-            {
-                // we only care about the first row of the first result
-                using ( DbDataReader dataReader = await dataCommand.ExecuteReaderAsync( CommandBehavior.SequentialAccess, cancellationToken ).ConfigureAwait(false) )
-                {
-                    AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dataReader, this.ReturnProviderSpecificTypes );
-                    try
-                    {
-                        bool getData = false;
-                        do
-                        {
-                            // advance to the first row returning result set
-                            // determined by actually having columns in the result set
-                            if (0 < readerHandler.FieldCount)
-                            {
-                                getData = true;
-                                break;
-                            }
-                        }
-                        while ( await dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false) );
-
-                        if (getData && (0 != dataReader.RecordsAffected))
-                        {
-                            AdaSchemaMapping mapping = new AdaSchemaMapping(this, null, rowUpdatedEvent.Row.Table, readerHandler, false, SchemaType.Mapped, rowUpdatedEvent.TableMapping.SourceTable, true, null, null);
-
-                            if ((null != mapping.DataTable) && (null != mapping.DataValues))
-                            {
-                                if (dataReader.Read())
-                                {
-                                    if ((StatementType.Insert == cmdIndex) && insertAcceptChanges)
-                                    { // MDAC 64199
-                                        rowUpdatedEvent.Row.AcceptChanges();
-                                        insertAcceptChanges = false;
-                                    }
-                                    mapping.ApplyToDataRow(rowUpdatedEvent.Row);
-                                }
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        // using Close which can optimize its { while(dataReader.NextResult()); } loop
-                        dataReader.Close();
-
-                        // RecordsAffected is available after Close, but don't trust it after Dispose
-                        int recordsAffected = dataReader.RecordsAffected;
-                        rowUpdatedEvent.AdapterInit_(recordsAffected);
-                    }
-                }
-            }
-            else
-            {
-                // StatementType.Select, StatementType.Batch
-                Debug.Assert(false, "unexpected StatementType");
-            }
-
-            // map the parameter results to the dataSet
-            if
-                (
-                    (
-                        (StatementType.Insert == cmdIndex)
-                        ||
-                        (StatementType.Update == cmdIndex)
-                    )
-                    &&
-                    (
-                        0 != (UpdateRowSource.OutputParameters & updatedRowSource)
-                    )
-                    &&
-                    (0 != rowUpdatedEvent.RecordsAffected)
-                )
-            {
-
-                if ((StatementType.Insert == cmdIndex) && insertAcceptChanges)
-                {
-                    rowUpdatedEvent.Row.AcceptChanges();
-                }
-                
-                this.ParameterOutput(dataCommand.Parameters, rowUpdatedEvent.Row, rowUpdatedEvent.TableMapping);
-            }
-
-            // Only error if RecordsAffect == 0, not -1.  A value of -1 means no count was received from server,
-            // do not error in that situation (means 'set nocount on' was executed on server).
-            switch (rowUpdatedEvent.Status)
-            {
-                case UpdateStatus.Continue:
-                    switch (cmdIndex)
-                    {
-                        case StatementType.Update:
-                        case StatementType.Delete:
-                            if (0 == rowUpdatedEvent.RecordsAffected)
-                            {
-                                // bug50526, an exception if no records affected and attempted an Update/Delete
-                                Debug.Assert(null == rowUpdatedEvent.Errors, "Continue - but contains an exception");
-                                rowUpdatedEvent.Errors = ADP.UpdateConcurrencyViolation(cmdIndex, rowUpdatedEvent.RecordsAffected, 1, new DataRow[] { rowUpdatedEvent.Row }); // MDAC 55735
-                                rowUpdatedEvent.Status = UpdateStatus.ErrorsOccurred;
-                            }
-                            break;
-                    }
-                    break;
-            }
+            return AsyncDataReaderBatchExecuteMethods.UpdatedRowStatus( this, rowUpdatedEvent, batchCommands, commandCount );
         }
 
-        private int UpdatedRowStatus(RowUpdatedEventArgs rowUpdatedEvent, BatchCommandInfo[] batchCommands, int commandCount)
+        private int UpdatedRowStatusContinue( BatchCommandInfo[] batchCommands, int commandCount )
         {
-            Debug.Assert(null != rowUpdatedEvent, "null rowUpdatedEvent");
-            int cumulativeDataRowsAffected;
-            switch (rowUpdatedEvent.Status)
-            {
-                case UpdateStatus.Continue:
-                    cumulativeDataRowsAffected = this.UpdatedRowStatusContinue(batchCommands, commandCount);
-                    break; // return to foreach DataRow
-                case UpdateStatus.ErrorsOccurred:
-                    cumulativeDataRowsAffected = this.UpdatedRowStatusErrors(rowUpdatedEvent, batchCommands, commandCount);
-                    break; // no datarow affected if ErrorsOccured
-                case UpdateStatus.SkipCurrentRow:
-                case UpdateStatus.SkipAllRemainingRows: // cancel the Update method
-                    cumulativeDataRowsAffected = this.UpdatedRowStatusSkip(batchCommands, commandCount);
-                    break; // foreach DataRow without accepting changes on this row (but user may haved accepted chagnes for us)
-                default:
-                    throw ADP.InvalidUpdateStatus(rowUpdatedEvent.Status);
-            }
-
-            return cumulativeDataRowsAffected;
+            return AsyncDataReaderBatchExecuteMethods.UpdatedRowStatusContinue( this, batchCommands, commandCount );
         }
 
-        private int UpdatedRowStatusContinue(BatchCommandInfo[] batchCommands, int commandCount)
+        private int UpdatedRowStatusErrors( RowUpdatedEventArgs rowUpdatedEvent, BatchCommandInfo[] batchCommands, int commandCount )
         {
-            Debug.Assert(null != batchCommands, "null batchCommands?");
-            int cumulativeDataRowsAffected = 0;
-            // 1. We delay accepting the changes until after we fire RowUpdatedEvent
-            //    so the user has a chance to call RejectChanges for any given reason
-            // 2. If the DataSource return 0 records affected, its an indication that
-            //    the command didn't take so we don't want to automatically
-            //    AcceptChanges.
-            // With 'set nocount on' the count will be -1, accept changes in that case too.
-            // 3.  Don't accept changes if no rows were affected, the user needs
-            //     to know that there is a concurrency violation
-
-            // Only accept changes if the row is not already accepted, ie detached.
-            bool acdu = this.AcceptChangesDuringUpdate;
-            for (int i = 0; i < commandCount; i++)
-            {
-                DataRow row = batchCommands[i].Row;
-                if ((null == batchCommands[i].Errors) && batchCommands[i].RecordsAffected.HasValue && (0 != batchCommands[i].RecordsAffected.Value))
-                {
-                    Debug.Assert(null != row, "null dataRow?");
-                    if (acdu)
-                    {
-                        if (0 != ((DataRowState.Added | DataRowState.Deleted | DataRowState.Modified) & row.RowState))
-                        {
-                            row.AcceptChanges();
-                        }
-                    }
-                    cumulativeDataRowsAffected++;
-                }
-            }
-            return cumulativeDataRowsAffected;
+            return AsyncDataReaderBatchExecuteMethods.UpdatedRowStatusErrors( this, rowUpdatedEvent, batchCommands, commandCount );
         }
 
-        private int UpdatedRowStatusErrors(RowUpdatedEventArgs rowUpdatedEvent, BatchCommandInfo[] batchCommands, int commandCount)
+        private int UpdatedRowStatusSkip( BatchCommandInfo[] batchCommands, int commandCount )
         {
-            Debug.Assert(null != batchCommands, "null batchCommands?");
-            Exception errors = rowUpdatedEvent.Errors;
-            if (null == errors)
-            {
-                // user changed status to ErrorsOccured without supplying an exception message
-                errors = new DataException("RowUpdatedEvent: Errors occurred; no additional is information available.");
-                rowUpdatedEvent.Errors = errors;
-            }
-
-            int affected = 0;
-            bool done = false;
-            string message = errors.Message;
-
-            for (int i = 0; i < commandCount; i++)
-            {
-                DataRow row = batchCommands[i].Row;
-                Debug.Assert(null != row, "null dataRow?");
-
-                if (null != batchCommands[i].Errors)
-                { // will exist if 0 == RecordsAffected
-                    string rowMsg = batchCommands[i].Errors.Message;
-                    if (String.IsNullOrEmpty(rowMsg))
-                    {
-                        rowMsg = message;
-                    }
-                    row.RowError += rowMsg;
-                    done = true;
-                }
-            }
-            if (!done)
-            { // all rows are in 'error'
-                for (int i = 0; i < commandCount; i++)
-                {
-                    DataRow row = batchCommands[i].Row;
-                    // its possible a DBConcurrencyException exists and all rows have records affected
-                    // via not overriding GetBatchedRecordsAffected or user setting the exception
-                    row.RowError += message; // MDAC 65808
-                }
-            }
-            else
-            {
-                affected = this.UpdatedRowStatusContinue( batchCommands, commandCount );
-            }
-            if (!this.ContinueUpdateOnError)
-            { // MDAC 66900
-                throw errors; // out of Update
-            }
-            return affected; // return the count of successful rows within the batch failure
+            return AsyncDataReaderBatchExecuteMethods.UpdatedRowStatusSkip( batchCommands, commandCount );
         }
 
-        private int UpdatedRowStatusSkip(BatchCommandInfo[] batchCommands, int commandCount)
+        private void UpdatingRowStatusErrors( RowUpdatingEventArgs rowUpdatedEvent, DataRow dataRow )
         {
-            Debug.Assert(null != batchCommands, "null batchCommands?");
-
-            int cumulativeDataRowsAffected = 0;
-
-            for (int i = 0; i < commandCount; i++)
-            {
-                DataRow row = batchCommands[i].Row;
-                Debug.Assert(null != row, "null dataRow?");
-                if (0 != ((DataRowState.Detached | DataRowState.Unchanged) & row.RowState))
-                {
-                    cumulativeDataRowsAffected++; // MDAC 66286
-                }
-            }
-            return cumulativeDataRowsAffected;
-        }
-
-        private void UpdatingRowStatusErrors(RowUpdatingEventArgs rowUpdatedEvent, DataRow dataRow)
-        {
-            Debug.Assert(null != dataRow, "null dataRow");
-            Exception errors = rowUpdatedEvent.Errors;
-
-            if (null == errors)
-            {
-                // user changed status to ErrorsOccured without supplying an exception message
-                errors = new DataException("RowUpdatingEvent: Errors occurred; no additional is information available.");
-                rowUpdatedEvent.Errors = errors;
-            }
-            string message = errors.Message;
-            dataRow.RowError += message; // MDAC 65808
-
-            if (!this.ContinueUpdateOnError)
-            { // MDAC 66900
-                throw errors; // out of Update
-            }
+            AsyncDataReaderUpdateMethods.UpdatingRowStatusErrors( continueUpdateOnError: this.ContinueUpdateOnError, rowUpdatedEvent, dataRow );
         }
 
         #endregion
@@ -1506,64 +796,8 @@ namespace AsyncDataAdapter
             return connection;
         }
 
-        private static DbConnection GetConnection4(DbCommand command, StatementType statementType, bool isCommandFromRowUpdating)
-        {
-            Debug.Assert(null != command, "GetConnection4: null command");
-            DbConnection connection = command.Connection;
-            if (null == connection)
-            {
-                throw ADP.UpdateConnectionRequired(statementType, isRowUpdatingCommand: isCommandFromRowUpdating);
-            }
-            return connection;
-        }
-
         #endregion
 
-        private static DataRowVersion GetParameterSourceVersion(StatementType statementType, IDataParameter parameter)
-        {
-            switch (statementType)
-            {
-                case StatementType.Insert: return DataRowVersion.Current;  // ignores parameter.SourceVersion
-                case StatementType.Update: return parameter.SourceVersion;
-                case StatementType.Delete: return DataRowVersion.Original; // ignores parameter.SourceVersion
-                case StatementType.Select:
-                case StatementType.Batch:
-                    throw new ArgumentException(message: string.Format("Unwanted statement type {0}", statementType.ToString()), paramName: nameof(statementType));
-                default:
-                    throw ADP.InvalidStatementType(statementType);
-            }
-        }
-
-        #region Connections
-
-        /// <summary></summary>
-        /// <remarks><see cref="QuietOpenAsync"/> needs to appear in the try {} finally { QuietClose } block otherwise a possibility exists that an exception may be thrown, i.e. <see cref="ThreadAbortException"/> where we would Open the connection and not close it</remarks>
-        /// <returns></returns>
-        private static async Task<ConnectionState> QuietOpenAsync(DbConnection connection, CancellationToken cancellationToken )
-        {
-            Debug.Assert(null != connection, "QuietOpen: null connection");
-            var originalState = connection.State;
-            if (ConnectionState.Closed == originalState)
-            {
-                await connection.OpenAsync( cancellationToken ).ConfigureAwait(false);
-            }
-
-            return originalState;
-        }
-
-        private static void QuietClose(DbConnection connection, ConnectionState originalState)
-        {
-            // close the connection if:
-            // * it was closed on first use and adapter has opened it, AND
-            // * provider's implementation did not ask to keep this connection open
-            if ((null != connection) && (ConnectionState.Closed == originalState))
-            {
-                // we don't have to check the current connection state because
-                // it is supposed to be safe to call Close multiple times
-                connection.Close();
-            }
-        }
-
-        #endregion
+        
     }
 }

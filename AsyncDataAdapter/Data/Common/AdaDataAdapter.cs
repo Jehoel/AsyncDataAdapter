@@ -165,11 +165,6 @@ namespace AsyncDataAdapter
             }
         }
 
-        protected bool HasTableMappings()
-        {
-            return ( this.tableMappings?.Count ?? 0 ) > 0;
-        }
-
         #endregion
 
         #region IAdaSchemaMappingAdapter

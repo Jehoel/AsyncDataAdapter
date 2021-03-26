@@ -20,27 +20,27 @@ namespace AsyncDataAdapter.SqlClient
         private ISqlCommandSet _commandSet;
         private int _updateBatchSize = 1;
 
-        public AdaSqlDataAdapter()
-            : base()
+        public AdaSqlDataAdapter( IBatchingAdapter batchingAdapter )
+            : base( batchingAdapter )
         {
             GC.SuppressFinalize(this);
         }
 
-        public AdaSqlDataAdapter(SqlCommand selectCommand)
-            : this()
+        public AdaSqlDataAdapter( IBatchingAdapter batchingAdapter, SqlCommand selectCommand)
+            : this( batchingAdapter )
         {
             this.SelectCommand = selectCommand;
         }
 
-        public AdaSqlDataAdapter(string selectCommandText, string selectConnectionString)
-            : this()
+        public AdaSqlDataAdapter( IBatchingAdapter batchingAdapter, string selectCommandText, string selectConnectionString)
+            : this( batchingAdapter )
         {
             SqlConnection connection = new SqlConnection(selectConnectionString);
             this.SelectCommand = new SqlCommand(selectCommandText, connection);
         }
 
-        public AdaSqlDataAdapter(string selectCommandText, SqlConnection selectConnection)
-            : this()
+        public AdaSqlDataAdapter( IBatchingAdapter batchingAdapter, string selectCommandText, SqlConnection selectConnection)
+            : this( batchingAdapter )
         {
             this.SelectCommand = new SqlCommand(selectCommandText, selectConnection);
         }
