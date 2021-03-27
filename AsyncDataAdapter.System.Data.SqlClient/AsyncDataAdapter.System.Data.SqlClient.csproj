@@ -48,4 +48,14 @@
   <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AsyncDataAdapter\AsyncDataAdapter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="DbDataAdapter\SqlAsyncDataAdapter.cs">
+      <SubType>Component</SubType>
+    </Compile>
+  </ItemGroup>
 </Project>
