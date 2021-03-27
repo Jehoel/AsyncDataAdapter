@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
+using System.Linq;
 using System.Data.Common;
 using System.Globalization;
 using System.Threading;
@@ -281,6 +283,31 @@ namespace AsyncDataAdapter.Tests
         public override int RecordsAffected => this.RecordsAffected2;
         
         public int RecordsAffected2 { get; set; }
+
+        #endregion
+
+        #region Non-abstract members that really should be abstract instead of throwing... grrr...
+
+        protected override DbDataReader GetDbDataReader(int ordinal)
+        {
+            //return base.GetDbDataReader(ordinal);
+            throw new NotSupportedException( nameof(this.GetDbDataReader) + " (for nested tables) is not supported. Fortunately no-one ever uses it." );
+        }
+
+        public override DataTable GetSchemaTable()
+        {
+            TestTable currentTable = this.CurrentTable;
+            if( currentTable is null ) return null;
+
+            {
+                DataTable minimalTable = currentTable.CreateMinimalSchemaTable();
+                using( DataTableReader dataTableReader = new DataTableReader( minimalTable ) )
+                {
+                    DataTable schemaTable = dataTableReader.GetSchemaTable();
+                    return schemaTable;
+                }
+            }
+        }
 
         #endregion
 

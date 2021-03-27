@@ -1,98 +1,179 @@
-﻿using System;
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using System.Data.Common;
 
 namespace AsyncDataAdapter.Tests
 {
     public class FakeDbParameterCollection : DbParameterCollection
     {
+        private readonly Object listLock = new Object();
+        private readonly List<FakeDbParameter> list = new List<FakeDbParameter>();
+
         public override int Add(object value)
         {
-            throw new NotImplementedException();
+            if( value is FakeDbParameter p )
+            {
+                this.list.Add( p );
+                return this.list.Count;
+            }
+            else
+            {
+                throw new ArgumentException( "Argument is null or is the wrong type." );
+            }
         }
 
         public override void AddRange(Array values)
         {
-            throw new NotImplementedException();
+            foreach( Object obj in values )
+            {
+                this.Add( obj );
+            }
         }
 
         public override void Clear()
         {
-            throw new NotImplementedException();
+            this.list.Clear();
         }
 
         public override bool Contains(object value)
         {
-            throw new NotImplementedException();
+            if( value is FakeDbParameter p )
+            {
+                return this.list.Contains( p );
+            }
+            else
+            {
+                return false;
+            }
         }
 
         public override bool Contains(string value)
         {
-            throw new NotImplementedException();
+            return this.list.Any( p => p.ParameterName == value );
         }
 
         public override void CopyTo(Array array, int index)
         {
-            throw new NotImplementedException();
+            FakeDbParameter[] a2 = (FakeDbParameter[])array;
+
+            this.list.CopyTo( a2, index );
         }
 
         public override IEnumerator GetEnumerator()
         {
-            throw new NotImplementedException();
+            return this.list.GetEnumerator();
         }
 
         protected override DbParameter GetParameter(int index)
         {
-            throw new NotImplementedException();
+            return this.list[index];
         }
 
         protected override DbParameter GetParameter(string parameterName)
         {
-            throw new NotImplementedException();
+            return this.list.SingleOrDefault( p => p.ParameterName == parameterName );
         }
 
         public override int IndexOf(object value)
         {
-            throw new NotImplementedException();
+            if( value is FakeDbParameter p )
+            {
+                return this.list.IndexOf( p );
+            }
+
+            return -1;
         }
 
         public override int IndexOf(string parameterName)
         {
-            throw new NotImplementedException();
+            var match = this.list
+                .Select( ( p, idx ) => ( p, idx ) )
+                .SingleOrDefault( t => t.p.ParameterName == parameterName );
+
+            if( match != default )
+            {
+                return match.idx;
+            }
+
+            return -1;
         }
 
         public override void Insert(int index, object value)
         {
-            throw new NotImplementedException();
+            if( value is FakeDbParameter p )
+            {
+                this.list.Insert( index, p );
+            }
+            else
+            {
+                throw new ArgumentException( "Null or incorrect parameter type." );
+            }
         }
 
         public override void Remove(object value)
         {
-            throw new NotImplementedException();
+            if( value is FakeDbParameter p )
+            {
+                _ = this.list.Remove( p );
+            }
+            else
+            {
+                throw new ArgumentException( "Null or incorrect parameter type." );
+            }
         }
 
         public override void RemoveAt(int index)
         {
-            throw new NotImplementedException();
+            this.list.RemoveAt( index );
         }
 
         public override void RemoveAt(string parameterName)
         {
-            throw new NotImplementedException();
+            var match = this.list
+                .Select( ( p, idx ) => ( p, idx ) )
+                .SingleOrDefault( t => t.p.ParameterName == parameterName );
+
+            if( match != default )
+            {
+                this.list.RemoveAt( match.idx );
+            }
         }
 
         protected override void SetParameter(int index, DbParameter value)
         {
-            throw new NotImplementedException();
+            if( value is FakeDbParameter p )
+            {
+                this.list[ index ] = p;
+            }
+            else
+            {
+                throw new ArgumentException( "Null or incorrect parameter type." );
+            }
         }
 
         protected override void SetParameter(string parameterName, DbParameter value)
         {
-            throw new NotImplementedException();
+            if( value is FakeDbParameter p )
+            {
+                var match = this.list
+                    .Select( ( p, idx ) => ( p, idx ) )
+                    .SingleOrDefault( t => t.p.ParameterName == parameterName );
+
+                if( match != default )
+                {
+                    this.list[ match.idx ] = p;
+                }
+            }
+            else
+            {
+                throw new ArgumentException( "Null or incorrect parameter type." );
+            }
         }
 
-        public override int Count => throw new NotImplementedException();
+        public override int Count => this.list.Count;
 
-        public override object SyncRoot => throw new NotImplementedException();
+        public override object SyncRoot => this.listLock;
     }
 }

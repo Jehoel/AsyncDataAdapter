@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Globalization;
 
 namespace AsyncDataAdapter.Tests
@@ -24,6 +25,22 @@ namespace AsyncDataAdapter.Tests
         public Type[] ColumnTypes { get; }
 
         public List<Object[]> Rows { get; }
+
+        //
+
+        /// <summary>Creates a DataTable with the same structure as this table, but without any rows. This table can be used by <see cref="System.Data.DataTableReader"/> for use with <see cref="System.Data.Common.DbDataReader.GetSchemaTable"/>.</summary>
+        public DataTable CreateMinimalSchemaTable()
+        {
+            DataTable dt = new DataTable( tableName: this.Name );
+
+            for( Int32 x = 0; x < this.ColumnNames.Length; x++ )
+            {
+                DataColumn col = new DataColumn( columnName: this.ColumnNames[x], dataType: this.ColumnTypes[x] );
+                dt.Columns.Add( col );
+            }
+
+            return dt;
+        }
     }
 
     public static class RandomDataGenerator
