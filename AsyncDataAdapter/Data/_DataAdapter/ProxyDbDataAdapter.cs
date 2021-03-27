@@ -27,6 +27,11 @@ namespace AsyncDataAdapter
             this.Subject         = subject;
             this.BatchingAdapter = batchingAdapter;
 
+            if( this.selectCommandSetByCtor != null ) this.SelectCommand = this.selectCommandSetByCtor;
+            if( this.insertCommandSetByCtor != null ) this.InsertCommand = this.insertCommandSetByCtor;
+            if( this.deleteCommandSetByCtor != null ) this.DeleteCommand = this.deleteCommandSetByCtor;
+            if( this.updateCommandSetByCtor != null ) this.UpdateCommand = this.updateCommandSetByCtor;
+
             this.Subject.FillError += this.OnSubjectFillError;
         }
 
@@ -37,13 +42,29 @@ namespace AsyncDataAdapter
 
         #region TDbCommands
 
+        // There's a problem: `DbDataAdapter`'s ctor calls the `SelectCommand_set` (and insert/update/delete) before control passes to the subclass ctor.
+        // But this class can't set `this.Subject` until then...
+        // So here's an ugly hack:
+
+        private TDbCommand selectCommandSetByCtor;
+        private TDbCommand insertCommandSetByCtor;
+        private TDbCommand deleteCommandSetByCtor;
+        private TDbCommand updateCommandSetByCtor;
+
         public new TDbCommand SelectCommand
         {
             get => (TDbCommand)this.Subject.SelectCommand;
             set
             {
-                this.Subject.SelectCommand = value;
-                base.SelectCommand = value;
+                if( this.Subject is null )
+                {
+                    if( value != null ) this.selectCommandSetByCtor = value;
+                }
+                else
+                {
+                    this.Subject.SelectCommand = value;
+//                  base.SelectCommand = value;
+                }
             }
         }
 
@@ -52,8 +73,15 @@ namespace AsyncDataAdapter
             get => (TDbCommand)base.InsertCommand;
             set
             {
-                this.Subject.InsertCommand = value;
-                base.InsertCommand = value;
+                if( this.Subject is null )
+                {
+                    if( value != null ) this.insertCommandSetByCtor = value;
+                }
+                else
+                {
+                    this.Subject.InsertCommand = value;
+//                  base.InsertCommand = value;
+                }
             }
         }
 
@@ -62,8 +90,15 @@ namespace AsyncDataAdapter
             get => (TDbCommand)base.DeleteCommand;
             set
             {
-                this.Subject.DeleteCommand = value;
-                base.DeleteCommand = value;
+                if( this.Subject is null )
+                {
+                    if( value != null ) this.deleteCommandSetByCtor = value;
+                }
+                else
+                {
+                    this.Subject.DeleteCommand = value;
+//                  base.DeleteCommand = value;
+                }
             }
         }
 
@@ -72,8 +107,15 @@ namespace AsyncDataAdapter
             get => (TDbCommand)base.UpdateCommand;
             set
             {
-                this.Subject.UpdateCommand = value;
-                base.UpdateCommand = value;
+                if( this.Subject is null )
+                {
+                    if( value != null ) this.updateCommandSetByCtor = value;
+                }
+                else
+                {
+                    this.Subject.UpdateCommand = value;
+//                  base.UpdateCommand = value;
+                }
             }
         }
 

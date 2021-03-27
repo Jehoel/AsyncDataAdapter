@@ -2,9 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Threading.Tasks;
 
 using NUnit.Framework;
+
+using Shouldly;
 
 namespace AsyncDataAdapter.Tests
 {
@@ -24,25 +27,45 @@ namespace AsyncDataAdapter.Tests
         {
             List<TestTable> randomDataSource = RandomDataGenerator.CreateRandomTables( seed: 1234, tableCount: 5, /*allowZeroRowsInTablesByIdx: */ 1, 3 );
 
-            //
-
-            DataSet dataSet = new DataSet();
-
-            using( FakeDbConnection connection = new FakeDbConnection() )
-            using( FakeDbCommand selectCommand = connection.CreateCommand( testTables: randomDataSource ) )
+            // Part 1: Use proxy
+            DataSet dataSetFromProxy;
             {
-                connection   .AsyncMode = AsyncMode.AllowSync;
-                selectCommand.AsyncMode = AsyncMode.AllowSync;
-
-                connection.Open();
-
-                using( BatchingFakeProxiedDbDataAdapter adpt = new BatchingFakeProxiedDbDataAdapter( selectCommand ) )
+                using( FakeDbConnection connection = new FakeDbConnection( asyncMode: AsyncMode.AllowSync ) )
+                using( FakeDbCommand selectCommand = connection.CreateCommand( testTables: randomDataSource ) )
                 {
-                    Int32 totalRows = adpt.Fill( dataSet );
+                    connection.Open();
 
-                    throw new NotImplementedException();
+                    using( BatchingFakeProxiedDbDataAdapter adpt = new BatchingFakeProxiedDbDataAdapter( selectCommand ) )
+                    {
+                        dataSetFromProxy = new DataSet();
+
+                        // `.Fill` returns the number of rows in the first table, not any subsequent tables. Yes, that's silly.
+                        Int32 rowsInFirstTable = adpt.Fill( dataSetFromProxy );
+                        rowsInFirstTable.ShouldBe( 40 );
+                    }
                 }
             }
+
+            // Part 2: Use real
+            DataSet dataSetFromReal;
+            {
+                using( FakeDbConnection connection = new FakeDbConnection( asyncMode: AsyncMode.AllowSync ) )
+                using( FakeDbCommand selectCommand = connection.CreateCommand( testTables: randomDataSource ) )
+                {
+                    connection.Open();
+
+                    using( NonBatchingFakeDbDataAdapter adpt = new NonBatchingFakeDbDataAdapter( selectCommand ) )
+                    {
+                        dataSetFromReal = new DataSet();
+
+                        Int32 rowsInFirstTable = adpt.Fill( dataSetFromReal );
+                        rowsInFirstTable.ShouldBe( 40 );
+                    }
+                }
+            }
+
+            // Assert equality:
+            DataTableEquality.DataSetEquals( dataSetFromProxy, dataSetFromReal ).ShouldBeTrue();
         }
 
         [Test]

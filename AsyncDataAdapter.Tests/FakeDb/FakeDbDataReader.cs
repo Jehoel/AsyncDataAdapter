@@ -12,7 +12,8 @@ namespace AsyncDataAdapter.Tests
     {
         public FakeDbDataReader( FakeDbCommand cmd )
         {
-            this.Command = cmd ?? throw new ArgumentNullException(nameof(cmd));
+            this.Command   = cmd ?? throw new ArgumentNullException(nameof(cmd));
+            this.AsyncMode = cmd.AsyncMode;
         }
 
         public AsyncMode AsyncMode { get; set; }
@@ -25,8 +26,7 @@ namespace AsyncDataAdapter.Tests
         public Int32 CurrentRowIdx   { get; set; } = -1;
 
         /// <summary>Lists all source tables in the current fake source result.</summary>
-        public List<TestTable> AllTables { get; set; } = new List<TestTable>();
-
+        public List<TestTable> AllTables { get; private set; } = new List<TestTable>();
 
         public TestTable CurrentTable
         {
@@ -70,6 +70,7 @@ namespace AsyncDataAdapter.Tests
                     return currentTableRows[ this.CurrentRowIdx ];
                 }
             }
+#if NO_THIS_MAKES_IT_HARD_TO_REASON_ABOUT
             set
             {
                 if( value is null ) throw new ArgumentNullException(nameof(value));
@@ -92,13 +93,14 @@ namespace AsyncDataAdapter.Tests
 
                 this.CurrentTable.Rows[ this.CurrentRowIdx ] = value;
             }
+#endif
         }
 
         /// <summary>Column names.</summary>
-        public String[] Names   { get; set; }
+        public String[] Names   => this.CurrentTable?.ColumnNames ?? Array.Empty<String>();
 
         /// <summary>Column types. Don't use <see cref="Nullable{T}"/> for nullable columns - all columns can store null values (as <see cref="DBNull"/>).</summary>
-        public Type[]   Types   { get; set; }
+        public Type[]   Types   => this.CurrentTable?.ColumnTypes ?? Array.Empty<Type>();
 
         #endregion
 
@@ -230,7 +232,7 @@ namespace AsyncDataAdapter.Tests
 
         public override Type GetFieldType(int ordinal)
         {
-            return this.RowData[ordinal].GetType();
+            return this.Types[ordinal];
         }
 
         public override string GetName(int ordinal)
@@ -250,7 +252,21 @@ namespace AsyncDataAdapter.Tests
 
         public override int Depth => 1;
 
-        public override int FieldCount => this.RowData.Length;
+        public override int FieldCount
+        {
+            get
+            {
+                TestTable currentTable = this.CurrentTable;
+                if( currentTable is null )
+                {
+                    return -1;
+                }
+                else
+                {
+                    return currentTable.ColumnNames.Length;
+                }
+            }
+        }
 
         public override bool HasRows => this.RowData != null;
 
@@ -277,6 +293,7 @@ namespace AsyncDataAdapter.Tests
             {
                 this.CurrentTableIdx++;
                 this.CurrentRowIdx = -1;
+
                 return true;
             }
             else // implicit: this.CurrentTableIdx >= maxIdx )
