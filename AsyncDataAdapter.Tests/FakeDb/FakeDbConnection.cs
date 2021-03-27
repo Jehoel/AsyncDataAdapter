@@ -10,8 +10,10 @@ namespace AsyncDataAdapter.Tests
 {
     public class FakeDbConnection : DbConnection
     {
-        public FakeDbConnection()
+        public FakeDbConnection( AsyncMode asyncMode = AsyncMode.AwaitAsync, Int32 inducedDelayMS = 100 )
         {
+            this.AsyncMode    = asyncMode;
+            this.InducedDelay = TimeSpan.FromMilliseconds( inducedDelayMS );
         }
 
         public override String ConnectionString { get; set; }
@@ -28,19 +30,38 @@ namespace AsyncDataAdapter.Tests
 
         public override ConnectionState State => this.State2;
 
-        //
+        #region Test data
 
         public AsyncMode AsyncMode { get; set; }
 
-        public Boolean AllowSync  => this.AsyncMode.HasFlag( AsyncMode.AllowSync );
-        
-        public Boolean AllowAsync => this.AsyncMode.HasFlag( AsyncMode.AllowAsync );
+        public TimeSpan InducedDelay { get; set; }
+
+        #endregion
+
+        #region CreateCommand
+
+        protected override DbCommand CreateDbCommand()
+        {
+            return this.CreateCommand();
+        }
+
+        public new FakeDbCommand CreateCommand()
+        {
+            return this.CreateCommand( testTables: null );
+        }
+
+        public FakeDbCommand CreateCommand( List<TestTable> testTables )
+        {
+            return new FakeDbCommand( connection: this, testTables: testTables ) { AsyncMode = this.AsyncMode };
+        }
+
+        #endregion
 
         //
 
         public override void Open()
         {
-            if( this.AllowSync )
+            if( this.AsyncMode.AllowOld() )
             {
                 Thread.Sleep( 100 );
 
@@ -60,15 +81,19 @@ namespace AsyncDataAdapter.Tests
 
                 this.State2 = ConnectionState.Open; 
             }
-            else if( this.AsyncMode.HasFlag( AsyncMode.SyncAsync ) )
+            else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
                 Thread.Sleep( 100 );
 
                 this.State2 = ConnectionState.Open; 
             }
-            else if( this.AsyncMode.HasFlag( AsyncMode.Default ) )
+            else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
                 await base.OpenAsync();
+            }
+            else if( this.AsyncMode.HasFlag( AsyncMode.RunAsync ) )
+            {
+                await Task.Run( () => { this.State2 = ConnectionState.Open; } );
             }
             else
             {
@@ -81,23 +106,20 @@ namespace AsyncDataAdapter.Tests
             this.State2 = ConnectionState.Closed;
         }
 
-        protected override DbCommand CreateDbCommand()
-        {
-            return this.CreateCommand();
-        }
+        #region BeginDbTransaction
 
-        public new FakeDbCommand CreateCommand()
+        private DbTransaction BeginDbTransactionImpl( IsolationLevel isolationLevel )
         {
-            return new FakeDbCommand();
+            return new FakeDbTransaction( this, isolationLevel );
         }
 
         protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel)
         {
-            if( this.AllowSync )
+            if( this.AsyncMode.AllowOld() )
             {
                 Thread.Sleep( 100 );
 
-                return new FakeDbTransaction( this, isolationLevel );
+                return this.BeginDbTransactionImpl( isolationLevel );
             }
             else
             {
@@ -111,17 +133,21 @@ namespace AsyncDataAdapter.Tests
             {
                 await Task.Delay( 100 ).ConfigureAwait(false);
 
-                return new FakeDbTransaction( this, isolationLevel );
+                return this.BeginDbTransactionImpl( isolationLevel );
             }
-            else if( this.AsyncMode.HasFlag( AsyncMode.SyncAsync ) )
+            else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
                 Thread.Sleep( 100 );
 
-                return new FakeDbTransaction( this, isolationLevel );
+                return this.BeginDbTransactionImpl( isolationLevel );
             }
-            else if( this.AsyncMode.HasFlag( AsyncMode.Default ) )
+            else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
                 return await base.BeginDbTransactionAsync( isolationLevel, cancellationToken );
+            }
+            else if( this.AsyncMode.HasFlag( AsyncMode.RunAsync ) )
+            {
+                return await Task.Run( () => this.BeginDbTransactionImpl( isolationLevel ) );
             }
             else
             {
@@ -129,14 +155,13 @@ namespace AsyncDataAdapter.Tests
             }
         }
 
+        #endregion
+
         public override void ChangeDatabase(String databaseName)
         {
             this.Database2 = databaseName;
         }
 
-        public override Task CloseAsync()
-        {
-            return base.CloseAsync();
-        }
+        // Don't override CloseAsync, it isn't in .NET Standard 2.0.
     }
 }

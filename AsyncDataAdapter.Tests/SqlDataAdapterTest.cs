@@ -18,11 +18,14 @@ namespace AsyncDataAdapter.Tests
     {
         private const Int32 COMMAND_TIMEOUT = 30; // `SqlCommand.CommandTimeou` is valued in seconds, not milliseconds!
 
-        private static readonly String _ConnectionString = TestConfiguration.Instance.ConnectionString;
+        private static readonly String  _ConnectionString = TestConfiguration.Instance.ConnectionString;
+        private static readonly Boolean _Enabled          = TestConfiguration.Instance.DatabaseTestsEnabled;
 
         #region Utility
         private static async Task<SqlConnection> CreateOpenConnectionAsync( CancellationToken cancellationToken = default )
         {
+            if( !_Enabled ) Assert.Inconclusive( message: "Database tests are disabled." );
+
             SqlConnection conn = new SqlConnection(_ConnectionString);
             try
             {
@@ -38,6 +41,8 @@ namespace AsyncDataAdapter.Tests
 
         private static SqlConnection CreateOpenConnection()
         {
+            if( !_Enabled ) Assert.Inconclusive( message: "Database tests are disabled." );
+
             SqlConnection conn = new SqlConnection(_ConnectionString);
             try
             {

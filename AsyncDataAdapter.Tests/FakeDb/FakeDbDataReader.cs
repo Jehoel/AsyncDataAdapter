@@ -17,10 +17,6 @@ namespace AsyncDataAdapter.Tests
 
         public AsyncMode AsyncMode { get; set; }
 
-        public Boolean AllowSync  => this.AsyncMode.HasFlag( AsyncMode.AllowSync );
-        
-        public Boolean AllowAsync => this.AsyncMode.HasFlag( AsyncMode.AllowAsync );
-
         #region TestTables
 
         public FakeDbCommand Command { get; }
@@ -274,20 +270,26 @@ namespace AsyncDataAdapter.Tests
 
         //
 
+        private Boolean NextResultImpl()
+        {
+            Int32 maxIdx = this.AllTables.Count - 1;
+            if( this.CurrentTableIdx < maxIdx )
+            {
+                this.CurrentTableIdx++;
+                this.CurrentRowIdx = -1;
+                return true;
+            }
+            else // implicit: this.CurrentTableIdx >= maxIdx )
+            {
+                return false;
+            }
+        }
+
         public override Boolean NextResult()
         {
-            if( this.AllowSync )
+            if( this.AsyncMode.AllowOld() )
             {
-                Int32 maxIdx = this.AllTables.Count - 1;
-                if( this.CurrentTableIdx < maxIdx )
-                {
-                    this.CurrentTableIdx++;
-                    return true;
-                }
-                else // implicit: this.CurrentTableIdx >= maxIdx )
-                {
-                    return false;
-                }
+                return this.NextResultImpl();
             }
             else
             {
@@ -301,17 +303,21 @@ namespace AsyncDataAdapter.Tests
             {
                 await Task.Delay( 100 ).ConfigureAwait(false);
 
-                return this.NextResult();
+                return this.NextResultImpl();
             }
-            else if( this.AsyncMode.HasFlag( AsyncMode.SyncAsync ) )
+            else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
                 Thread.Sleep( 100 );
 
-                return this.NextResult();
+                return this.NextResultImpl();
             }
-            else if( this.AsyncMode.HasFlag( AsyncMode.Default ) )
+            else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
                 return await base.NextResultAsync();
+            }
+            else if( this.AsyncMode.HasFlag( AsyncMode.RunAsync ) )
+            {
+                return await Task.Run( () => this.NextResultImpl() );
             }
             else
             {
@@ -321,20 +327,25 @@ namespace AsyncDataAdapter.Tests
 
         //
 
+        private Boolean ReadImpl()
+        {
+            Int32 maxIdx = this.Rows.Count - 1;
+            if( this.CurrentRowIdx < maxIdx)
+            {
+                this.CurrentRowIdx++;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         public override Boolean Read()
         {
-            if( this.AllowSync )
+            if( this.AsyncMode.AllowOld() )
             {
-                Int32 maxIdx = this.Rows.Count - 1;
-                if( this.CurrentRowIdx < maxIdx)
-                {
-                    this.CurrentRowIdx++;
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
+                return this.ReadImpl();
             }
             else
             {
@@ -346,19 +357,23 @@ namespace AsyncDataAdapter.Tests
         {
             if( this.AsyncMode.HasFlag( AsyncMode.AwaitAsync ) )
             {
-                await Task.Delay( 100 ).ConfigureAwait(false);
+                await Task.Delay( 1 ).ConfigureAwait(false);
 
-                return this.Read();
+                return this.ReadImpl();
             }
-            else if( this.AsyncMode.HasFlag( AsyncMode.SyncAsync ) )
+            else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
-                Thread.Sleep( 100 );
+                Thread.Sleep( 1 );
 
-                return this.Read();
+                return this.ReadImpl();
             }
-            else if( this.AsyncMode.HasFlag( AsyncMode.Default ) )
+            else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
-                return await base.NextResultAsync();
+                return await base.ReadAsync();
+            }
+            else if( this.AsyncMode.HasFlag( AsyncMode.RunAsync ) )
+            {
+                return await Task.Run( () => this.ReadImpl() );
             }
             else
             {

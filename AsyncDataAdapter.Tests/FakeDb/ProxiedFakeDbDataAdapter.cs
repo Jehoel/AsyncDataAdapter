@@ -2,8 +2,8 @@ namespace AsyncDataAdapter.Tests
 {
     public sealed class BatchingFakeProxiedDbDataAdapter : ProxyDbDataAdapter<BatchingFakeDbDataAdapter,FakeDbConnection,FakeDbCommand,FakeDbDataReader>
     {
-        public BatchingFakeProxiedDbDataAdapter()
-            : this( adp: new BatchingFakeDbDataAdapter() )
+        public BatchingFakeProxiedDbDataAdapter( FakeDbCommand selectCmd )
+            : this( adp: new BatchingFakeDbDataAdapter( selectCmd ) )
         {
 
         }
@@ -16,8 +16,8 @@ namespace AsyncDataAdapter.Tests
 
     public sealed class NonBatchingFakeProxiedDbDataAdapter : ProxyDbDataAdapter<NonBatchingFakeDbDataAdapter,FakeDbConnection,FakeDbCommand,FakeDbDataReader>
     {
-        public NonBatchingFakeProxiedDbDataAdapter()
-            : base( subject: new NonBatchingFakeDbDataAdapter(), batchingAdapter: null )
+        public NonBatchingFakeProxiedDbDataAdapter( FakeDbCommand selectCmd )
+            : base( subject: new NonBatchingFakeDbDataAdapter( selectCmd ), batchingAdapter: null )
         {
         }
     }

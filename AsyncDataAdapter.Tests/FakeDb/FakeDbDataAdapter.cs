@@ -10,11 +10,43 @@ namespace AsyncDataAdapter.Tests
     public class NonBatchingFakeDbDataAdapter : DbDataAdapter
     {
         // TODO: Override every, single, method - and add call-counts.
+
+        /// <summary>The <paramref name="select"/> is required before <see cref="DbDataAdapter.Fill(DataSet)"/> can be used.</summary>
+        public NonBatchingFakeDbDataAdapter( FakeDbCommand select )
+            : base()
+        {
+            this.SelectCommand = select ?? throw new ArgumentNullException(nameof(select));
+        }
+
+        /// <summary>The <paramref name="select"/> is required before <see cref="DbDataAdapter.Fill(DataSet)"/> can be used.</summary>
+        public NonBatchingFakeDbDataAdapter( FakeDbCommand select, FakeDbCommand update, FakeDbCommand insert, FakeDbCommand delete )
+            : this( select )
+        {
+            this.UpdateCommand = update ?? throw new ArgumentNullException(nameof(update));
+            this.InsertCommand = insert ?? throw new ArgumentNullException(nameof(insert));
+            this.DeleteCommand = delete ?? throw new ArgumentNullException(nameof(delete));
+        }
     }
 
     public class BatchingFakeDbDataAdapter : DbDataAdapter, IBatchingAdapter
     {
         // TODO: Override every, single, method - and add call-counts.
+
+        /// <summary>The <paramref name="select"/> is required before <see cref="DbDataAdapter.Fill(DataSet)"/> can be used.</summary>
+        public BatchingFakeDbDataAdapter( FakeDbCommand select )
+            : base()
+        {
+            this.SelectCommand = select ?? throw new ArgumentNullException(nameof(select));
+        }
+
+        /// <summary>The <paramref name="select"/> is required before <see cref="DbDataAdapter.Fill(DataSet)"/> can be used.</summary>
+        public BatchingFakeDbDataAdapter( FakeDbCommand select, FakeDbCommand update, FakeDbCommand insert, FakeDbCommand delete )
+            : this( select )
+        {
+            this.UpdateCommand = update ?? throw new ArgumentNullException(nameof(update));
+            this.InsertCommand = insert ?? throw new ArgumentNullException(nameof(insert));
+            this.DeleteCommand = delete ?? throw new ArgumentNullException(nameof(delete));
+        }
 
         #region IBatchingAdapter
 

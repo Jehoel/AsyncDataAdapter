@@ -1,10 +1,7 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 using NUnit.Framework;
@@ -22,29 +19,28 @@ namespace AsyncDataAdapter.Tests
     {
         // TODO: Test every overload of Fill, FillSchema, and Update!
 
-        
-
         [Test]
         public void Proxy_Fill_should_work_identically_to_DbDataReader_Fill()
         {
-            List<TestTable> randomDataSource = RandomDataGenerator.CreateRandomTables( tableCount: 5, /*allowZeroRowsInTablesByIdx: */ 1, 3 );
+            List<TestTable> randomDataSource = RandomDataGenerator.CreateRandomTables( seed: 1234, tableCount: 5, /*allowZeroRowsInTablesByIdx: */ 1, 3 );
 
             //
 
             DataSet dataSet = new DataSet();
 
             using( FakeDbConnection connection = new FakeDbConnection() )
-            using( FakeDbCommand selectCommand = connection.CreateCommand() )
+            using( FakeDbCommand selectCommand = connection.CreateCommand( testTables: randomDataSource ) )
             {
                 connection   .AsyncMode = AsyncMode.AllowSync;
                 selectCommand.AsyncMode = AsyncMode.AllowSync;
 
                 connection.Open();
 
-                using( BatchingFakeProxiedDbDataAdapter adpt = new BatchingFakeProxiedDbDataAdapter() )
+                using( BatchingFakeProxiedDbDataAdapter adpt = new BatchingFakeProxiedDbDataAdapter( selectCommand ) )
                 {
                     Int32 totalRows = adpt.Fill( dataSet );
 
+                    throw new NotImplementedException();
                 }
             }
         }
@@ -53,7 +49,7 @@ namespace AsyncDataAdapter.Tests
         public void ProxyFillSchema_should_work_identically_to_FillSchema()
         {
             FakeDbConnection connection = new FakeDbConnection();
-            FakeDbCommand    selectCmd  = new FakeDbCommand();
+            FakeDbCommand    selectCmd  = connection.CreateCommand();
 
             throw new NotImplementedException();
         }
@@ -62,7 +58,7 @@ namespace AsyncDataAdapter.Tests
         public void ProxyUpdate_should_work_identically_to_Update()
         {
             FakeDbConnection connection = new FakeDbConnection();
-            FakeDbCommand    selectCmd  = new FakeDbCommand();
+            FakeDbCommand    selectCmd  = connection.CreateCommand();
 
             throw new NotImplementedException();
         }
@@ -77,7 +73,7 @@ namespace AsyncDataAdapter.Tests
         public async Task ProxyFillAsync_should_not_use_synchronous_calls()
         {
             FakeDbConnection connection = new FakeDbConnection();
-            FakeDbCommand    selectCmd  = new FakeDbCommand();
+            FakeDbCommand    selectCmd  = connection.CreateCommand();
 
             throw new NotImplementedException();
         }
@@ -86,7 +82,7 @@ namespace AsyncDataAdapter.Tests
         public async Task ProxyFillSchemaAsync_should_not_use_synchronous_calls()
         {
             FakeDbConnection connection = new FakeDbConnection();
-            FakeDbCommand    selectCmd  = new FakeDbCommand();
+            FakeDbCommand    selectCmd  = connection.CreateCommand();
 
             throw new NotImplementedException();
         }
@@ -95,7 +91,7 @@ namespace AsyncDataAdapter.Tests
         public async Task ProxyUpdateAsync_should_not_use_synchronous_calls()
         {
             FakeDbConnection connection = new FakeDbConnection();
-            FakeDbCommand    selectCmd  = new FakeDbCommand();
+            FakeDbCommand    selectCmd  = connection.CreateCommand();
 
             throw new NotImplementedException();
         }
