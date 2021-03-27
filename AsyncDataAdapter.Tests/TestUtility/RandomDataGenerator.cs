@@ -26,6 +26,8 @@ namespace AsyncDataAdapter.Tests
 
         public List<Object[]> Rows { get; }
 
+        public Int32 PKColumnIndex => 0; // The 0th column is always the PK column.
+
         //
 
         /// <summary>Creates a DataTable with the same structure as this table, but without any rows. This table can be used by <see cref="System.Data.DataTableReader"/> for use with <see cref="System.Data.Common.DbDataReader.GetSchemaTable"/>.</summary>
@@ -36,8 +38,16 @@ namespace AsyncDataAdapter.Tests
             for( Int32 x = 0; x < this.ColumnNames.Length; x++ )
             {
                 DataColumn col = new DataColumn( columnName: this.ColumnNames[x], dataType: this.ColumnTypes[x] );
+                if( x == 0 )
+                {
+                    col.Unique      = true;
+                    col.AllowDBNull = false;
+                }
+
                 dt.Columns.Add( col );
             }
+
+            dt.PrimaryKey = new DataColumn[] { dt.Columns[0] };
 
             return dt;
         }
@@ -81,13 +91,26 @@ namespace AsyncDataAdapter.Tests
             String[] colNames = new String[ cols ];
             for( Int32 x = 0; x < cols; x++ )
             {
-                colNames[x] = String.Format( CultureInfo.InvariantCulture, "Col{0}", x );
+                if( x == 0 )
+                {
+                    colNames[x] = "PK";
+                }
+                else
+                {
+                    colNames[x] = String.Format( CultureInfo.InvariantCulture, "Col{0}", x );
+                }
             }
 
             Type[] colTypes = new Type[ cols ];
             for( Int32 x = 0; x < cols; x++ )
             {
+                // We need to call `GetRandomColumnType` for every column so we get the same random numbers, even if we disregard them for column 0.
                 colTypes[x] = GetRandomColumnType( rng );
+
+                if( x == 0 )
+                {
+                    colTypes[x] = typeof(Int32);
+                }
             }
             
             //
@@ -101,6 +124,11 @@ namespace AsyncDataAdapter.Tests
                 for( Int32 x = 0; x < cols; x++ )
                 {
                     row[x] = GetRandomValue( rng, colTypes[x] );
+
+                    if( x == 0 )
+                    {
+                        row[x] = y + 1;
+                    }
                 }
 
                 rowsList.Add( row );

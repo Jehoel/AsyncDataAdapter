@@ -98,7 +98,7 @@ namespace AsyncDataAdapter.Tests
         [Test]
         [TestCase( SchemaType.Mapped )]
         [TestCase( SchemaType.Source )]
-        public void ProxyFillSchema_should_work_identically_to_FillSchema_SchemaType( SchemaType schemaType )
+        public void Proxy_FillSchema_should_work_identically_to_FillSchema_SchemaType( SchemaType schemaType )
         {
             List<TestTable> randomDataSource = RandomDataGenerator.CreateRandomTables( seed: 1234, tableCount: 5, /*allowZeroRowsInTablesByIdx: */ 1, 3 );
 
@@ -143,9 +143,7 @@ namespace AsyncDataAdapter.Tests
         }
 
         [Test]
-        [TestCase( SchemaType.Mapped )]
-        [TestCase( SchemaType.Source )]
-        public void ProxyUpdate_should_work_identically_to_Update( SchemaType schemaType )
+        public void Proxy_Update_should_work_identically_to_Update()
         {
             List<TestTable> randomDataSource = RandomDataGenerator.CreateRandomTables( seed: 1234, tableCount: 5, /*allowZeroRowsInTablesByIdx: */ 1, 3 );
 
@@ -174,6 +172,7 @@ namespace AsyncDataAdapter.Tests
                         adpt.UpdateCommand = cmdBuilder.GetUpdateCommand();
 
                         Int32 updatedRows = adpt.Update( dataSetFromProxy ); // updatedRows... in first table only?
+                        updatedRows.ShouldNotBe( 0 );
                     }
                 }
             }
@@ -203,6 +202,7 @@ namespace AsyncDataAdapter.Tests
                         adpt.UpdateCommand = cmdBuilder.GetUpdateCommand();
 
                         Int32 updatedRows = adpt.Update( dataSetFromReal ); // updatedRows... in first table only?
+                        updatedRows.ShouldNotBe( 0 );
                     }
                 }
             }
@@ -211,9 +211,23 @@ namespace AsyncDataAdapter.Tests
             DataTableEquality.DataSetEquals( dataSetFromProxy, dataSetFromReal ).ShouldBeTrue();
         }
 
-        private static void MutateDataSet( DataSet dataSet )
+        public static void MutateDataSet( DataSet dataSet )
         {
+            // Do the exact same mutation in both DataSets: a diagonal line of nulls, methinks.
 
+            foreach( DataTable table in dataSet.Tables )
+            {
+                Int32 rows = Math.Min( 30, table.Rows   .Count );
+                Int32 cols = Math.Min( 30, table.Columns.Count );
+                Int32 max  = Math.Min( rows, cols );
+
+                for( Int32 i = 1; i < max; i++ ) // Don't modify column 0, that's the PK column.
+                {
+                    DataRow row = table.Rows[i];
+
+                    row[ i ] = DBNull.Value;
+                }
+            }
         }
     }
 }

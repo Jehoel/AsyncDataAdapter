@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 
 namespace AsyncDataAdapter.Tests
 {
+    // hmmm, need to subclass `DbProviderFactory` too?
+
     public class FakeDbConnection : DbConnection
     {
         public FakeDbConnection( AsyncMode asyncMode = AsyncMode.AwaitAsync, Int32 inducedDelayMS = 100 )
