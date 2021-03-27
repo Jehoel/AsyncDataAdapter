@@ -83,6 +83,11 @@ namespace AsyncDataAdapter.Tests
 
         protected override DbCommand CreateDbCommand()
         {
+            return this.CreateCommand();
+        }
+
+        public new FakeDbCommand CreateCommand()
+        {
             return new FakeDbCommand();
         }
 

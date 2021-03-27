@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,30 +15,116 @@ namespace AsyncDataAdapter.Tests
             this.Command = cmd ?? throw new ArgumentNullException(nameof(cmd));
         }
 
+        public AsyncMode AsyncMode { get; set; }
+
+        public Boolean AllowSync  => this.AsyncMode.HasFlag( AsyncMode.AllowSync );
+        
+        public Boolean AllowAsync => this.AsyncMode.HasFlag( AsyncMode.AllowAsync );
+
+        #region TestTables
+
         public FakeDbCommand Command { get; }
 
-        public Int32 CurrentResultIdx { get; set; } =  0;
-        public Int32 CurrentRowIdx    { get; set; } = -1;
+        public Int32 CurrentTableIdx { get; set; } =  0;
+        public Int32 CurrentRowIdx   { get; set; } = -1;
 
-        public List<List<Object[]>> Results { get; set; } = new List<List<Object[]>>();
+        /// <summary>Lists all source tables in the current fake source result.</summary>
+        public List<TestTable> AllTables { get; set; } = new List<TestTable>();
 
-        public List<Object[]> Rows { get; set; } = new List<Object[]>();
 
+        public TestTable CurrentTable
+        {
+            get
+            {
+                if( this.CurrentTableIdx < this.AllTables.Count )
+                {
+                    return this.AllTables[ this.CurrentTableIdx ];
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
+
+        /// <summary>Lists all source rows in the current table. Returns null if there is no current row.</summary>
+        public IList<Object[]> Rows
+        {
+            get
+            {
+                TestTable currentTable = this.CurrentTable;
+                if( currentTable is null ) return null;
+
+                return currentTable.Rows;
+            }
+        }
+
+        /// <summary>Lists all columns (fields) in the current row. Returns <see langword="null"/> if no row is available.</summary>
         public Object[] RowData
         {
             get
             {
-                return this.Rows[ this.CurrentRowIdx ];
+                IList<Object[]> currentTableRows = this.Rows;
+                if( currentTableRows is null || this.CurrentRowIdx < 0 || this.CurrentRowIdx >= currentTableRows.Count )
+                {
+                    return null;
+                }
+                else
+                {
+                    return currentTableRows[ this.CurrentRowIdx ];
+                }
             }
             set
             {
-                this.Rows[ this.CurrentRowIdx ] = value ?? throw new ArgumentNullException(nameof(value));
+                if( value is null ) throw new ArgumentNullException(nameof(value));
+
+                IList<Object[]> currentTableRows = this.Rows;
+                if( currentTableRows is null || this.CurrentRowIdx < 0 || this.CurrentRowIdx >= currentTableRows.Count )
+                {
+                    throw new InvalidOperationException( "Cannot set the current row when no results are loaded." );
+                }
+
+                if( value.Length != currentTableRows.Count )
+                {
+                    String msg = String.Format( CultureInfo.CurrentCulture, "Cannot set the current row using an array with {0} columns when the current table has {1} columns.", value.Length, currentTableRows.Count );
+                    throw new InvalidOperationException( msg );
+                }
+
+                // TODO: Check column types too?
+
+                //
+
+                this.CurrentTable.Rows[ this.CurrentRowIdx ] = value;
             }
         }
 
+        /// <summary>Column names.</summary>
         public String[] Names   { get; set; }
 
+        /// <summary>Column types. Don't use <see cref="Nullable{T}"/> for nullable columns - all columns can store null values (as <see cref="DBNull"/>).</summary>
         public Type[]   Types   { get; set; }
+
+        #endregion
+
+        public void ResetAndLoadTestData( List<TestTable> tables )
+        {
+            if (tables is null) throw new ArgumentNullException(nameof(tables));
+
+            //
+
+            this.AllTables = tables;
+
+            if( tables.Count == 0 )
+            {
+                this.CurrentTableIdx = -1;
+                this.CurrentRowIdx   = -1;
+            }
+            else
+            {
+                this.CurrentTableIdx =  0; // DataReaders are always positioned at the start of the first table when they have results.
+                this.CurrentRowIdx   = -1;
+            }
+        }
 
         #region Get typed values
 
@@ -107,6 +194,8 @@ namespace AsyncDataAdapter.Tests
         }
 
         #endregion
+
+        #region More reader methods
 
         public override int GetValues(object[] values)
         {
@@ -181,46 +270,100 @@ namespace AsyncDataAdapter.Tests
         
         public int RecordsAffected2 { get; set; }
 
+        #endregion
+
         //
 
-        public override bool NextResult()
+        public override Boolean NextResult()
         {
-            // TODO: AllowSync/AllowAsync
-
-            if( this.CurrentResultIdx < this.Results.Count - 1 )
+            if( this.AllowSync )
             {
-                this.CurrentResultIdx++;
-                this.Rows          = this.Results[ this.CurrentResultIdx ];
-                this.CurrentRowIdx = -1;
-                return true;
+                Int32 maxIdx = this.AllTables.Count - 1;
+                if( this.CurrentTableIdx < maxIdx )
+                {
+                    this.CurrentTableIdx++;
+                    return true;
+                }
+                else // implicit: this.CurrentTableIdx >= maxIdx )
+                {
+                    return false;
+                }
             }
             else
             {
-                return false;
+                throw new InvalidOperationException( "Synchronous methods are disabled." );
             }
         }
 
-        public override bool Read()
+        public override async Task<Boolean> NextResultAsync(CancellationToken cancellationToken)
         {
-            if( this.CurrentRowIdx < this.Rows.Count - 1 )
+            if( this.AsyncMode.HasFlag( AsyncMode.AwaitAsync ) )
             {
-                this.CurrentRowIdx++;
-                return true;
+                await Task.Delay( 100 ).ConfigureAwait(false);
+
+                return this.NextResult();
+            }
+            else if( this.AsyncMode.HasFlag( AsyncMode.SyncAsync ) )
+            {
+                Thread.Sleep( 100 );
+
+                return this.NextResult();
+            }
+            else if( this.AsyncMode.HasFlag( AsyncMode.Default ) )
+            {
+                return await base.NextResultAsync();
             }
             else
             {
-                return false;
+                throw new InvalidOperationException( "Asynchronous methods are disabled." );
             }
         }
 
-        public override Task<bool> NextResultAsync(CancellationToken cancellationToken)
+        //
+
+        public override Boolean Read()
         {
-            return base.NextResultAsync(cancellationToken);
+            if( this.AllowSync )
+            {
+                Int32 maxIdx = this.Rows.Count - 1;
+                if( this.CurrentRowIdx < maxIdx)
+                {
+                    this.CurrentRowIdx++;
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException( "Synchronous methods are disabled." );
+            }
         }
 
-        public override Task<bool> ReadAsync(CancellationToken cancellationToken)
+        public override async Task<Boolean> ReadAsync( CancellationToken cancellationToken )
         {
-            return base.ReadAsync(cancellationToken);
+            if( this.AsyncMode.HasFlag( AsyncMode.AwaitAsync ) )
+            {
+                await Task.Delay( 100 ).ConfigureAwait(false);
+
+                return this.Read();
+            }
+            else if( this.AsyncMode.HasFlag( AsyncMode.SyncAsync ) )
+            {
+                Thread.Sleep( 100 );
+
+                return this.Read();
+            }
+            else if( this.AsyncMode.HasFlag( AsyncMode.Default ) )
+            {
+                return await base.NextResultAsync();
+            }
+            else
+            {
+                throw new InvalidOperationException( "Asynchronous methods are disabled." );
+            }
         }
     }
 }

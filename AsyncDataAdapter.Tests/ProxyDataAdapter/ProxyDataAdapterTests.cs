@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Text;
 using System.Threading;
@@ -20,13 +22,31 @@ namespace AsyncDataAdapter.Tests
     {
         // TODO: Test every overload of Fill, FillSchema, and Update!
 
-        [Test]
-        public void ProxyFill_should_work_identically_to_Fill()
-        {
-            FakeDbConnection connection = new FakeDbConnection();
-            FakeDbCommand    selectCmd  = new FakeDbCommand();
+        
 
-            throw new NotImplementedException();
+        [Test]
+        public void Proxy_Fill_should_work_identically_to_DbDataReader_Fill()
+        {
+            List<TestTable> randomDataSource = RandomDataGenerator.CreateRandomTables( tableCount: 5, /*allowZeroRowsInTablesByIdx: */ 1, 3 );
+
+            //
+
+            DataSet dataSet = new DataSet();
+
+            using( FakeDbConnection connection = new FakeDbConnection() )
+            using( FakeDbCommand selectCommand = connection.CreateCommand() )
+            {
+                connection   .AsyncMode = AsyncMode.AllowSync;
+                selectCommand.AsyncMode = AsyncMode.AllowSync;
+
+                connection.Open();
+
+                using( BatchingFakeProxiedDbDataAdapter adpt = new BatchingFakeProxiedDbDataAdapter() )
+                {
+                    Int32 totalRows = adpt.Fill( dataSet );
+
+                }
+            }
         }
 
         [Test]
