@@ -51,6 +51,11 @@ namespace AsyncDataAdapter
             : base( batchingAdapter: batching, subject: original )
         {
         }
+
+        protected override DbCommandBuilder CreateCommandBuilder()
+        {
+            return new SqlCommandBuilder( this.Subject );
+        }
     }
 }
 

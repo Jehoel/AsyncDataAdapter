@@ -15,7 +15,7 @@ namespace AsyncDataAdapter.Tests
         {
             var e = new RowUpdatedEventArgs(null, null, StatementType.Select, null);
 
-            Assert.DoesNotThrow(() => e.AdapterInit_(10));
+            Assert.DoesNotThrow(() => e.AdapterInit_( rowCount: 10 ) );
         }
 
         [Test]
@@ -23,7 +23,7 @@ namespace AsyncDataAdapter.Tests
         {
             var e = new RowUpdatedEventArgs(null, null, StatementType.Select, null);
 
-            Assert.DoesNotThrow(() => e.AdapterInit_(new DataRow[0]));
+            Assert.DoesNotThrow(() => e.AdapterInit_( rowBatch: new DataRow[0]));
         }
 
         [Test]

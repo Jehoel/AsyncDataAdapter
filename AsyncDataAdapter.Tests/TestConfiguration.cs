@@ -3,7 +3,7 @@ using System.IO;
 
 using Microsoft.Extensions.Configuration;
 
-namespace AsyncDataAdapter
+namespace AsyncDataAdapter.Tests
 {
     public class TestConfiguration
     {

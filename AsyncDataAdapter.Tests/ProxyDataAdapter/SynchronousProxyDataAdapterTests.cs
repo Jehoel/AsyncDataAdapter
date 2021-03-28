@@ -1,12 +1,15 @@
 using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
-using System.Linq;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 using NUnit.Framework;
 
 using Shouldly;
+
+using AsyncDataAdapter.Tests.FakeDb;
+using System.Data.Common;
 
 namespace AsyncDataAdapter.Tests
 {
@@ -15,37 +18,6 @@ namespace AsyncDataAdapter.Tests
     /// <summary>These tests demonstrate that <see cref="ProxyDbDataAdapter{TDbDataAdapter, TDbConnection, TDbCommand, TDbDataReader}"/> forwards all synchronous calls to the underlying <see cref="DbDataAdapter"/>.</summary>
     public class SynchronousProxyDataAdapterTests
     {
-        [Test]
-        public void FakeDbDataAdapter_properties_should_not_have_infinite_loops_and_stack_overflows()
-        {
-            List<TestTable> randomDataSource = RandomDataGenerator.CreateRandomTables( seed: 1, tableCount: 2, /*allowZeroRowsInTablesByIdx: */ 1, 3 );
-
-            try
-            {
-                // Test that .Dispose() works (DbDataAdapter clears mutable properties in its disposal method)
-                using( FakeDbConnection connection = new FakeDbConnection( asyncMode: AsyncMode.AllowSync ) )
-                using( FakeDbCommand selectCommand = connection.CreateCommand( testTables: randomDataSource ) )
-                using( FakeDbDataAdapter adapter = new FakeDbDataAdapter( selectCommand ) )
-                {
-                }
-
-                using( FakeDbConnection connection = new FakeDbConnection( asyncMode: AsyncMode.AllowSync ) )
-                using( FakeDbCommand selectCommand1 = connection.CreateCommand( testTables: randomDataSource ) )
-                using( FakeDbCommand selectCommand2 = connection.CreateCommand( testTables: randomDataSource ) )
-                using( FakeDbDataAdapter adapter = new FakeDbDataAdapter( selectCommand1 ) )
-                {
-                    FakeDbCommand cmd1 = (FakeDbCommand)adapter.SelectCommand;
-                    adapter.SelectCommand = null;
-                    adapter.SelectCommand = cmd1;
-                    adapter.SelectCommand = selectCommand2;
-                }
-            }
-            catch( Exception ex )
-            {
-                Assert.Fail( ex.ToString() );
-            }
-        }
-
         #warning TODO: Test every overload of Fill, FillSchema, and Update!
         // TODO: Test every overload of Fill, FillSchema, and Update!
 
@@ -92,7 +64,7 @@ namespace AsyncDataAdapter.Tests
             }
 
             // Assert equality:
-            DataTableEquality.DataSetEquals( dataSetFromProxy, dataSetFromReal ).ShouldBeTrue();
+            DataTableMethods.DataSetEquals( dataSetFromProxy, dataSetFromReal ).ShouldBeTrue();
         }
 
         [Test]
@@ -139,7 +111,7 @@ namespace AsyncDataAdapter.Tests
             }
 
             // Assert equality:
-            DataTableEquality.DataSetEquals( schemaFromProxy, schemaFromReal ).ShouldBeTrue();
+            DataTableMethods.DataSetEquals( schemaFromProxy, schemaFromReal ).ShouldBeTrue();
         }
 
         [Test]
@@ -156,7 +128,7 @@ namespace AsyncDataAdapter.Tests
                     connection.Open();
 
                     using( BatchingFakeProxiedDbDataAdapter adpt = new BatchingFakeProxiedDbDataAdapter( selectCommand ) )
-                    using( FakeDbCommandBuilder cmdBuilder = adpt.CreateCommandBuilder() )
+                    using( FakeDbCommandBuilder cmdBuilder = new FakeDbCommandBuilder( adpt ) )
                     {
                         dataSetFromProxy = new DataSet();
 
@@ -166,7 +138,7 @@ namespace AsyncDataAdapter.Tests
 
                         //
 
-                        MutateDataSet( dataSetFromProxy );
+                        DataTableMethods.MutateDataSet( dataSetFromProxy );
 
                         //
                         adpt.UpdateCommand = cmdBuilder.GetUpdateCommand();
@@ -196,7 +168,7 @@ namespace AsyncDataAdapter.Tests
 
                         //
 
-                        MutateDataSet( dataSetFromReal );
+                        DataTableMethods.MutateDataSet( dataSetFromReal );
 
                         //
                         adpt.UpdateCommand = cmdBuilder.GetUpdateCommand();
@@ -208,26 +180,7 @@ namespace AsyncDataAdapter.Tests
             }
 
             // Assert equality:
-            DataTableEquality.DataSetEquals( dataSetFromProxy, dataSetFromReal ).ShouldBeTrue();
-        }
-
-        public static void MutateDataSet( DataSet dataSet )
-        {
-            // Do the exact same mutation in both DataSets: a diagonal line of nulls, methinks.
-
-            foreach( DataTable table in dataSet.Tables )
-            {
-                Int32 rows = Math.Min( 30, table.Rows   .Count );
-                Int32 cols = Math.Min( 30, table.Columns.Count );
-                Int32 max  = Math.Min( rows, cols );
-
-                for( Int32 i = 1; i < max; i++ ) // Don't modify column 0, that's the PK column.
-                {
-                    DataRow row = table.Rows[i];
-
-                    row[ i ] = DBNull.Value;
-                }
-            }
+            DataTableMethods.DataSetEquals( dataSetFromProxy, dataSetFromReal ).ShouldBeTrue();
         }
     }
 }
