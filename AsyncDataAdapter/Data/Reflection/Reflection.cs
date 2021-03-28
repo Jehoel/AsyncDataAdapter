@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Reflection;
 
 namespace AsyncDataAdapter.Internal
@@ -154,7 +155,15 @@ namespace AsyncDataAdapter.Internal
 			}
             else
             {
-                return fieldInfo;
+                if( !fieldType.IsAssignableFrom( fieldInfo.FieldType ) )
+                {
+                    string msg = String.Format( CultureInfo.CurrentCulture, "Expected reflected FieldInfo for {0}::{1} to have field type {2} but the FieldInfo has field type {3}.", type.FullName, name, fieldType.FullName, fieldInfo.FieldType.FullName );
+                    throw new InvalidOperationException( message: msg );
+                }
+                else
+                {
+                    return fieldInfo;
+                }
             }
         }
 
@@ -264,5 +273,130 @@ namespace AsyncDataAdapter.Internal
 //      }
 
         #endregion
+
+        public static String GetName( Type nameType )
+        {
+            String name = nameType.Name;
+            return name.Substring( startIndex: 1 ); // TODO: Perhaps requires a known prefix?
+        }
+
+        public static FieldInfo RequireInstanceFieldInfo( Type owner, String name, Type fieldType )
+        {
+            const BindingFlags bf = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+
+            FieldInfo fieldInfo = owner.GetField( name: name, bindingAttr: bf );
+            if( fieldInfo is null )
+            {
+                throw new InvalidOperationException( message: "Could not reflect FieldInfo for " + owner.FullName + "::" + name );
+            }
+            else
+            {
+                if( !fieldType.IsAssignableFrom( fieldInfo.FieldType ) )
+                {
+                    string msg = String.Format( CultureInfo.CurrentCulture, "Expected reflected FieldInfo for {0}::{1} to have field type {2} but the FieldInfo has field type {3}.", owner.FullName, name, fieldType.FullName, fieldInfo.FieldType.FullName );
+                    throw new InvalidOperationException( message: msg );
+                }
+                else
+                {
+                    return fieldInfo;
+                }
+            }
+        }
+
+        public static PropertyInfo RequireInstancePropertyInfo( Type owner, String name, Type returnType )
+        {
+            const BindingFlags bf = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+
+            PropertyInfo methodInfo = owner.GetProperty( name: name, bindingAttr: bf, binder: null, returnType: returnType, types: null, modifiers: null );
+            if( methodInfo is null )
+            {
+                string msg = String.Format( CultureInfo.CurrentCulture, "Could not reflect PropertyInfo for {0}::{1} with property type {2}.", owner.FullName, name, returnType.FullName );
+                throw new InvalidOperationException( message: msg );
+            }
+            else
+            {
+                return methodInfo;
+            }
+        }
+
+        public static MethodInfo RequireInstanceMethodInfo( Type owner, String name, Type returnType, params Type[] parameterTypes )
+        {
+            const BindingFlags bf = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+
+            MethodInfo methodInfo = owner.GetMethod( name: name, bindingAttr: bf, binder: null, types: parameterTypes, modifiers: null );
+            if( methodInfo is null )
+            {
+                throw new InvalidOperationException( message: "Could not reflect MethodInfo for " + owner.FullName + "::" + name );
+            }
+            else
+            {
+                if( !returnType.IsAssignableFrom( methodInfo.ReturnType ) )
+                {
+                    string msg = String.Format( CultureInfo.CurrentCulture, "Expected reflected MethodInfo for {0}::{1} to have return type {2} but the MethodInfo has return type {3}.", owner.FullName, name, returnType.FullName, methodInfo.ReturnType.FullName );
+                    throw new InvalidOperationException( message: msg );
+                }
+                else
+                {
+                    return methodInfo;
+                }
+            }
+        }
+
+        public static MethodInfo RequireVoidInstanceMethodInfo( Type owner, String name, params Type[] parameterTypes )
+        {
+            const BindingFlags bf = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+
+            MethodInfo methodInfo = owner.GetMethod( name: name, bindingAttr: bf, binder: null, types: parameterTypes, modifiers: null );
+            if( methodInfo is null )
+            {
+                throw new InvalidOperationException( message: "Could not reflect MethodInfo for " + owner.FullName + "::" + name );
+            }
+            else
+            {
+                if( methodInfo.ReturnType is null || methodInfo.ReturnType != typeof(void) )
+                {
+                    string msg = String.Format( CultureInfo.CurrentCulture, "Expected reflected MethodInfo for {0}::{1} to have void return type but the MethodInfo has return type {2}.", owner.FullName, name, methodInfo.ReturnType.FullName );
+                    throw new InvalidOperationException( message: msg );
+                }
+                else
+                {
+                    return methodInfo;
+                }
+            }
+        }
+
+        public static void AssertVoid( MemberInfo memberInfo, Object value )
+        {
+            if( !( value is null ) )
+            {
+                string msg = String.Format( CultureInfo.CurrentCulture, "Expected {0}.{1} to return void, but encountered {2} instead.", memberInfo.DeclaringType.FullName, memberInfo.Name, value.GetType().FullName );
+                throw new InvalidOperationException( msg );
+            }
+        }
+
+        public static TReturn AssertResult<TReturn>( MemberInfo memberInfo, Object value, Boolean allowNull = true )
+        {
+            if( value is TReturn typed )
+            {
+                return typed;
+            }
+            else if( value is null )
+            {
+                if( allowNull )
+                {
+                    return default;
+                }
+                else
+                {
+                    string msg = String.Format( CultureInfo.CurrentCulture, "Expected {0}.{1} not to return null, but encountered a null return value.", memberInfo.DeclaringType.FullName, memberInfo.Name );
+                    throw new InvalidOperationException( msg );
+                }
+            }
+            else
+            {
+                string msg = String.Format( CultureInfo.CurrentCulture, "Expected {0}.{1} to return {2}, but encountered {3} instead.", memberInfo.DeclaringType.FullName, memberInfo.Name, typeof(TReturn).FullName, value.GetType().FullName );
+                throw new InvalidOperationException( msg );
+            }
+        }
     }
 }

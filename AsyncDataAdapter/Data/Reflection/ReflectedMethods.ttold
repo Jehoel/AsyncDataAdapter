@@ -1,0 +1,145 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Globalization" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+<#
+
+#>
+using System;
+using System.Reflection;
+
+namespace AsyncDataAdapter.Internal
+{
+<#  for( Int32 i = 0; i < 8; i++ ) { #>
+<#      String typeParams   = ( i > 0 ? ","  : "" ) + GetTypeParameters( i, "TArg{0:d}" );           #>
+<#      String invokeParams = ( i > 0 ? "," : ""  ) + GetTypeParameters( i, " TArg{0:d} arg{0:d}" ); #>
+<#      String invokeArgs   =                         GetTypeParameters( i, " arg{0:d}" );           #>
+    public struct ReflectedAction<TOwner<#= typeParams #>>
+    {
+        public static ReflectedAction<TOwner<#= typeParams #>> Require( String name )
+        {
+            MethodInfo methodInfo = Reflection.RequireVoidInstanceMethodInfo( typeof(TOwner), name: name, parameterTypes: Array.Empty<Type>() );
+            return new ReflectedAction<TOwner<#= typeParams #>>( methodInfo );
+        }
+
+        public ReflectedAction( MethodInfo methodInfo )
+        {
+            this.MethodInfo = methodInfo ?? throw new ArgumentNullException(nameof(methodInfo));
+        }
+
+        public MethodInfo MethodInfo { get; }
+
+        public void Invoke( TOwner instance<#= invokeParams #> )
+        {
+            Object[] arguments = new Object[] { <#= invokeArgs #> };
+            Object value = this.MethodInfo.Invoke( obj: instance, parameters: arguments );
+            Reflection.AssertVoid( this.MethodInfo, value );
+        }
+    }
+
+    public struct ReflectedFunc<TOwner<#= typeParams #>,TReturn>
+    {
+        public static ReflectedFunc<TOwner<#= typeParams #>,TReturn> Require( String name, Boolean allowNullReturn )
+        {
+            MethodInfo methodInfo = Reflection.RequireInstanceMethodInfo( typeof(TOwner), name: name, returnType: typeof(TReturn), parameterTypes: Array.Empty<Type>() );
+            return new ReflectedFunc<TOwner<#= typeParams #>,TReturn>( methodInfo, allowNullReturn );
+        }
+
+        public ReflectedFunc( MethodInfo methodInfo, Boolean allowNullReturn )
+        {
+            this.AllowNullReturn = allowNullReturn;
+            this.MethodInfo      = methodInfo ?? throw new ArgumentNullException(nameof(methodInfo));
+        }
+
+        public Boolean    AllowNullReturn { get; }
+        public MethodInfo MethodInfo      { get; }
+
+        public TReturn Invoke( TOwner instance<#= invokeParams #> )
+        {
+            Object[] arguments = new Object[] {<#= invokeArgs #> };
+            Object value = this.MethodInfo.Invoke( obj: instance, parameters: arguments );
+            return Reflection.AssertResult<TReturn>( this.MethodInfo, value, this.AllowNullReturn );
+        }
+    }
+
+<#  } #>
+
+    public struct ReflectedProperty<TOwner,TProperty>
+    {
+        public static ReflectedProperty<TOwner,TProperty> Require( String name, Boolean allowNull )
+        {
+            PropertyInfo propertyInfo = Reflection.RequireInstancePropertyInfo( typeof(TOwner), name, returnType: typeof(TProperty) );
+            return new ReflectedProperty<TOwner,TProperty>( propertyInfo, allowNull );
+        }
+
+        public ReflectedProperty( PropertyInfo propertyInfo, Boolean allowNull )
+        {
+            this.AllowNull    = allowNull;// && ( typeof(TProperty).IsValueType == false );
+            this.PropertyInfo = propertyInfo ?? throw new ArgumentNullException(nameof(propertyInfo));
+            this.Getter       = propertyInfo.GetGetMethod( nonPublic: true );
+            this.Setter       = propertyInfo.GetSetMethod( nonPublic: true );
+        }
+
+        public Boolean      AllowNull    { get; }
+        public PropertyInfo PropertyInfo { get; }
+        public MethodInfo   Getter       { get; }
+        public MethodInfo   Setter       { get; }
+
+        public TProperty GetValue( TOwner instance )
+        {
+            Object value = this.Getter.Invoke( obj: instance, parameters: null );
+            return Reflection.AssertResult<TProperty>( this.PropertyInfo, value, this.AllowNull );
+        }
+
+        public void SetValue( TOwner instance, TProperty value )
+        {
+            _ = this.Setter.Invoke( instance, new Object[] { value } );
+        }
+    }
+
+    public struct ReflectedField<TOwner,TField>
+    {
+        public static ReflectedField<TOwner,TField> Require( String name, Boolean allowNull )
+        {
+            FieldInfo fieldInfo = Reflection.RequireInstanceFieldInfo( typeof(TOwner), name );
+            return new ReflectedField<TOwner,TField>( fieldInfo, allowNull );
+        }
+
+        public ReflectedField( FieldInfo fieldInfo, Boolean allowNull )
+        {
+            this.AllowNull = allowNull;// && ( typeof(TProperty).IsValueType == false );
+            this.FieldInfo = fieldInfo ?? throw new ArgumentNullException(nameof(fieldInfo));
+        }
+
+        public Boolean   AllowNull { get; }
+        public FieldInfo FieldInfo { get; }
+
+        public TField GetValue( TOwner instance )
+        {
+            Object value = this.FieldInfo.GetValue( obj: instance );
+            return Reflection.AssertResult<TField>( this.FieldInfo, value, this.AllowNull );
+        }
+
+        public void SetValue( TOwner instance, TField value )
+        {
+            this.FieldInfo.SetValue( instance, value );
+        }
+    }
+
+} // namespaace
+<#+
+
+static String GetTypeParameters( Int32 count, String format )
+{
+    IEnumerable<String> elms = Enumerable
+        .Range( 0, count )
+        .Select( n => String.Format( CultureInfo.InvariantCulture, format, n ) );
+        // `StringJoin` needs to be an extension method!
+
+    return String.Join( separator: ",", elms );
+}
+
+#>
