@@ -3,11 +3,19 @@ using System.Data;
 using System.Data.Common;
 using System.Globalization;
 
-namespace AsyncDataAdapter.Tests
+namespace AsyncDataAdapter.Tests.FakeDb
 {
     public class FakeDbCommandBuilder : DbCommandBuilder
     {
+        /// <summary>This ctor is only used by <see cref="FakeDbProviderFactory"/> and should not be called by anyone, ever, really.</summary>
+        internal FakeDbCommandBuilder()
+        {
+            base.QuotePrefix = "[";
+            base.QuoteSuffix = "]";
+        }
+
         public FakeDbCommandBuilder( FakeDbDataAdapter adapter )
+            : base()
         {
             base.QuotePrefix = "[";
             base.QuoteSuffix = "]";

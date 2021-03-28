@@ -8,7 +8,7 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AsyncDataAdapter.Tests
+namespace AsyncDataAdapter.Tests.FakeDb
 {
     public class FakeDbDataReader : DbDataReader
     {

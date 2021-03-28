@@ -5,12 +5,17 @@ using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AsyncDataAdapter.Tests
+namespace AsyncDataAdapter.Tests.FakeDb
 {
     /// <summary>NOTE: This <see cref="DbDataReader"/> does not implement <see cref="IBatchingAdapter"/>. For that, see <see cref="BatchingFakeDbDataAdapter"/>.</summary>
     public class FakeDbDataAdapter : DbDataAdapter
     {
         // TODO: Override every, single, method - and add call-counts.
+
+        /// <summary>This ctor is only used by <see cref="FakeDbProviderFactory"/> and should not be called by anyone, ever, really.</summary>
+        internal FakeDbDataAdapter()
+        {
+        }
 
         /// <summary>The <paramref name="select"/> is required before <see cref="DbDataAdapter.Fill(DataSet)"/> can be used.</summary>
         public FakeDbDataAdapter( FakeDbCommand select )
@@ -71,7 +76,7 @@ namespace AsyncDataAdapter.Tests
             this.BatchList.Clear();
         }
 
-        public async Task<int> ExecuteBatchAsync(CancellationToken cancellationToken)
+        public Task<int> ExecuteBatchAsync(CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

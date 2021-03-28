@@ -1,11 +1,15 @@
 using System;
-using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 using NUnit.Framework;
 
 using Shouldly;
+
+using AsyncDataAdapter.Tests.FakeDb;
 
 namespace AsyncDataAdapter.Tests
 {
@@ -58,7 +62,7 @@ namespace AsyncDataAdapter.Tests
             }
 
             // Assert equality:
-            DataTableEquality.DataSetEquals( dataSetFromProxy, dataSetFromReal ).ShouldBeTrue();
+            DataTableMethods.DataSetEquals( dataSetFromProxy, dataSetFromReal ).ShouldBeTrue();
         }
 
         [Test]
@@ -105,7 +109,7 @@ namespace AsyncDataAdapter.Tests
             }
 
             // Assert equality:
-            DataTableEquality.DataSetEquals( schemaFromProxy, schemaFromReal ).ShouldBeTrue();
+            DataTableMethods.DataSetEquals( schemaFromProxy, schemaFromReal ).ShouldBeTrue();
         }
 
         [Test]
@@ -122,7 +126,7 @@ namespace AsyncDataAdapter.Tests
                     await connection.OpenAsync();
 
                     using( BatchingFakeProxiedDbDataAdapter adpt = new BatchingFakeProxiedDbDataAdapter( selectCommand ) )
-                    using( FakeDbCommandBuilder cmdBuilder = adpt.CreateCommandBuilder() )
+                    using( DbCommandBuilder cmdBuilder = await adpt.CreateCommandBuilderAsync().ConfigureAwait(false) )
                     {
                         dataSetFromProxy = new DataSet();
 
@@ -132,10 +136,10 @@ namespace AsyncDataAdapter.Tests
 
                         //
 
-                        SynchronousProxyDataAdapterTests.MutateDataSet( dataSetFromProxy );
+                        DataTableMethods.MutateDataSet( dataSetFromProxy );
 
                         //
-                        adpt.UpdateCommand = cmdBuilder.GetUpdateCommand();
+                        adpt.UpdateCommand = (FakeDbCommand)cmdBuilder.GetUpdateCommand();
 
                         Int32 updatedRows = await adpt.UpdateAsync( dataSetFromProxy ); // updatedRows... in first table only?
                         updatedRows.ShouldNotBe( 0 );
@@ -162,7 +166,7 @@ namespace AsyncDataAdapter.Tests
 
                         //
 
-                        SynchronousProxyDataAdapterTests.MutateDataSet( dataSetFromReal );
+                        DataTableMethods.MutateDataSet( dataSetFromReal );
 
                         //
                         adpt.UpdateCommand = cmdBuilder.GetUpdateCommand();
@@ -174,7 +178,7 @@ namespace AsyncDataAdapter.Tests
             }
 
             // Assert equality:
-            DataTableEquality.DataSetEquals( dataSetFromProxy, dataSetFromReal ).ShouldBeTrue();
+            DataTableMethods.DataSetEquals( dataSetFromProxy, dataSetFromReal ).ShouldBeTrue();
         }
     }
 }

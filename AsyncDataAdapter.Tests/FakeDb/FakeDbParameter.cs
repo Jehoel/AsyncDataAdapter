@@ -2,7 +2,7 @@ using System;
 using System.Data;
 using System.Data.Common;
 
-namespace AsyncDataAdapter.Tests
+namespace AsyncDataAdapter.Tests.FakeDb
 {
     public class FakeDbParameter : DbParameter
     {

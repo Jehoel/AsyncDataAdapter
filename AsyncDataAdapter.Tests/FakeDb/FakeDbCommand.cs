@@ -5,7 +5,7 @@ using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AsyncDataAdapter.Tests
+namespace AsyncDataAdapter.Tests.FakeDb
 {
     public class FakeDbCommand : DbCommand
     {
@@ -16,10 +16,12 @@ namespace AsyncDataAdapter.Tests
             this.CreateReader = this.CreateFakeDbDataReader;
         }
 
-        public FakeDbCommand( FakeDbConnection connection, List<TestTable> testTables )
+        public FakeDbCommand( FakeDbConnection connection, List<TestTable> testTables, TimeSpan? executeDelay, TimeSpan? readDelay)
         {
-            base.Connection = connection ?? throw new ArgumentNullException(nameof(connection));
-            this.TestTables = testTables;
+            base.Connection   = connection ?? throw new ArgumentNullException(nameof(connection));
+            this.TestTables   = testTables;
+            this.ExecuteDelay = executeDelay;
+            this.ReadDelay    = readDelay;
 
             this.CreateReader = this.CreateFakeDbDataReader;
         }
@@ -45,9 +47,11 @@ namespace AsyncDataAdapter.Tests
         #region Test Data
 
         /// <summary>Used to prepopulate any <see cref="FakeDbDataReader"/> that's created.</summary>
-        public List<TestTable> TestTables { get; set; }
-
-        public AsyncMode AsyncMode { get; set; }
+        
+        public List<TestTable> TestTables   { get; set; }
+        public TimeSpan?       ExecuteDelay { get; set; }
+        public TimeSpan?       ReadDelay    { get; set; }
+        public AsyncMode       AsyncMode    { get; set; }
 
         private FakeDbDataReader CreateFakeDbDataReader( FakeDbCommand cmd )
         {
@@ -117,7 +121,10 @@ namespace AsyncDataAdapter.Tests
         {
             if( this.AsyncMode.AllowOld() )
             {
-                Thread.Sleep( 100 );
+                if( this.ExecuteDelay.HasValue )
+                {
+                    Thread.Sleep( this.ExecuteDelay.Value );
+                }
 
                 return this.CreateReader( this );
             }
@@ -131,7 +138,10 @@ namespace AsyncDataAdapter.Tests
         {
             if( this.AsyncMode.AllowOld() )
             {
-                Thread.Sleep( 100 );
+                if( this.ExecuteDelay.HasValue )
+                {
+                    Thread.Sleep( this.ExecuteDelay.Value );
+                }
 
                 return this.GetNonQueryResultRowCount();
             }
@@ -143,9 +153,12 @@ namespace AsyncDataAdapter.Tests
 
         public override Object ExecuteScalar()
         {
-             if( this.AsyncMode.AllowOld() )
+            if( this.AsyncMode.AllowOld() )
             {
-                Thread.Sleep( 100 );
+                if( this.ExecuteDelay.HasValue )
+                {
+                    Thread.Sleep( this.ExecuteDelay.Value );
+                }
 
                 return this.ExecuteScalar_Ret;
             }
@@ -163,25 +176,39 @@ namespace AsyncDataAdapter.Tests
         {
             if( this.AsyncMode.HasFlag( AsyncMode.AwaitAsync ) )
             {
-                await Task.Delay( 100 ).ConfigureAwait(false);
+                if( this.ExecuteDelay.HasValue )
+                {
+                    await Task.Delay( 20 ).ConfigureAwait(false);
+                }
 
                 return this.CreateReader( this );
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
-                Thread.Sleep( 100 );
+                if( this.ExecuteDelay.HasValue )
+                {
+                    Thread.Sleep( this.ExecuteDelay.Value );
+                }
 
                 return this.CreateReader( this );
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
-                Thread.Sleep( 100 );
+                if( this.ExecuteDelay.HasValue )
+                {
+                    Thread.Sleep( this.ExecuteDelay.Value );
+                }
 
                 return await base.ExecuteDbDataReaderAsync( behavior, cancellationToken );
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.RunAsync ) )
             {
                 await Task.Yield();
+
+                if( this.ExecuteDelay.HasValue )
+                {
+                    await Task.Delay( 20 ).ConfigureAwait(false);
+                }
 
                 return await Task.Run( () => this.CreateReader( this ) );
             }
@@ -195,25 +222,39 @@ namespace AsyncDataAdapter.Tests
         {
             if( this.AsyncMode.HasFlag( AsyncMode.AwaitAsync ) )
             {
-                await Task.Delay( 100 ).ConfigureAwait(false);
+                if( this.ExecuteDelay.HasValue )
+                {
+                    await Task.Delay( 20 ).ConfigureAwait(false);
+                }
 
                 return this.GetNonQueryResultRowCount();
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
-                Thread.Sleep( 100 );
+                if( this.ExecuteDelay.HasValue )
+                {
+                    Thread.Sleep( this.ExecuteDelay.Value );
+                }
 
                 return this.GetNonQueryResultRowCount();
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
-                Thread.Sleep( 100 );
+                if( this.ExecuteDelay.HasValue )
+                {
+                    Thread.Sleep( this.ExecuteDelay.Value );
+                }
 
                 return await base.ExecuteNonQueryAsync( cancellationToken );
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.RunAsync ) )
             {
                 await Task.Yield();
+
+                if( this.ExecuteDelay.HasValue )
+                {
+                    await Task.Delay( 20 ).ConfigureAwait(false);
+                }
 
                 return await Task.Run( () => this.GetNonQueryResultRowCount() );
             }
@@ -227,25 +268,39 @@ namespace AsyncDataAdapter.Tests
         {
             if( this.AsyncMode.HasFlag( AsyncMode.AwaitAsync ) )
             {
-                await Task.Delay( 100 ).ConfigureAwait(false);
+                if( this.ExecuteDelay.HasValue )
+                {
+                    await Task.Delay( 20 ).ConfigureAwait(false);
+                }
 
                 return this.ExecuteScalar_Ret;
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
-                Thread.Sleep( 100 );
+                if( this.ExecuteDelay.HasValue )
+                {
+                    Thread.Sleep( this.ExecuteDelay.Value );
+                }
 
                 return this.ExecuteScalar_Ret;
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
-                Thread.Sleep( 100 );
+                if( this.ExecuteDelay.HasValue )
+                {
+                    Thread.Sleep( this.ExecuteDelay.Value );
+                }
 
                 return await base.ExecuteScalarAsync( cancellationToken );
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.RunAsync ) )
             {
                 await Task.Yield();
+
+                if( this.ExecuteDelay.HasValue )
+                {
+                    await Task.Delay( 20 ).ConfigureAwait(false);
+                }
 
                 return await Task.Run( () => this.ExecuteScalar_Ret );
             }

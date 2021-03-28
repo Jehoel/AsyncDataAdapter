@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Data.Common;
 
-namespace AsyncDataAdapter.Tests
+namespace AsyncDataAdapter.Tests.FakeDb
 {
     public class FakeDbParameterCollection : DbParameterCollection
     {

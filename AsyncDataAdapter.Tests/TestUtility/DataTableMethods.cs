@@ -8,8 +8,27 @@ using Shouldly;
 
 namespace AsyncDataAdapter.Tests
 {
-    public static class DataTableEquality
+    public static class DataTableMethods
     {
+        public static void MutateDataSet( DataSet dataSet )
+        {
+            // Do the exact same mutation in both DataSets: a diagonal line of nulls, methinks.
+
+            foreach( DataTable table in dataSet.Tables )
+            {
+                Int32 rows = Math.Min( 30, table.Rows   .Count );
+                Int32 cols = Math.Min( 30, table.Columns.Count );
+                Int32 max  = Math.Min( rows, cols );
+
+                for( Int32 i = 1; i < max; i++ ) // Don't modify column 0, that's the PK column.
+                {
+                    DataRow row = table.Rows[i];
+
+                    row[ i ] = DBNull.Value;
+                }
+            }
+        }
+
         public static Boolean DataSetEquals( DataSet left, DataSet right )
         {
             _ = left .ShouldNotBeNull();

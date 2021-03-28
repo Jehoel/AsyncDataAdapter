@@ -1,20 +1,17 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 using NUnit.Framework;
 
 using Shouldly;
 
-namespace AsyncDataAdapter.Tests
+using AsyncDataAdapter.Tests.FakeDb;
+
+namespace AsyncDataAdapter.Tests.MetaTests
 {
-    /// <summary>Just some meta-tests so I know my FakeDb stuff works.</summary>
-    public class RandomDataTests
+    /// <summary>Just some meta-tests so I know my <see cref="FakeDbDataReader"/> class works.</summary>
+    public class FakeDbDataReaderTests
     {
         [Test]
         public void FakeDbDataReader_Sync_should_behave()
@@ -23,14 +20,13 @@ namespace AsyncDataAdapter.Tests
 
             FakeDbDataReader rdr = new FakeDbDataReader( cmd );
 
-            //
-
             List<TestTable> tables = RandomDataGenerator.CreateRandomTables( seed: 1234, tableCount: 5 );
 
             rdr.ResetAndLoadTestData( tables );
 
             rdr.AllTables.Count.ShouldBe( 5 );
-//          rdr.AllTables[0].Rows.Count.ShouldBe( 40 ); // The RNG is rather fickle, so don't test these.
+            // The RNG is rather fickle, so don't test these. See the `RandomDataGenerator_seed_values_should_produce_expected_results` test above instead.
+//          rdr.AllTables[0].Rows.Count.ShouldBe( 40 );
 //          rdr.AllTables[1].Rows.Count.ShouldBe( 52 );
 //          rdr.AllTables[2].Rows.Count.ShouldBe( 79 );
 //          rdr.AllTables[3].Rows.Count.ShouldBe( 37 );
