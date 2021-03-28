@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -51,11 +52,26 @@ namespace AsyncDataAdapter
         private TDbCommand deleteCommandSetByCtor;
         private TDbCommand updateCommandSetByCtor;
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        private static void CheckForStackOverflow()
+        {
+            // https://stackoverflow.com/questions/15337469/debugging-unit-tests-that-fail-due-to-a-stackoverflow-exception
+        }
+
         public new TDbCommand SelectCommand
         {
-            get => (TDbCommand)this.Subject.SelectCommand;
+            get
+            {
+#if DEBUG
+                RuntimeHelpers.EnsureSufficientExecutionStack(); // https://stackoverflow.com/questions/5491654/insufficientexecutionstackexception
+#endif
+                return (TDbCommand)this.Subject.SelectCommand;
+            }
             set
             {
+#if DEBUG
+                RuntimeHelpers.EnsureSufficientExecutionStack(); // https://stackoverflow.com/questions/5491654/insufficientexecutionstackexception
+#endif
                 if( this.Subject is null )
                 {
                     if( value != null ) this.selectCommandSetByCtor = value;
@@ -70,9 +86,18 @@ namespace AsyncDataAdapter
 
         public new TDbCommand InsertCommand
         {
-            get => (TDbCommand)base.InsertCommand;
+            get
+            {
+#if DEBUG
+                RuntimeHelpers.EnsureSufficientExecutionStack();
+#endif
+                return (TDbCommand)base.InsertCommand;
+            }
             set
             {
+#if DEBUG
+                RuntimeHelpers.EnsureSufficientExecutionStack();
+#endif
                 if( this.Subject is null )
                 {
                     if( value != null ) this.insertCommandSetByCtor = value;
@@ -87,9 +112,18 @@ namespace AsyncDataAdapter
 
         public new TDbCommand DeleteCommand
         {
-            get => (TDbCommand)base.DeleteCommand;
+            get
+            {
+#if DEBUG
+                RuntimeHelpers.EnsureSufficientExecutionStack();
+#endif
+                 return (TDbCommand)base.DeleteCommand;
+            }
             set
             {
+#if DEBUG
+                RuntimeHelpers.EnsureSufficientExecutionStack();
+#endif
                 if( this.Subject is null )
                 {
                     if( value != null ) this.deleteCommandSetByCtor = value;
@@ -104,9 +138,18 @@ namespace AsyncDataAdapter
 
         public new TDbCommand UpdateCommand
         {
-            get => (TDbCommand)base.UpdateCommand;
+            get
+            {
+#if DEBUG
+                RuntimeHelpers.EnsureSufficientExecutionStack();
+#endif
+                return (TDbCommand)base.UpdateCommand;
+            }
             set
             {
+#if DEBUG
+                RuntimeHelpers.EnsureSufficientExecutionStack();
+#endif
                 if( this.Subject is null )
                 {
                     if( value != null ) this.updateCommandSetByCtor = value;

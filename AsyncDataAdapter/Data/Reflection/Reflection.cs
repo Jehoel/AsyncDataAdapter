@@ -121,22 +121,16 @@ namespace AsyncDataAdapter.Internal
 
         #region FieldInfo
 
-        public static FieldInfo GetStaticFieldInfo<T>( string name )
-		{
-            return GetStaticFieldInfo(type: typeof(T), name: name );
-        }
-
-        public static FieldInfo GetStaticFieldInfo( Type type, string name )
+        public static Boolean TryGetStaticFieldInfo( Type type, string name, out FieldInfo fieldInfo )
         {
-            FieldInfo fieldInfo = type.GetField( name, BindingFlags.NonPublic | BindingFlags.Static );
+            fieldInfo = type.GetField( name, BindingFlags.NonPublic | BindingFlags.Static );
             if (fieldInfo is null)
 			{
-				string msg = string.Format("Couldn't find field {0} in type {1}.", name, type.AssemblyQualifiedName);
-				throw new InvalidOperationException(msg);
+				return false;
 			}
             else
             {
-                return fieldInfo;
+                return true;
             }
         }
 

@@ -8,6 +8,12 @@ using AsyncDataAdapter.Internal;
 
 namespace AsyncDataAdapter
 {
+    public static class ProxyDataAdapterReflection
+    {
+        /// <summary>If the underlying field name for the <see cref="DataAdapter.FillError"/> key changes in a future release of .NET, then set this property before using any types in <c>AsyncDataAdapter</c>.</summary>
+        public static String FillErrorEventKeyName = null;
+    }
+
     public abstract partial class ProxyDataAdapter : DataAdapter, IDataAdapter
     {
         #region FillError
@@ -16,8 +22,22 @@ namespace AsyncDataAdapter
 
         private static Object GetFillErrorEventKey()
         {
-            FieldInfo fieldInfo = Reflection.GetStaticFieldInfo( typeof(DataAdapter), name: "EventFillError" );
-            return fieldInfo.GetValue( obj: null );
+            if( ProxyDataAdapterReflection.FillErrorEventKeyName is String customFieldName && Reflection.TryGetStaticFieldInfo( typeof(DataAdapter), name: customFieldName, out FieldInfo customField ) )
+            {
+                return customField.GetValue( obj: null );
+            }
+            else if( Reflection.TryGetStaticFieldInfo( typeof(DataAdapter), name: "EventFillError", out FieldInfo dotNetFramework4x ) )
+            {
+                return dotNetFramework4x.GetValue( obj: null );
+            }
+            else if( Reflection.TryGetStaticFieldInfo( typeof(DataAdapter), name: "s_eventFillError", out FieldInfo dotNetCore31 ) )
+            {
+                return dotNetCore31.GetValue( obj: null );
+            }
+            else
+            {
+                throw new InvalidOperationException( "Couldn't find DataAdapter's static event-key field for FillError." );
+            }
         }
 
         [DefaultValue(false)]
