@@ -18,7 +18,7 @@ namespace AsyncDataAdapter
             TDbCommand      selectCommand       = this.SelectCommand;
 		    CommandBehavior fillCommandBehavior = this.FillCommandBehavior;
 
-		    return this.FillAsync( dataSet, 0, 0, "Table", selectCommand, fillCommandBehavior, cancellationToken );
+		    return this.FillAsync( dataSet, 0, 0, AdaDbDataAdapter.DefaultSourceTableName, selectCommand, fillCommandBehavior, cancellationToken );
         }
 
         public async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, CancellationToken cancellationToken = default)
@@ -32,20 +32,17 @@ namespace AsyncDataAdapter
 
 		    CommandBehavior fillCommandBehavior = FillCommandBehavior;
 
-		    return await this.FillSchemaAsync( dataSet, schemaType, selectCommand, "Table", fillCommandBehavior, cancellationToken ).ConfigureAwait(false);
+		    return await this.FillSchemaAsync( dataSet, schemaType, selectCommand, AdaDbDataAdapter.DefaultSourceTableName, fillCommandBehavior, cancellationToken ).ConfigureAwait(false);
         }
 
         #endregion
 
         #region IUpdatingAsyncDataAdapter
 
-        public Task<Int32> UpdateAsync(DataSet dataSet, CancellationToken cancellationToken = default )
+        public Task<int> UpdateAsync( DataSet dataSet, CancellationToken cancellationToken = default )
         {
-            if (!this.TableMappings.Contains(DbDataAdapter.DefaultSourceTableName))
-            {
-                string msg = string.Format("Update unable to find TableMapping['{0}'] or DataTable '{0}'.", DbDataAdapter.DefaultSourceTableName);
-                throw new InvalidOperationException(msg);
-            }
+            // The original in ReferenceSource would throw an exception due to this guard: `!TableMappings.Contains(DbDataAdapter.DefaultSourceTableName)` // MDAC 59268
+            // The comment was left in voloda's copy, but I thought they commented it out themselves as a TODO. Turns out they didn't, whoops.
 
             return this.UpdateAsync( dataSet, srcTable: AdaDbDataAdapter.DefaultSourceTableName, cancellationToken );
         }
