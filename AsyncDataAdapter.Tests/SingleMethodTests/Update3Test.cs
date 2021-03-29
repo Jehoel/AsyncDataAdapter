@@ -30,7 +30,7 @@ namespace AsyncDataAdapter.Tests.Big3
 
                 //
                 adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataTable, cmd, rowsModified );
 
                 Int32 updatedRows = adapter.Update3( dataTable );
 //              updatedRows.ShouldBe( rowsModified );
@@ -54,7 +54,7 @@ namespace AsyncDataAdapter.Tests.Big3
 
                 //
                 adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataTable, cmd, rowsModified );
 
                 Int32 updatedRows = adapter.Update3( dataTable );
 //              updatedRows.ShouldBe( rowsModified );
@@ -78,7 +78,7 @@ namespace AsyncDataAdapter.Tests.Big3
 
                 //
                 adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataTable, cmd, rowsModified );
 
                 Int32 updatedRows = await adapter.Update3Async( dataTable );
 //              updatedRows.ShouldBe( rowsModified );
@@ -102,7 +102,7 @@ namespace AsyncDataAdapter.Tests.Big3
 
                 //
                 adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataTable, cmd, rowsModified );
 
                 DataRow[] rows = dataTable.Rows.Cast<DataRow>().ToArray();
 

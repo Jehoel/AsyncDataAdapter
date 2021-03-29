@@ -1,13 +1,13 @@
 using System;
-using System.Data;
-using System.Collections;
 using System.Collections.Generic;
-using System.Text;
+using System.Data;
+using System.Data.Common;
+using System.Globalization;
+using System.Text.RegularExpressions;
+
+using AsyncDataAdapter.Internal;
 
 using Shouldly;
-using System.Text.RegularExpressions;
-using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 
 namespace AsyncDataAdapter.Tests
 {
@@ -191,12 +191,7 @@ namespace AsyncDataAdapter.Tests
             return false;
         }
 
-        public static Int32 GetNonQueryResultRowCountValue( FakeDb.FakeDbCommand cmd, Dictionary<String,Int32> rowsModified )
-        {
-            return GetNonQueryResultRowCountValue( dataSet: null, cmd, rowsModified );
-        }
-
-        public static Int32 GetNonQueryResultRowCountValue( DataSet dataSet, FakeDb.FakeDbCommand cmd, Dictionary<String,Int32> rowsModified )
+        public static Int32 GetNonQueryResultRowCountValue( DbDataAdapter adapter, DataTables data, FakeDb.FakeDbCommand cmd, Dictionary<String,Int32> rowsModified )
         {
             // Special-case for UpdateCommands from DbDataAdapter and DbCommandBuilder:
             // If the query looks like this:
