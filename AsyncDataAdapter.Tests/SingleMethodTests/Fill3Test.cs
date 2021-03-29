@@ -16,7 +16,7 @@ namespace AsyncDataAdapter.Tests.Big3
             DataSet dataSet = new DataSet();
 
             Int32 rowsInFirstTable = adapter.Fill3( dataSet, startRecord: 5, maxRecords: 10, srcTable: "Barqux" );
-            rowsInFirstTable.ShouldBe( 40 );
+            rowsInFirstTable.ShouldBe( 10 );
 
             return dataSet;
         }
@@ -26,7 +26,7 @@ namespace AsyncDataAdapter.Tests.Big3
             DataSet dataSet = new DataSet();
 
             Int32 rowsInFirstTable = adapter.Fill3( dataSet, startRecord: 5, maxRecords: 10, srcTable: "Barqux" );
-            rowsInFirstTable.ShouldBe( 40 );
+            rowsInFirstTable.ShouldBe( 10 );
 
             return dataSet;
         }
@@ -36,7 +36,7 @@ namespace AsyncDataAdapter.Tests.Big3
             DataSet dataSet = new DataSet();
 
             Int32 rowsInFirstTable = await adapter.Fill3Async( dataSet, startRecord: 5, maxRecords: 10, srcTable: "Barqux" );
-            rowsInFirstTable.ShouldBe( 40 );
+            rowsInFirstTable.ShouldBe( 10 );
 
             return dataSet;
         }
@@ -46,7 +46,7 @@ namespace AsyncDataAdapter.Tests.Big3
             DataSet dataSet = new DataSet();
 
             Int32 rowsInFirstTable = await adapter.Fill3Async( dataSet, startRecord: 5, maxRecords: 10, srcTable: "Barqux" );
-            rowsInFirstTable.ShouldBe( 40 );
+            rowsInFirstTable.ShouldBe( 10 );
 
             return dataSet;
         }

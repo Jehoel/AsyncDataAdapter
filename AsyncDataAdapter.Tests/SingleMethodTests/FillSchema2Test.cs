@@ -58,7 +58,13 @@ namespace AsyncDataAdapter.Tests.Big3
 
         protected override void AssertResult( FS2Pair dbSynchronous, FS2Pair dbProxied, FS2Pair dbProxiedAsync, FS2Pair dbBatchingProxiedAsync )
         {
-            throw new NotImplementedException();
+            DataTableMethods.DataTableEquals( dbSynchronous.Item1, dbProxied             .Item1, "1", out String diffs11 ).ShouldBeTrue( customMessage: diffs11 );
+            DataTableMethods.DataTableEquals( dbSynchronous.Item1, dbProxiedAsync        .Item1, "2", out String diffs12 ).ShouldBeTrue( customMessage: diffs12 );
+            DataTableMethods.DataTableEquals( dbSynchronous.Item1, dbBatchingProxiedAsync.Item1, "3", out String diffs13 ).ShouldBeTrue( customMessage: diffs13 );
+
+            DataTableMethods.DataTableEquals( dbSynchronous.Item2, dbProxied             .Item2, "1", out String diffs21 ).ShouldBeTrue( customMessage: diffs21 );
+            DataTableMethods.DataTableEquals( dbSynchronous.Item2, dbProxiedAsync        .Item2, "2", out String diffs22 ).ShouldBeTrue( customMessage: diffs22 );
+            DataTableMethods.DataTableEquals( dbSynchronous.Item2, dbBatchingProxiedAsync.Item2, "3", out String diffs23 ).ShouldBeTrue( customMessage: diffs23 );
         }
     }
 

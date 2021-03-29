@@ -64,6 +64,11 @@ namespace AsyncDataAdapter
             return ReflectedFunc<DbDataAdapter,_Fill,DataSet,Int32,Int32,String,IDbCommand,CommandBehavior,Int32>.Invoke( this.Subject, dataSet, startRecord, maxRecords, srcTable, command, behavior );
         }
 
+        protected override Int32 Fill( DataTable[] dataTables, IDataReader dataReader, Int32 startRecord, Int32 maxRecords )
+        {
+            return ReflectedFunc<DbDataAdapter,_Fill,DataTable[],IDataReader,Int32,Int32,Int32>.Invoke( this.Subject, dataTables, dataReader, startRecord, maxRecords );
+        }
+
         private struct _FillSchema { }
 
         protected override DataTable[] FillSchema( DataSet dataSet, SchemaType schemaType, IDbCommand command, String srcTable, CommandBehavior behavior )

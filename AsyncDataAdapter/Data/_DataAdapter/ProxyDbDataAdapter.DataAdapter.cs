@@ -67,7 +67,6 @@ namespace AsyncDataAdapter
 
         [Obsolete]
         protected override DataAdapter                CloneInternals()                                                                                      => throw new InvalidOperationException( "protected virtual method " + nameof(this.CloneInternals)               + "() should never be invoked." );
-        protected override Int32                      Fill( DataTable[] dataTables, IDataReader dataReader, Int32 startRecord, Int32 maxRecords )           => throw new InvalidOperationException( "protected virtual method " + nameof(this.Fill)                         + "(DataTable[] dataTables, IDataReader dataReader, Int32 startRecord, Int32 maxRecords) should never be invoked." );
         protected override Int32                      Fill( DataTable dataTable, IDataReader dataReader )                                                   => throw new InvalidOperationException( "protected virtual method " + nameof(this.Fill)                         + "(DataTable dataTable, IDataReader dataReader) should never be invoked." );
         protected override Int32                      Fill( DataSet dataSet, String srcTable, IDataReader dataReader, Int32 startRecord, Int32 maxRecords ) => throw new InvalidOperationException( "protected virtual method " + nameof(this.Fill)                         + "(DataSet dataSet, String srcTable, IDataReader dataReader, Int32 startRecord, Int32 maxRecords) should never be invoked." );
         protected override DataTable                  FillSchema( DataTable dataTable, SchemaType schemaType, IDataReader dataReader )                      => throw new InvalidOperationException( "protected virtual method " + nameof(this.FillSchema)                   + "(DataTable dataTable, SchemaType schemaType, IDataReader dataReader) should never be invoked." );
@@ -75,7 +74,6 @@ namespace AsyncDataAdapter
         protected override Boolean                    ShouldSerializeTableMappings()                                                                        => throw new InvalidOperationException( "protected virtual method " + nameof(this.ShouldSerializeTableMappings) + "() should never be invoked." );
 
         private struct _CreateTableMappings { }
-
         protected override DataTableMappingCollection CreateTableMappings()
         {
             return Internal.ReflectedFunc<DataAdapter,_CreateTableMappings,DataTableMappingCollection>.Invoke( this.Subject );
@@ -92,6 +90,8 @@ namespace AsyncDataAdapter
         }
 
         #endregion
+
+        
 
         protected override void Dispose(bool disposing)
         {

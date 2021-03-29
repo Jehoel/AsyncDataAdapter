@@ -61,13 +61,16 @@ namespace AsyncDataAdapter.Tests
 
             for( Int32 tableIdx = 0; tableIdx < left.Tables.Count; tableIdx++ )
             {
-                DataTable lt = left .Tables[tableIdx];
-                DataTable rt = right.Tables[tableIdx];
+                DataTable leftTable  = left .Tables[tableIdx];
+                DataTable rightTable = right.Tables[tableIdx];
 
-                Boolean tablesSame = DataTableEquals( lt, rt, out Int32? differentRowIndex );
+                Boolean tablesSame = DataTableEquals( leftTable, rightTable, out Int32? diffRowIdx, out Int32? diffColIdx );
                 if( !tablesSame )
                 {
-                    differences = String.Format( CultureInfo.CurrentCulture, "First difference found in table {0:D}, at row {1:D}", tableIdx, differentRowIndex );
+                    Object leftValue  = leftTable .Rows[diffRowIdx.Value][diffColIdx.Value];
+                    Object rightValue = rightTable.Rows[diffRowIdx.Value][diffColIdx.Value];
+
+                    differences = String.Format( CultureInfo.CurrentCulture, "First difference found in table {0:D}, at row {1:D} and column {2:D} ( {3} vs {4} )", tableIdx, diffRowIdx, diffColIdx, leftValue, rightValue );
                     return false;
                 }
             }
@@ -85,19 +88,30 @@ namespace AsyncDataAdapter.Tests
 
             for( Int32 tableIdx = 0; tableIdx < left.Length; tableIdx++ )
             {
-                Boolean tablesSame = DataTableEquals( left[tableIdx], right[tableIdx], out Int32? differentRowIndex );
-                if( !tablesSame )
-                {
-                    differences = String.Format( CultureInfo.CurrentCulture, "First difference found in table {0:D}, at row {1:D}", tableIdx, differentRowIndex );
-                    return false;
-                }
+                
             }
 
-             differences = null;
+            differences = null;
             return true;
         }
 
-        public static Boolean DataTableEquals( DataTable left, DataTable right, out Int32? differentRowIndex )
+        public static Boolean DataTableEquals( DataTable leftTable, DataTable rightTable, Object tableId, out String differences )
+        {
+            Boolean tablesSame = DataTableEquals( leftTable, rightTable, out Int32? diffRowIdx, out Int32? diffColIdx );
+            if( !tablesSame )
+            {
+                Object leftValue  = leftTable .Rows[diffRowIdx.Value][diffColIdx.Value];
+                Object rightValue = rightTable.Rows[diffRowIdx.Value][diffColIdx.Value];
+
+                differences = String.Format( CultureInfo.CurrentCulture, "First difference found in table {0:D}, at row {1:D} and column {2:D} ( {3} vs {4} )", tableId, diffRowIdx, diffColIdx, leftValue, rightValue );
+                return false;
+            }
+
+            differences = null;
+            return true;
+        }
+
+        public static Boolean DataTableEquals( DataTable left, DataTable right, out Int32? diffRowIdx, out Int32? diffColIdx )
         {
             _ = left .ShouldNotBeNull();
             _ = right.ShouldNotBeNull();
@@ -124,13 +138,15 @@ namespace AsyncDataAdapter.Tests
                     Boolean eq = CellsEquals( leftValue, rightValue );
                     if( !eq )
                     {
-                        differentRowIndex = y;
+                        diffRowIdx = y;
+                        diffColIdx = x;
                         return false;
                     }
                 }
             }
 
-            differentRowIndex = null;
+            diffRowIdx = null;
+            diffColIdx = null;
             return true;
         }
 
@@ -144,7 +160,17 @@ namespace AsyncDataAdapter.Tests
 
             if( leftType.Equals( righType ) )
             {
-                return leftValue.Equals( rightValue );
+                if( leftType == typeof(Byte[]) )
+                {
+                    Byte[] leftBytes  = (Byte[])leftValue;
+                    Byte[] rightBytes = (Byte[])rightValue;
+
+                    return System.Linq.Enumerable.SequenceEqual( leftBytes, rightBytes );
+                }
+                else
+                {
+                    return leftValue.Equals( rightValue );
+                }
             }
 
             return false;

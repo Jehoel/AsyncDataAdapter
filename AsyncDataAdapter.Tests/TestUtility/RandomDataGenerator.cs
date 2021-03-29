@@ -214,7 +214,9 @@ namespace AsyncDataAdapter.Tests
             }
             else if( type == typeof(Guid) )
             {
-                return Guid.NewGuid();
+                //return Guid.NewGuid();
+                // HACK: For now, use a const guid so we don't break the Random rng:
+                return new Guid( a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8, i: 9, j: 10, k: 11 );
             }
             else
             {

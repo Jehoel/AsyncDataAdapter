@@ -47,20 +47,23 @@ namespace AsyncDataAdapter
             if (SchemaType.Source != schemaType && SchemaType.Mapped != schemaType) throw ADP.InvalidSchemaType(schemaType);
             if (command == null) throw ADP.MissingSelectCommand("FillSchema");
 
-            string text = dataTable.TableName;
+            string srcTable = dataTable.TableName;
 
             IAdaSchemaMappingAdapter self = this;
 
-            int num = self.IndexOfDataSetTable( text );
+            int num = self.IndexOfDataSetTable( srcTable );
             if (-1 != num)
             {
-                text = base.TableMappings[num].SourceTable;
+                srcTable = base.TableMappings[num].SourceTable;
             }
 
-            var table = await FillSchemaInternalAsync( null, dataTable, schemaType, command, text, behavior | CommandBehavior.SingleResult, cancellationToken ).ConfigureAwait(false);
+            behavior = behavior | CommandBehavior.SingleResult;
+
+            Object table = await this.FillSchemaInternalAsync( dataset: null, dataTable, schemaType, command, srcTable: srcTable, behavior, cancellationToken ).ConfigureAwait(false);
             return (DataTable)table;
         }
 
+        /// <summary>Returns either <see cref="DataTable"/> (when <paramref name="datatable"/> is set) or <see cref="DataTable[]"/> (when <paramref name="dataset"/> is set).</summary>
         private async Task<Object> FillSchemaInternalAsync( DataSet dataset, DataTable datatable, SchemaType schemaType, TDbCommand command, string srcTable, CommandBehavior behavior, CancellationToken cancellationToken )
         {
             TDbConnection   connection    = GetConnection( command );
@@ -77,11 +80,12 @@ namespace AsyncDataAdapter
                     {
                         // delegate to next set of protected FillSchema methods
                         DataTable singleTable = await this.FillSchemaAsync( datatable, schemaType, dataReader, cancellationToken ).ConfigureAwait(false);
-                        return new[] { singleTable };
+                        return singleTable;
                     }
                     else
                     {
-                        return await this.FillSchemaAsync( dataset, schemaType, srcTable, dataReader, cancellationToken ).ConfigureAwait(false);
+                        DataTable[] tables = await this.FillSchemaAsync( dataset, schemaType, srcTable, dataReader, cancellationToken ).ConfigureAwait(false);
+                        return tables;
                     }
                 }
             }

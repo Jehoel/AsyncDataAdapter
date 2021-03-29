@@ -28,6 +28,11 @@ namespace AsyncDataAdapter
             this.Subject         = subject;
             this.BatchingAdapter = batchingAdapter;
 
+            base.SelectCommand   = subject.SelectCommand;
+            base.InsertCommand   = subject.InsertCommand;
+            base.DeleteCommand   = subject.DeleteCommand;
+            base.UpdateCommand   = subject.UpdateCommand;
+
 //          if( this.selectCommandSetByCtor != null ) this.SelectCommand = this.selectCommandSetByCtor;
 //          if( this.insertCommandSetByCtor != null ) this.InsertCommand = this.insertCommandSetByCtor;
 //          if( this.deleteCommandSetByCtor != null ) this.DeleteCommand = this.deleteCommandSetByCtor;

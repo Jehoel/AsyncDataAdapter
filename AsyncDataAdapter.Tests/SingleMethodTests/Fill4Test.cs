@@ -53,9 +53,9 @@ namespace AsyncDataAdapter.Tests.Big3
 
         protected override void AssertResult(DataTable dbSynchronous, DataTable dbProxied, DataTable dbProxiedAsync, DataTable dbBatchingProxiedAsync)
         {
-            DataTableMethods.DataTableEquals( dbSynchronous, dbProxied             , out Int32? diffs1 ).ShouldBeTrue( customMessage: "First different row at index: " + diffs1 );
-            DataTableMethods.DataTableEquals( dbSynchronous, dbProxiedAsync        , out Int32? diffs2 ).ShouldBeTrue( customMessage: "First different row at index: " + diffs2 );
-            DataTableMethods.DataTableEquals( dbSynchronous, dbBatchingProxiedAsync, out Int32? diffs3 ).ShouldBeTrue( customMessage: "First different row at index: " + diffs3 );
+            DataTableMethods.DataTableEquals( dbSynchronous, dbProxied             , "1", out String differences1 ).ShouldBeTrue( customMessage: "First different row at index: " + differences1 );
+            DataTableMethods.DataTableEquals( dbSynchronous, dbProxiedAsync        , "2", out String differences2 ).ShouldBeTrue( customMessage: "First different row at index: " + differences2 );
+            DataTableMethods.DataTableEquals( dbSynchronous, dbBatchingProxiedAsync, "3", out String differences3 ).ShouldBeTrue( customMessage: "First different row at index: " + differences3 );
         }
     }
 }
