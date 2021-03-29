@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace AsyncDataAdapter
 {
-    public abstract partial class ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> : /*ProxyDataAdapter*/ DbDataAdapter, IDbDataAdapter
+    public abstract partial class ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> : /*ProxyDataAdapter*/ DbDataAdapter /*, IDbDataAdapter*/
         where TDbDataAdapter : DbDataAdapter
         where TDbConnection  : DbConnection
         where TDbCommand     : DbCommand
@@ -28,10 +28,10 @@ namespace AsyncDataAdapter
             this.Subject         = subject;
             this.BatchingAdapter = batchingAdapter;
 
-            if( this.selectCommandSetByCtor != null ) this.SelectCommand = this.selectCommandSetByCtor;
-            if( this.insertCommandSetByCtor != null ) this.InsertCommand = this.insertCommandSetByCtor;
-            if( this.deleteCommandSetByCtor != null ) this.DeleteCommand = this.deleteCommandSetByCtor;
-            if( this.updateCommandSetByCtor != null ) this.UpdateCommand = this.updateCommandSetByCtor;
+//          if( this.selectCommandSetByCtor != null ) this.SelectCommand = this.selectCommandSetByCtor;
+//          if( this.insertCommandSetByCtor != null ) this.InsertCommand = this.insertCommandSetByCtor;
+//          if( this.deleteCommandSetByCtor != null ) this.DeleteCommand = this.deleteCommandSetByCtor;
+//          if( this.updateCommandSetByCtor != null ) this.UpdateCommand = this.updateCommandSetByCtor;
 
             this.Subject.FillError += this.OnSubjectFillError;
         }
@@ -47,10 +47,10 @@ namespace AsyncDataAdapter
         // But this class can't set `this.Subject` until then...
         // So here's an ugly hack:
 
-        private TDbCommand selectCommandSetByCtor;
-        private TDbCommand insertCommandSetByCtor;
-        private TDbCommand deleteCommandSetByCtor;
-        private TDbCommand updateCommandSetByCtor;
+//      private TDbCommand selectCommandSetByCtor;
+//      private TDbCommand insertCommandSetByCtor;
+//      private TDbCommand deleteCommandSetByCtor;
+//      private TDbCommand updateCommandSetByCtor;
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         private static void CheckForStackOverflow()
@@ -74,12 +74,12 @@ namespace AsyncDataAdapter
 #endif
                 if( this.Subject is null )
                 {
-                    if( value != null ) this.selectCommandSetByCtor = value;
+//                  if( value != null ) this.selectCommandSetByCtor = value;
                 }
                 else
                 {
                     this.Subject.SelectCommand = value;
-//                  base.SelectCommand = value;
+                    base.SelectCommand = value; // `DbDataAdapter.set_SelectCommand` calls into its vtable for `IDbDataAdapter.set_SelectCommand` which it also implements and stores in its own field.
                 }
             }
         }
@@ -100,12 +100,12 @@ namespace AsyncDataAdapter
 #endif
                 if( this.Subject is null )
                 {
-                    if( value != null ) this.insertCommandSetByCtor = value;
+//                  if( value != null ) this.insertCommandSetByCtor = value;
                 }
                 else
                 {
                     this.Subject.InsertCommand = value;
-//                  base.InsertCommand = value;
+                    base.InsertCommand = value;
                 }
             }
         }
@@ -126,12 +126,12 @@ namespace AsyncDataAdapter
 #endif
                 if( this.Subject is null )
                 {
-                    if( value != null ) this.deleteCommandSetByCtor = value;
+//                  if( value != null ) this.deleteCommandSetByCtor = value;
                 }
                 else
                 {
                     this.Subject.DeleteCommand = value;
-//                  base.DeleteCommand = value;
+                    base.DeleteCommand = value;
                 }
             }
         }
@@ -152,12 +152,12 @@ namespace AsyncDataAdapter
 #endif
                 if( this.Subject is null )
                 {
-                    if( value != null ) this.updateCommandSetByCtor = value;
+//                  if( value != null ) this.updateCommandSetByCtor = value;
                 }
                 else
                 {
                     this.Subject.UpdateCommand = value;
-//                  base.UpdateCommand = value;
+                    base.UpdateCommand = value;
                 }
             }
         }
