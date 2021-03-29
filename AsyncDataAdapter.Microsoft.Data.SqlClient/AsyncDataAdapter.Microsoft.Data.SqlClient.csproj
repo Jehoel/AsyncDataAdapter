@@ -52,8 +52,4 @@
   <ItemGroup>
     <ProjectReference Include="..\AsyncDataAdapter\AsyncDataAdapter.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Compile Update="SqlClient\AdaSqlDataAdapter.cs" />
-  </ItemGroup>
 </Project>

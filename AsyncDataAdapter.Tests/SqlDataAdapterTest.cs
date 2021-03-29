@@ -4,8 +4,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-using AsyncDataAdapter.SqlClient;
-
 using Microsoft.Data.SqlClient;
 
 using NUnit.Framework;
@@ -77,13 +75,13 @@ namespace AsyncDataAdapter.Tests
         public async Task FillAsyncDataTable()
         {
             using (SqlConnection conn = await CreateOpenConnectionAsync())
-            using (var c = conn.CreateCommand())
+            using (var cmd = conn.CreateCommand())
             {
-                c.CommandText = "GetFast";
-                c.CommandType = CommandType.StoredProcedure;
-                c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+                cmd.CommandText = "GetFast";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                using (AdaSqlDataAdapter a = new AdaSqlDataAdapter( null, c ))
+                using (MSqlAsyncDbDataAdapter a = new MSqlAsyncDbDataAdapter( cmd ))
                 {
                     var dt = new DataTable();
                     var r = await a.FillAsync(dt);
@@ -100,13 +98,13 @@ namespace AsyncDataAdapter.Tests
         public void FillDataTable()
         {
             using (SqlConnection conn = CreateOpenConnection())
-            using (var c = conn.CreateCommand())
+            using (var cmd = conn.CreateCommand())
             {
-                c.CommandText = "GetFast";
-                c.CommandType = CommandType.StoredProcedure;
-                c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+                cmd.CommandText = "GetFast";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                using (SqlDataAdapter a = new SqlDataAdapter(c))
+                using (SqlDataAdapter a = new SqlDataAdapter(cmd))
                 {
                     var dt = new DataTable();
                     var r = a.Fill(dt);
@@ -127,13 +125,13 @@ namespace AsyncDataAdapter.Tests
         public async Task FillAsyncDataSet()
         {
             using (SqlConnection conn = await CreateOpenConnectionAsync())
-            using (var c = conn.CreateCommand())
+            using (var cmd = conn.CreateCommand())
             {
-                c.CommandText = "GetFast";
-                c.CommandType = CommandType.StoredProcedure;
-                c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+                cmd.CommandText = "GetFast";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                using (AdaSqlDataAdapter a = new AdaSqlDataAdapter( null, c))
+                using (MSqlAsyncDbDataAdapter a = new MSqlAsyncDbDataAdapter( cmd ) )
                 {
                     var ds = new DataSet();
                     var r = await a.FillAsync(ds);
@@ -153,13 +151,13 @@ namespace AsyncDataAdapter.Tests
         public void FillDataSet()
         {
             using (SqlConnection conn = CreateOpenConnection())
-            using (var c = conn.CreateCommand())
+            using (var cmd = conn.CreateCommand())
             {
-                c.CommandText = "GetFast";
-                c.CommandType = CommandType.StoredProcedure;
-                c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+                cmd.CommandText = "GetFast";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-                using (SqlDataAdapter a = new SqlDataAdapter( c))
+                using (SqlDataAdapter a = new SqlDataAdapter( cmd))
                 {
                     var ds = new DataSet();
                     var r = a.Fill(ds);
@@ -184,16 +182,16 @@ namespace AsyncDataAdapter.Tests
         public async Task FillAsyncDataSetMulti()
         {
             using (SqlConnection conn = await CreateOpenConnectionAsync())
-            using (var c = conn.CreateCommand())
+            using (var cmd = conn.CreateCommand())
             {
-                c.CommandText = "GetMulti";
-                c.CommandTimeout = COMMAND_TIMEOUT;
-                c.CommandType = CommandType.StoredProcedure;
-                c.Parameters.Add("@Number1", SqlDbType.Int).Value = 100000;
-                c.Parameters.Add("@Number2", SqlDbType.Int).Value = 300000;
-                c.Parameters.Add("@Number3", SqlDbType.Int).Value = 500000;
+                cmd.CommandText = "GetMulti";
+                cmd.CommandTimeout = COMMAND_TIMEOUT;
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Number1", SqlDbType.Int).Value = 100000;
+                cmd.Parameters.Add("@Number2", SqlDbType.Int).Value = 300000;
+                cmd.Parameters.Add("@Number3", SqlDbType.Int).Value = 500000;
 
-                using (AdaSqlDataAdapter a = new AdaSqlDataAdapter( null, c))
+                using (MSqlAsyncDbDataAdapter a = new MSqlAsyncDbDataAdapter( cmd))
                 {
                     var ds = new DataSet();
 
@@ -229,16 +227,16 @@ namespace AsyncDataAdapter.Tests
         public void FillDataSetMulti()
         {
             using (SqlConnection conn = CreateOpenConnection())
-            using (var c = conn.CreateCommand())
+            using (var cmd = conn.CreateCommand())
             {
-                c.CommandText = "GetMulti";
-                c.CommandTimeout = COMMAND_TIMEOUT;
-                c.CommandType = CommandType.StoredProcedure;
-                c.Parameters.Add("@Number1", SqlDbType.Int).Value = 100000;
-                c.Parameters.Add("@Number2", SqlDbType.Int).Value = 300000;
-                c.Parameters.Add("@Number3", SqlDbType.Int).Value = 500000;
+                cmd.CommandText = "GetMulti";
+                cmd.CommandTimeout = COMMAND_TIMEOUT;
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Number1", SqlDbType.Int).Value = 100000;
+                cmd.Parameters.Add("@Number2", SqlDbType.Int).Value = 300000;
+                cmd.Parameters.Add("@Number3", SqlDbType.Int).Value = 500000;
 
-                using (SqlDataAdapter a = new SqlDataAdapter(c))
+                using (SqlDataAdapter a = new SqlDataAdapter(cmd))
                 {
                     var ds = new DataSet();
 

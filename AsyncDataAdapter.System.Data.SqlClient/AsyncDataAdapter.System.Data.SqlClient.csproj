@@ -54,6 +54,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="DbDataAdapter\SqlAsyncDataAdapter.cs" />
+    <Compile Update="Data\SqlAsyncDataAdapter.cs" />
   </ItemGroup>
 </Project>
