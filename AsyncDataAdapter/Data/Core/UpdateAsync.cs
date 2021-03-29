@@ -31,7 +31,7 @@ namespace AsyncDataAdapter.Internal
                     throw ADP.MissingTableMappingDestination(dataTable.TableName);
                 }
 
-                tableMapping = new DataTableMapping(AdaDbDataAdapter.DefaultSourceTableName, dataTable.TableName);
+                tableMapping = new DataTableMapping( DbDataAdapter.DefaultSourceTableName, dataTable.TableName );
             }
 
             return UpdateFromDataTableAsync( self, dataTable, tableMapping, cancellationToken );

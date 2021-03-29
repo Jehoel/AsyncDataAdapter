@@ -18,7 +18,7 @@ namespace AsyncDataAdapter
             TDbCommand      selectCommand       = this.SelectCommand;
 		    CommandBehavior fillCommandBehavior = this.FillCommandBehavior;
 
-		    return this.FillAsync( dataSet, 0, 0, AdaDbDataAdapter.DefaultSourceTableName, selectCommand, fillCommandBehavior, cancellationToken );
+		    return this.FillAsync( dataSet, 0, 0, DbDataAdapter.DefaultSourceTableName, selectCommand, fillCommandBehavior, cancellationToken );
         }
 
         public async Task<DataTable[]> FillSchemaAsync(DataSet dataSet, SchemaType schemaType, CancellationToken cancellationToken = default)
@@ -32,7 +32,7 @@ namespace AsyncDataAdapter
 
 		    CommandBehavior fillCommandBehavior = FillCommandBehavior;
 
-		    return await this.FillSchemaAsync( dataSet, schemaType, selectCommand, AdaDbDataAdapter.DefaultSourceTableName, fillCommandBehavior, cancellationToken ).ConfigureAwait(false);
+		    return await this.FillSchemaAsync( dataSet, schemaType, selectCommand, DbDataAdapter.DefaultSourceTableName, fillCommandBehavior, cancellationToken ).ConfigureAwait(false);
         }
 
         #endregion
@@ -44,7 +44,7 @@ namespace AsyncDataAdapter
             // The original in ReferenceSource would throw an exception due to this guard: `!TableMappings.Contains(DbDataAdapter.DefaultSourceTableName)` // MDAC 59268
             // The comment was left in voloda's copy, but I thought they commented it out themselves as a TODO. Turns out they didn't, whoops.
 
-            return this.UpdateAsync( dataSet, srcTable: AdaDbDataAdapter.DefaultSourceTableName, cancellationToken );
+            return this.UpdateAsync( dataSet, srcTable: DbDataAdapter.DefaultSourceTableName, cancellationToken );
         }
 
         #endregion
