@@ -74,17 +74,25 @@ namespace AsyncDataAdapter
         public override Boolean          ShouldSerializeFillLoadOption()                      => this.subject.ShouldSerializeFillLoadOption();
         public override Int32            Update( DataSet dataSet )                            => this.subject.Update( dataSet );
 
-        // Because all of the virtual entrypoints above are overridden and forwarded to the subject, none of the protected-virtual methods should be invoked:
+        // Because all of the virtual entrypoints above are overridden and forwarded to the subject, none of the protected-virtual methods should be invoked...
+        // UPDATE: ...with the exception of the following:
+        // * CreateTableMappings (via `DataAdapter.get_TableMappings`)
 
         [Obsolete]
         protected override DataAdapter                CloneInternals()                                                                                      => throw new InvalidOperationException( "protected virtual method " + nameof(this.CloneInternals)               + "() should never be invoked." );
-        protected override DataTableMappingCollection CreateTableMappings()                                                                                 => throw new InvalidOperationException( "protected virtual method " + nameof(this.CloneInternals)               + "() should never be invoked." );
         protected override Int32                      Fill( DataTable[] dataTables, IDataReader dataReader, Int32 startRecord, Int32 maxRecords )           => throw new InvalidOperationException( "protected virtual method " + nameof(this.Fill)                         + "(DataTable[] dataTables, IDataReader dataReader, Int32 startRecord, Int32 maxRecords) should never be invoked." );
         protected override Int32                      Fill( DataTable dataTable, IDataReader dataReader )                                                   => throw new InvalidOperationException( "protected virtual method " + nameof(this.Fill)                         + "(DataTable dataTable, IDataReader dataReader) should never be invoked." );
         protected override Int32                      Fill( DataSet dataSet, String srcTable, IDataReader dataReader, Int32 startRecord, Int32 maxRecords ) => throw new InvalidOperationException( "protected virtual method " + nameof(this.Fill)                         + "(DataSet dataSet, String srcTable, IDataReader dataReader, Int32 startRecord, Int32 maxRecords) should never be invoked." );
         protected override DataTable                  FillSchema( DataTable dataTable, SchemaType schemaType, IDataReader dataReader )                      => throw new InvalidOperationException( "protected virtual method " + nameof(this.FillSchema)                   + "(DataTable dataTable, SchemaType schemaType, IDataReader dataReader) should never be invoked." );
         protected override DataTable[]                FillSchema( DataSet dataSet, SchemaType schemaType, String srcTable, IDataReader dataReader )         => throw new InvalidOperationException( "protected virtual method " + nameof(this.FillSchema)                   + "(DataSet dataSet, SchemaType schemaType, String srcTable, IDataReader dataReader) should never be invoked." );
         protected override Boolean                    ShouldSerializeTableMappings()                                                                        => throw new InvalidOperationException( "protected virtual method " + nameof(this.ShouldSerializeTableMappings) + "() should never be invoked." );
+
+        private struct _CreateTableMappings { }
+
+        protected override DataTableMappingCollection CreateTableMappings()
+        {
+            return Internal.ReflectedFunc<DataAdapter,_CreateTableMappings,DataTableMappingCollection>.Invoke( this.subject );
+        }
 
         private void OnSubjectFillError(Object sender, FillErrorEventArgs e)
         {

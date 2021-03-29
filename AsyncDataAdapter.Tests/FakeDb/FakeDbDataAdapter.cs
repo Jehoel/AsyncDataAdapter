@@ -5,6 +5,8 @@ using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 
+using AsyncDataAdapter.Internal;
+
 namespace AsyncDataAdapter.Tests.FakeDb
 {
     /// <summary>NOTE: This <see cref="DbDataReader"/> does not implement <see cref="IBatchingAdapter"/>. For that, see <see cref="BatchingFakeDbDataAdapter"/>.</summary>
@@ -33,6 +35,12 @@ namespace AsyncDataAdapter.Tests.FakeDb
             this.DeleteCommand = delete ?? throw new ArgumentNullException(nameof(delete));
         }
 
+        public new FakeDbCommand UpdateCommand
+        {
+            get => (FakeDbCommand)base.UpdateCommand;
+            set => base.UpdateCommand = value;
+        }
+
         public FakeDbCommandBuilder CreateCommandBuilder()
         {
             return new FakeDbCommandBuilder( this );
@@ -56,12 +64,10 @@ namespace AsyncDataAdapter.Tests.FakeDb
         }
 
         #region IBatchingAdapter
+        // Btw, don't confuse *Update*FooAction with *Missing*FooAction.
 
-        MissingMappingAction IBatchingAdapter.UpdateMappingAction => this.UpdateMappingAction;
-        MissingSchemaAction  IBatchingAdapter.UpdateSchemaAction  => this.UpdateSchemaAction;
-
-        public MissingMappingAction UpdateMappingAction { get; set; }
-        public MissingSchemaAction  UpdateSchemaAction  { get; set; }
+        public MissingMappingAction UpdateMappingAction => BatchingAdapterMethods.UpdateMappingAction( base.MissingMappingAction );
+        public MissingSchemaAction  UpdateSchemaAction  => BatchingAdapterMethods.UpdateSchemaAction ( base.MissingSchemaAction  );
 
         public List<DbCommand> BatchList { get; set; } = new List<DbCommand>();
 

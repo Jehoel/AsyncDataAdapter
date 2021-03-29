@@ -21,6 +21,8 @@ namespace AsyncDataAdapter.Internal
 
         public static void SetValue( TOwner instance, TProperty value )
         {
+            if( _setter is null ) throw new InvalidOperationException( "The " + _propertyInfo.Name + " property does not have a setter." );
+
             _ = _setter.Invoke( instance, new Object[] { value } );
         }
     }

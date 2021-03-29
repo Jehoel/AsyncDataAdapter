@@ -8,7 +8,7 @@ namespace AsyncDataAdapter
 {
     public abstract partial class ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader>
     {
-        public virtual async Task<DbCommandBuilder> CreateCommandBuilderAsync()
+        public virtual async Task<DbCommandBuilder> CreateCommandBuilderAsync( CancellationToken cancellationToken = default )
         {
             DbCommandBuilder normalBuilder = this.CreateCommandBuilder();
 
@@ -19,7 +19,7 @@ namespace AsyncDataAdapter
 
         protected abstract DbCommandBuilder CreateCommandBuilder();
 
-        protected virtual async Task<DbCommandBuilder> CreateProxiedCommandBuilderAsync( DbCommandBuilder builder )
+        protected virtual async Task<DbCommandBuilder> CreateProxiedCommandBuilderAsync( DbCommandBuilder builder, CancellationToken cancellationToken = default )
         {
             DataTable selectCommandResultsSchema;
             using( DbDataReader reader = await this.SelectCommand.ExecuteReaderAsync( CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo ).ConfigureAwait(false) )

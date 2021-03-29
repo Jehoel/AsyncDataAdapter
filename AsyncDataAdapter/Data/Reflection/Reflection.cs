@@ -301,7 +301,7 @@ namespace AsyncDataAdapter.Internal
         {
             const BindingFlags bf = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
 
-            PropertyInfo methodInfo = owner.GetProperty( name: name, bindingAttr: bf, binder: null, returnType: returnType, types: null, modifiers: null );
+            PropertyInfo methodInfo = owner.GetProperty( name: name, bindingAttr: bf, binder: null, returnType: returnType, types: Array.Empty<Type>(), modifiers: null );
             if( methodInfo is null )
             {
                 string msg = String.Format( CultureInfo.CurrentCulture, "Could not reflect PropertyInfo for {0}::{1} with property type {2}.", owner.FullName, name, returnType.FullName );
