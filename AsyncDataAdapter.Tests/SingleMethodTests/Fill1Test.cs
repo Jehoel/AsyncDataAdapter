@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 using Shouldly;
 
 using AsyncDataAdapter.Tests.FakeDb;
+using NUnit.Framework;
 
-namespace AsyncDataAdapter.Tests
+namespace AsyncDataAdapter.Tests.Big3
 {
     public class Fill1Test : SingleMethodTest<DataSet>
     {
@@ -53,7 +54,9 @@ namespace AsyncDataAdapter.Tests
 
         protected override void AssertResult(DataSet dbSynchronous, DataSet dbProxied, DataSet dbProxiedAsync, DataSet dbBatchingProxiedAsync)
         {
-            throw new NotImplementedException();
+            DataTableMethods.DataSetEquals( dbSynchronous, dbProxied ).ShouldBeTrue();
+            DataTableMethods.DataSetEquals( dbSynchronous, dbProxiedAsync ).ShouldBeTrue();
+            DataTableMethods.DataSetEquals( dbSynchronous, dbBatchingProxiedAsync ).ShouldBeTrue();
         }
     }
 }

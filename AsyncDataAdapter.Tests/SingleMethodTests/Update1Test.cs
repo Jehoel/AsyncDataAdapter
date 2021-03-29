@@ -7,7 +7,7 @@ using Shouldly;
 
 using AsyncDataAdapter.Tests.FakeDb;
 
-namespace AsyncDataAdapter.Tests
+namespace AsyncDataAdapter.Tests.Big3
 {
     using U1Pair = ValueTuple<DataSet,Int32>; // ( DataSet ds, Int32 rows )
 

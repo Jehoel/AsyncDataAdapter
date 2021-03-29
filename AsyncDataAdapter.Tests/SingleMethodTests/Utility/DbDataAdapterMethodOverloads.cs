@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 using AsyncDataAdapter.Internal;
 
-namespace AsyncDataAdapter.Tests
+namespace AsyncDataAdapter.Tests.Big3
 {
     /// <summary>This class introduces explicitly named extension methods to avoid ambiguity problems when writing code for specific overloads.</summary>
     public static class DbDataAdapterMethodOverloads

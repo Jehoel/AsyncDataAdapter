@@ -69,6 +69,22 @@ namespace AsyncDataAdapter.Tests
             return true;
         }
 
+        public static Boolean DataTablesEquals( DataTable[] left, DataTable[] right )
+        {
+            _ = left .ShouldNotBeNull();
+            _ = right.ShouldNotBeNull();
+
+            left.Length.ShouldBe( right.Length );
+
+            for( Int32 i = 0; i < left.Length; i++ )
+            {
+                Boolean teq = DataTableEquals( left[i], right[i] );
+                if( !teq ) return false;
+            }
+
+            return true;
+        }
+
         public static Boolean DataTableEquals( DataTable left, DataTable right )
         {
             _ = left .ShouldNotBeNull();

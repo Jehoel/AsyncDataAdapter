@@ -4,7 +4,9 @@ using System.Threading.Tasks;
 
 using AsyncDataAdapter.Tests.FakeDb;
 
-namespace AsyncDataAdapter.Tests
+using NUnit.Framework;
+
+namespace AsyncDataAdapter.Tests.Big3
 {
     public abstract class SingleMethodTest<TResult>
     {
@@ -19,6 +21,12 @@ namespace AsyncDataAdapter.Tests
         protected abstract void AssertResult( TResult dbSynchronous, TResult dbProxied, TResult dbProxiedAsync, TResult dbBatchingProxiedAsync );
 
         //
+
+        [Test]
+        public virtual async Task RunAsync()
+        {
+            await this.RunAsync( seed: 1234, tableCount: 5 );
+        }
 
         protected async Task RunAsync( Int32 seed, Int32 tableCount )
         {

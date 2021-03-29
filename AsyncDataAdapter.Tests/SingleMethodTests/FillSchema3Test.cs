@@ -7,7 +7,7 @@ using Shouldly;
 
 using AsyncDataAdapter.Tests.FakeDb;
 
-namespace AsyncDataAdapter.Tests
+namespace AsyncDataAdapter.Tests.Big3
 {
     using FS3Pair = ValueTuple<DataSet,DataTable[]>;
 

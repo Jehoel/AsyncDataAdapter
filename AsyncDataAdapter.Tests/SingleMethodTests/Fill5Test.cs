@@ -7,7 +7,7 @@ using Shouldly;
 
 using AsyncDataAdapter.Tests.FakeDb;
 
-namespace AsyncDataAdapter.Tests
+namespace AsyncDataAdapter.Tests.Big3
 {
     public class Fill5Test : SingleMethodTest<DataTable[]>
     {
@@ -53,7 +53,9 @@ namespace AsyncDataAdapter.Tests
 
         protected override void AssertResult(DataTable[] dbSynchronous, DataTable[] dbProxied, DataTable[] dbProxiedAsync, DataTable[] dbBatchingProxiedAsync)
         {
-            throw new NotImplementedException();
+            DataTableMethods.DataTablesEquals( dbSynchronous, dbProxied ).ShouldBeTrue();
+            DataTableMethods.DataTablesEquals( dbSynchronous, dbProxiedAsync ).ShouldBeTrue();
+            DataTableMethods.DataTablesEquals( dbSynchronous, dbBatchingProxiedAsync ).ShouldBeTrue();
         }
     }
 }
