@@ -46,7 +46,7 @@ namespace AsyncDataAdapter.Internal
 
             int rowsAffected = 0;
 
-            DataTableMapping tableMapping = self.GetTableMappingBySchemaAction( srcTable, srcTable, self.UpdateMappingAction );
+            DataTableMapping tableMapping = self.GetTableMappingBySchemaAction( sourceTableName: srcTable, dataSetTableName: srcTable, mappingAction: self.UpdateMappingAction );
             
             Debug.Assert(null != tableMapping, "null TableMapping when MissingMappingAction.Error");
 
