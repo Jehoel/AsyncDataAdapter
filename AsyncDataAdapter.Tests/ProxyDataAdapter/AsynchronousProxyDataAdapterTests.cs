@@ -136,13 +136,17 @@ namespace AsyncDataAdapter.Tests
 
                         //
 
-                        DataTableMethods.MutateDataSet( dataSetFromProxy );
+                        Dictionary<String,Int32> rowsModified = DataTableMethods.MutateDataSet( dataSetFromProxy );
 
                         //
+
                         adpt.UpdateCommand = (FakeDbCommand)cmdBuilder.GetUpdateCommand();
+                        adpt.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+
+                        //
 
                         Int32 updatedRows = await adpt.UpdateAsync( dataSetFromProxy ); // updatedRows... in first table only?
-                        updatedRows.ShouldNotBe( 0 );
+//                      updatedRows.ShouldBe( rowsModified );
                     }
                 }
             }
@@ -166,13 +170,17 @@ namespace AsyncDataAdapter.Tests
 
                         //
 
-                        DataTableMethods.MutateDataSet( dataSetFromReal );
+                        Dictionary<String,Int32> rowsModified = DataTableMethods.MutateDataSet( dataSetFromReal );
 
                         //
+
                         adpt.UpdateCommand = cmdBuilder.GetUpdateCommand();
+                        adpt.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+
+                        //
 
                         Int32 updatedRows = adpt.Update( dataSetFromReal ); // updatedRows... in first table only?
-                        updatedRows.ShouldNotBe( 0 );
+//                      updatedRows.ShouldBe( rowsModified );
                     }
                 }
             }
