@@ -15,6 +15,11 @@ namespace AsyncDataAdapter.Tests.Big3
 
     public class Update1Test : SingleMethodTest<U1Pair>
     {
+        #warning TODO: Variations of `UpdateNTest` that use custom Table/Column Mappings.
+        // TODO: Variations of `UpdateNTest` that use custom Table/Column Mappings.
+        // This is documented here: https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/dataadapter-datatable-and-datacolumn-mappings
+        // This would then cover the `Table`, `Table1`, etc. naming issues.
+
         protected override U1Pair RunDbDataAdapterSynchronous(List<TestTable> randomDataSource, FakeDbDataAdapter adapter)
         {
             using( FakeDbCommandBuilder cmdBuilder = adapter.CreateCommandBuilder() )
@@ -30,7 +35,7 @@ namespace AsyncDataAdapter.Tests.Big3
 
                 //
                 adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( dataSet, cmd, rowsModified );
 
                 Int32 updatedRows = adapter.Update1( dataSet ); // updatedRows... in first table only?
 //              updatedRows.ShouldBe( rowsModified );
@@ -53,7 +58,7 @@ namespace AsyncDataAdapter.Tests.Big3
 
                 //
                 adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( dataSet, cmd, rowsModified );
 
                 Int32 updatedRows = adapter.Update1( dataSet ); // updatedRows... in first table only?
 //              updatedRows.ShouldBe( rowsModified );
@@ -76,7 +81,7 @@ namespace AsyncDataAdapter.Tests.Big3
 
                 //
                 adapter.UpdateCommand = (FakeDbCommand)cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( dataSet, cmd, rowsModified );
 
                 //
 
@@ -101,7 +106,7 @@ namespace AsyncDataAdapter.Tests.Big3
 
                 //
                 adapter.UpdateCommand = (FakeDbCommand)cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( dataSet, cmd, rowsModified );
 
                 //
 

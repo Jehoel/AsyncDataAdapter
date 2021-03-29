@@ -122,13 +122,13 @@ namespace AsyncDataAdapter.Tests
                 {
                     await connection.OpenAsync();
 
-                    using( BatchingFakeProxiedDbDataAdapter adpt = new BatchingFakeProxiedDbDataAdapter( selectCommand ) )
-                    using( DbCommandBuilder cmdBuilder = await adpt.CreateCommandBuilderAsync().ConfigureAwait(false) )
+                    using( BatchingFakeProxiedDbDataAdapter adapter = new BatchingFakeProxiedDbDataAdapter( selectCommand ) )
+                    using( DbCommandBuilder cmdBuilder = await adapter.CreateCommandBuilderAsync().ConfigureAwait(false) )
                     {
                         dataSetFromProxy = new DataSet();
 
                         // `.Fill` returns the number of rows in the first table, not any subsequent tables. Yes, that's silly.
-                        Int32 rowsInFirstTable = await adpt.FillAsync( dataSetFromProxy );
+                        Int32 rowsInFirstTable = await adapter.FillAsync( dataSetFromProxy );
                         rowsInFirstTable.ShouldBe( 40 );
 
                         //
@@ -137,12 +137,12 @@ namespace AsyncDataAdapter.Tests
 
                         //
 
-                        adpt.UpdateCommand = (FakeDbCommand)cmdBuilder.GetUpdateCommand();
-                        adpt.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+                        adapter.UpdateCommand = (FakeDbCommand)cmdBuilder.GetUpdateCommand();
+                        adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => 1; // HACK /* DataTableMethods.GetNonQueryResultRowCountValue( dataSetFromProxy, cmd, rowsModified ); */;
 
                         //
 
-                        Int32 updatedRows = await adpt.UpdateAsync( dataSetFromProxy ); // updatedRows... in first table only?
+                        Int32 updatedRows = await adapter.UpdateAsync( dataSetFromProxy ); // updatedRows... in first table only?
 //                      updatedRows.ShouldBe( rowsModified );
                     }
                 }
@@ -156,13 +156,13 @@ namespace AsyncDataAdapter.Tests
                 {
                     connection.Open();
 
-                    using( FakeDbDataAdapter adpt = new FakeDbDataAdapter( selectCommand ) )
-                    using( FakeDbCommandBuilder cmdBuilder = adpt.CreateCommandBuilder() )
+                    using( FakeDbDataAdapter adapter = new FakeDbDataAdapter( selectCommand ) )
+                    using( FakeDbCommandBuilder cmdBuilder = adapter.CreateCommandBuilder() )
                     {
                         dataSetFromReal = new DataSet();
 
                         // `.Fill` returns the number of rows in the first table, not any subsequent tables. Yes, that's silly.
-                        Int32 rowsInFirstTable = adpt.Fill( dataSetFromReal );
+                        Int32 rowsInFirstTable = adapter.Fill( dataSetFromReal );
                         rowsInFirstTable.ShouldBe( 40 );
 
                         //
@@ -171,12 +171,12 @@ namespace AsyncDataAdapter.Tests
 
                         //
 
-                        adpt.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                        adpt.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+                        adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
+                        adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => 1; // HACK /* DataTableMethods.GetNonQueryResultRowCountValue( dataSetFromProxy, cmd, rowsModified ); */;
 
                         //
 
-                        Int32 updatedRows = adpt.Update( dataSetFromReal ); // updatedRows... in first table only?
+                        Int32 updatedRows = adapter.Update( dataSetFromReal ); // updatedRows... in first table only?
 //                      updatedRows.ShouldBe( rowsModified );
                     }
                 }
