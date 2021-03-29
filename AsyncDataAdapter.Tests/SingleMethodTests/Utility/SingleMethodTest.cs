@@ -23,7 +23,13 @@ namespace AsyncDataAdapter.Tests.Big3
         //
 
         [Test]
-        public virtual async Task RunAsync()
+        public virtual async Task Test_with_single_table()
+        {
+            await this.RunAsync( seed: 1234, tableCount: 1 );
+        }
+
+        [Test]
+        public virtual async Task Test_with_five_tables()
         {
             await this.RunAsync( seed: 1234, tableCount: 5 );
         }

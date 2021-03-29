@@ -88,7 +88,7 @@ namespace AsyncDataAdapter.Tests
 
             return new TestTable(
                 index      : idx,
-                name       : String.Format( CultureInfo.InvariantCulture, "Table_{0}", idx + 1 ),
+                name       : String.Format( CultureInfo.InvariantCulture, "RandomDataTable_{0}", idx + 1 ),
                 columnNames: colNames,
                 columnTypes: colTypes,
                 rows       : rowsList
@@ -215,7 +215,7 @@ namespace AsyncDataAdapter.Tests
             else if( type == typeof(Guid) )
             {
                 //return Guid.NewGuid();
-                // HACK: For now, use a const guid so we don't break the Random rng:
+                // HACK: For now, use a const guid so we don't break tests by mutating the Random rng more than we already do:
                 return new Guid( a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8, i: 9, j: 10, k: 11 );
             }
             else
