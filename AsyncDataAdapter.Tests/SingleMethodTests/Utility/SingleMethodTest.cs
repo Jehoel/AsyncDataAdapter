@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 using AsyncDataAdapter.Tests.FakeDb;
@@ -30,13 +31,24 @@ namespace AsyncDataAdapter.Tests.Big3
 
         protected async Task RunAsync( Int32 seed, Int32 tableCount )
         {
+            Stopwatch sw = Stopwatch.StartNew();
+            List<(TimeSpan,String)> list = new List<(TimeSpan, string)>();
+
             TResult dbSynchronous = this.DoRunDbDataAdapterSynchronous( seed, tableCount );
+
+        list.Add( ( sw.Elapsed, nameof(this.DoRunDbDataAdapterSynchronous) + " completed" ) );
 
             TResult dbProxied = this.DoRunProxiedDbDataAdapter( seed, tableCount );
 
+        list.Add( ( sw.Elapsed, nameof(this.DoRunProxiedDbDataAdapter) + " completed" ) );
+
             TResult dbProxiedAsync = await this.DoRunProxiedDbDataAdapterAsync( seed, tableCount );
 
+        list.Add( ( sw.Elapsed, nameof(this.DoRunProxiedDbDataAdapterAsync) + " completed" ) );
+            
             TResult dbBatchingProxiedAsync = await this.DoRunBatchingProxiedDbDataAdapterAsync( seed, tableCount );
+
+        list.Add( ( sw.Elapsed, nameof(this.DoRunBatchingProxiedDbDataAdapterAsync) + " completed" ) );
 
             //
 
@@ -77,16 +89,27 @@ namespace AsyncDataAdapter.Tests.Big3
 
         protected async Task<TResult> DoRunProxiedDbDataAdapterAsync( Int32 seed, Int32 tableCount )
         {
+            Stopwatch sw = Stopwatch.StartNew();
+            List<(TimeSpan,String)> list = new List<(TimeSpan, string)>();
+
             List<TestTable> randomDataSource = RandomDataGenerator.CreateRandomTables( seed: seed, tableCount: tableCount );
 
             using( FakeDbConnection connection = new FakeDbConnection( asyncMode: AsyncMode.AwaitAsync ) )
             using( FakeDbCommand selectCommand = connection.CreateCommand( testTables: randomDataSource ) )
             {
+                list.Add( ( sw.Elapsed, "In using" ) );
+
                 await connection.OpenAsync();
+
+                list.Add( ( sw.Elapsed, "OpenAsync completed" ) );
 
                 using( FakeProxiedDbDataAdapter adapter = new FakeProxiedDbDataAdapter( selectCommand ) )
                 {
-                    return await this.RunProxiedDbDataAdapterAsync( randomDataSource, adapter );
+                    var x = await this.RunProxiedDbDataAdapterAsync( randomDataSource, adapter );
+
+                    list.Add( ( sw.Elapsed, "RunProxiedDbDataAdapterAsync completed" ) );
+
+                    return x;
                 }
             }
         }

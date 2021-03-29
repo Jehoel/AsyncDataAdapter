@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
@@ -95,10 +96,14 @@ namespace AsyncDataAdapter.Internal
 
         public static async Task<int> FillFromReaderAsync( Action<Exception, DataTable, Object[]> onFillError, IAdaSchemaMappingAdapter adapter, DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int startRecord, int maxRecords, DataColumn parentChapterColumn, object parentChapterValue, CancellationToken cancellationToken )
         {
+Stopwatch sw = Stopwatch.StartNew();
+List<(TimeSpan,String)> list = new List<(TimeSpan, string)>();
+
             int rowsAddedToDataSet = 0;
             int schemaCount = 0;
             do
             {
+list.Add( ( sw.Elapsed, "Loop body entered completed" ) );
                 if (0 >= dataReader.FieldCount)
                 {
                     continue; // loop to next result
@@ -107,18 +112,11 @@ namespace AsyncDataAdapter.Internal
                 AdaSchemaMapping mapping = FillMapping( onFillError, adapter, dataset, datatable, srcTable, dataReader, schemaCount, parentChapterColumn, parentChapterValue );
                 schemaCount++; // don't increment if no SchemaTable ( a non-row returning result )
 
-                if (null == mapping)
-                {
-                    continue; // loop to next result
-                }
-                if (null == mapping.DataValues)
-                {
-                    continue; // loop to next result
-                }
-                if (null == mapping.DataTable)
-                {
-                    continue; // loop to next result
-                }
+list.Add( ( sw.Elapsed, "FillMapping completed" ) );
+
+                if (null == mapping) continue; // loop to next result
+                if (null == mapping.DataValues) continue; // loop to next result
+                if (null == mapping.DataTable) continue; // loop to next result
 
                 mapping.DataTable.BeginLoadData();
 
@@ -128,10 +126,12 @@ namespace AsyncDataAdapter.Internal
                     if ((1 == schemaCount) && ((0 < startRecord) || (0 < maxRecords)))
                     {
                         rowsAddedToDataSet = await FillLoadDataRowChunkAsync( onFillError, mapping, startRecord, maxRecords, cancellationToken ).ConfigureAwait(false);
+list.Add( ( sw.Elapsed, "FillLoadDataRowChunkAsync completed" ) );
                     }
                     else
                     {
                         int count = await FillLoadDataRowAsync( onFillError, mapping, cancellationToken ).ConfigureAwait(false);
+list.Add( ( sw.Elapsed, "FillLoadDataRowAsync completed" ) );
 
                         if (1 == schemaCount)
                         {
@@ -149,6 +149,8 @@ namespace AsyncDataAdapter.Internal
                 {
                     break; // do not read remaining results in single DataTable case
                 }
+
+list.Add( ( sw.Elapsed, "Loop body completed" ) );
             }
             while( await FillNextResultAsync( onFillError, dataReader, cancellationToken ).ConfigureAwait(false) );
 

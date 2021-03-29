@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -63,6 +65,9 @@ namespace AsyncDataAdapter
 
         private async Task<Int32> FillInternalAsync( DataSet dataset, DataTable[] datatables, int startRecord, int maxRecords, string srcTable, TDbCommand command, CommandBehavior behavior, CancellationToken cancellationToken )
         {
+Stopwatch sw = Stopwatch.StartNew();
+List<(TimeSpan,String)> list = new List<(TimeSpan, string)>();
+
             TDbConnection   connection    = GetConnection( command );
 		    ConnectionState originalState = ConnectionState.Open;
 
@@ -75,17 +80,25 @@ namespace AsyncDataAdapter
 		    {
 			    originalState = await QuietOpenAsync( connection, cancellationToken ).ConfigureAwait(false);
 
+list.Add( ( sw.Elapsed, "QuietOpenAsync completed" ) );
+
 			    behavior |= CommandBehavior.SequentialAccess;
 			        
                 using( TDbDataReader dataReader = await ExecuteReaderAsync( command, behavior, cancellationToken ).ConfigureAwait(false) )
                 {
+list.Add( ( sw.Elapsed, "ExecuteReaderAsync completed" ) );
+
                     if (datatables != null)
 				    {
-					    return await this.FillAsync( datatables, dataReader, startRecord, maxRecords, cancellationToken ).ConfigureAwait(false);
+					    var x = await this.FillAsync( datatables, dataReader, startRecord, maxRecords, cancellationToken ).ConfigureAwait(false);
+list.Add( ( sw.Elapsed, "FillAsync completed" ) );
+                        return x;
 				    }
                     else
                     {
-                        return await this.FillAsync( dataset, srcTable, dataReader, startRecord, maxRecords, cancellationToken ).ConfigureAwait(false);
+                        var y = await this.FillAsync( dataset, srcTable, dataReader, startRecord, maxRecords, cancellationToken ).ConfigureAwait(false);
+list.Add( ( sw.Elapsed, "FillAsync completed" ) );
+                        return y;
                     }
                 }
 		    }

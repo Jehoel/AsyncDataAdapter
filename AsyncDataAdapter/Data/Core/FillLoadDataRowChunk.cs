@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
@@ -65,17 +66,24 @@ namespace AsyncDataAdapter.Internal
 
         public static async Task<int> FillLoadDataRowAsync( Action<Exception, DataTable, Object[]> onFillError, AdaSchemaMapping mapping, CancellationToken cancellationToken )
         {
+Stopwatch sw = Stopwatch.StartNew();
+List<(TimeSpan,String)> list = new List<(TimeSpan, string)>();
+
             int rowsAddedToDataSet = 0;
             AdaDataReaderContainer dataReader = mapping.DataReader;
             if ( onFillError != null )
             {
                 while (await dataReader.ReadAsync( cancellationToken ).ConfigureAwait(false))
-                { // read remaining rows of first and subsequent resultsets
+                {
+list.Add( ( sw.Elapsed, "ReadAsync 1 completed" ) );
+
+                    // read remaining rows of first and subsequent resultsets
                     try
                     {
                         // only try-catch if a FillErrorEventHandler is registered so that
                         // in the default case we get the full callstack from users
                         await mapping.LoadDataRowWithClearAsync( cancellationToken ).ConfigureAwait(false);
+list.Add( ( sw.Elapsed, "LoadDataRowWithClearAsync completed" ) );
                         rowsAddedToDataSet++;
                     }
                     catch (Exception e)
@@ -94,8 +102,10 @@ namespace AsyncDataAdapter.Internal
             {
                 while (await dataReader.ReadAsync( cancellationToken ).ConfigureAwait(false))
                 {
+list.Add( ( sw.Elapsed, "ReadAsync 2 completed" ) );
                     // read remaining rows of first and subsequent resultset
                     await mapping.LoadDataRowAsync( cancellationToken ).ConfigureAwait(false);
+list.Add( ( sw.Elapsed, "LoadDataRowAsync 2 completed" ) );
                     rowsAddedToDataSet++;
                 }
             }
