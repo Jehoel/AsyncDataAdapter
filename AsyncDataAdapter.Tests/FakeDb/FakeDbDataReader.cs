@@ -16,9 +16,11 @@ namespace AsyncDataAdapter.Tests.FakeDb
         {
             this.Command   = cmd ?? throw new ArgumentNullException(nameof(cmd));
             this.AsyncMode = cmd.AsyncMode;
+            this.Delays    = cmd.Delays;
         }
 
-        public AsyncMode AsyncMode { get; set; }
+        public AsyncMode    AsyncMode { get; set; }
+        public FakeDbDelays Delays    { get; set; }
 
         #region TestTables
 
@@ -345,22 +347,40 @@ namespace AsyncDataAdapter.Tests.FakeDb
         {
             if( this.AsyncMode.HasFlag( AsyncMode.AwaitAsync ) )
             {
-                await Task.Delay( 100 ).ConfigureAwait(false);
+                if( this.Delays.Result.HasValue )
+                {
+                    await Task.Delay( this.Delays.Result.Value ).ConfigureAwait(false);
+                }
 
                 return this.NextResultImpl();
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
-                Thread.Sleep( 100 );
+                if( this.Delays.Result.HasValue )
+                {
+                    Thread.Sleep( this.Delays.Result.Value );
+                }
 
                 return this.NextResultImpl();
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
+                if( this.Delays.Result.HasValue )
+                {
+                    Thread.Sleep( this.Delays.Result.Value );
+                }
+
                 return await base.NextResultAsync();
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.RunAsync ) )
             {
+                await Task.Yield();
+
+                if( this.Delays.Result.HasValue )
+                {
+                    await Task.Delay( this.Delays.Result.Value ).ConfigureAwait(false);
+                }
+
                 return await Task.Run( () => this.NextResultImpl() );
             }
             else
@@ -389,6 +409,11 @@ namespace AsyncDataAdapter.Tests.FakeDb
         {
             if( this.AsyncMode.AllowOld() )
             {
+                if( this.Delays.Row.HasValue )
+                {
+                    Thread.Sleep( this.Delays.Row.Value );
+                }
+
                 return this.ReadImpl();
             }
             else
@@ -401,22 +426,40 @@ namespace AsyncDataAdapter.Tests.FakeDb
         {
             if( this.AsyncMode.HasFlag( AsyncMode.AwaitAsync ) )
             {
-                await Task.Delay( 1 ).ConfigureAwait(false);
+                if( this.Delays.Row.HasValue )
+                {
+                    await Task.Delay( this.Delays.Row.Value );
+                }
 
                 return this.ReadImpl();
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
-                Thread.Sleep( 1 );
+                if( this.Delays.Row.HasValue )
+                {
+                    Thread.Sleep( this.Delays.Row.Value );
+                }
 
                 return this.ReadImpl();
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
+                if( this.Delays.Row.HasValue )
+                {
+                    Thread.Sleep( this.Delays.Row.Value );
+                }
+
                 return await base.ReadAsync();
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.RunAsync ) )
             {
+                await Task.Yield();
+
+                if( this.Delays.Row.HasValue )
+                {
+                    await Task.Delay( this.Delays.Row.Value );
+                }
+
                 return await Task.Run( () => this.ReadImpl() );
             }
             else

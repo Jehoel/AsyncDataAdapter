@@ -12,13 +12,10 @@ namespace AsyncDataAdapter.Tests.FakeDb
 
     public class FakeDbConnection : DbConnection
     {
-        public FakeDbConnection( AsyncMode asyncMode, Int32 openDelayMS = 10, Int32 executeDelayMS = 10, Int32 readDelayMS = 10 )
+        public FakeDbConnection( AsyncMode asyncMode, FakeDbDelays delays = null )
         {
             this.AsyncMode    = asyncMode;
-
-            this.OpenDelay    = TimeSpan.FromMilliseconds( openDelayMS );
-            this.ExecuteDelay = TimeSpan.FromMilliseconds( executeDelayMS );
-            this.ReadDelay    = TimeSpan.FromMilliseconds( readDelayMS );
+            this.FakeDbDelays = delays ?? FakeDb.FakeDbDelays.DefaultDelaysNone;
         }
 
         protected override DbProviderFactory DbProviderFactory => FakeDbProviderFactory.Instance;
@@ -55,9 +52,7 @@ namespace AsyncDataAdapter.Tests.FakeDb
 
         public AsyncMode AsyncMode { get; set; }
 
-        public TimeSpan OpenDelay    { get; set; }
-        public TimeSpan ExecuteDelay { get; set; }
-        public TimeSpan ReadDelay    { get; set; }
+        public FakeDbDelays FakeDbDelays { get; }
 
         #endregion
 
@@ -69,7 +64,7 @@ namespace AsyncDataAdapter.Tests.FakeDb
 
         public FakeDbCommand CreateCommand( List<TestTable> testTables )
         {
-            return this.Factory.CreateCommand( this, testTables: testTables, executeDelay: this.ExecuteDelay, readDelay: this.ReadDelay );
+            return this.Factory.CreateCommand( this, testTables: testTables, delays: this.FakeDbDelays );
         }
 
         #endregion
@@ -169,9 +164,17 @@ namespace AsyncDataAdapter.Tests.FakeDb
 
         public override void Open()
         {
+            if( this.State.HasFlag( ConnectionState.Open ) )
+            {
+                return;
+            }
+
             if( this.AsyncMode.AllowOld() )
             {
-                Thread.Sleep( 100 );
+                if( this.FakeDbDelays.Connect.HasValue )
+                {
+                    Thread.Sleep( this.FakeDbDelays.Connect.Value );
+                }
 
                 this.StateValue = ConnectionState.Open; 
             }
@@ -183,24 +186,42 @@ namespace AsyncDataAdapter.Tests.FakeDb
 
         public override async Task OpenAsync(CancellationToken cancellationToken)
         {
+            if( this.State.HasFlag( ConnectionState.Open ) )
+            {
+                return;
+            }
+
             if( this.AsyncMode.HasFlag( AsyncMode.AwaitAsync ) )
             {
-                await Task.Delay( 100 ).ConfigureAwait(false);
+                if( this.FakeDbDelays.Connect.HasValue )
+                {
+                    await Task.Delay( this.FakeDbDelays.Connect.Value ).ConfigureAwait(false);
+                }
 
                 this.StateValue = ConnectionState.Open; 
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
-                Thread.Sleep( 100 );
+                if( this.FakeDbDelays.Connect.HasValue )
+                {
+                    await Task.Delay( this.FakeDbDelays.Connect.Value ).ConfigureAwait(false);
+                }
 
                 this.StateValue = ConnectionState.Open; 
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
+                if( this.FakeDbDelays.Connect.HasValue )
+                {
+                    await Task.Delay( this.FakeDbDelays.Connect.Value ).ConfigureAwait(false);
+                }
+
                 await base.OpenAsync();
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.RunAsync ) )
             {
+                await Task.Yield();
+
                 await Task.Run( () => { this.StateValue = ConnectionState.Open; } );
             }
             else
@@ -234,7 +255,10 @@ namespace AsyncDataAdapter.Tests.FakeDb
         {
             if( this.AsyncMode.AllowOld() )
             {
-                Thread.Sleep( 100 );
+                if( this.FakeDbDelays.Transact.HasValue )
+                {
+                    Thread.Sleep( this.FakeDbDelays.Transact.Value );
+                }
 
                 return this.BeginDbTransactionImpl( isolationLevel );
             }
@@ -248,22 +272,35 @@ namespace AsyncDataAdapter.Tests.FakeDb
         {
             if( this.AsyncMode.HasFlag( AsyncMode.AwaitAsync ) )
             {
-                await Task.Delay( 100 ).ConfigureAwait(false);
+                if( this.FakeDbDelays.Transact.HasValue )
+                {
+                    await Task.Delay( this.FakeDbDelays.Transact.Value ).ConfigureAwait(false);
+                }
 
                 return this.BeginDbTransactionImpl( isolationLevel );
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
-                Thread.Sleep( 100 );
+                if( this.FakeDbDelays.Transact.HasValue )
+                {
+                    await Task.Delay( this.FakeDbDelays.Transact.Value ).ConfigureAwait(false);
+                }
 
                 return this.BeginDbTransactionImpl( isolationLevel );
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
+                if( this.FakeDbDelays.Transact.HasValue )
+                {
+                    Thread.Sleep( this.FakeDbDelays.Transact.Value );
+                }
+
                 return await base.BeginDbTransactionAsync( isolationLevel, cancellationToken );
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.RunAsync ) )
             {
+                await Task.Yield();
+
                 return await Task.Run( () => this.BeginDbTransactionImpl( isolationLevel ) );
             }
             else

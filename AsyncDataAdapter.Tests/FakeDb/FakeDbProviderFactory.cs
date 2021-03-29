@@ -23,9 +23,9 @@ namespace AsyncDataAdapter.Tests.FakeDb
             return new FakeDbCommand();
         }
 
-        public FakeDbCommand CreateCommand( FakeDbConnection connection, List<TestTable> testTables, TimeSpan? executeDelay, TimeSpan? readDelay )
+        public FakeDbCommand CreateCommand( FakeDbConnection connection, List<TestTable> testTables, FakeDbDelays delays )
         {
-            return new FakeDbCommand( connection: connection, testTables: testTables, executeDelay: executeDelay, readDelay: readDelay )
+            return new FakeDbCommand( connection: connection, testTables: testTables, delays )
             {
                 AsyncMode = connection.AsyncMode
             };

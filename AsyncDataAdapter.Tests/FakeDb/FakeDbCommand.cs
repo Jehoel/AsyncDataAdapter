@@ -14,14 +14,14 @@ namespace AsyncDataAdapter.Tests.FakeDb
         public FakeDbCommand()
         {
             this.CreateReader = this.CreateFakeDbDataReader;
+            this.Delays       = FakeDb.FakeDbDelays.DefaultDelaysNone;
         }
 
-        public FakeDbCommand( FakeDbConnection connection, List<TestTable> testTables, TimeSpan? executeDelay, TimeSpan? readDelay )
+        public FakeDbCommand( FakeDbConnection connection, List<TestTable> testTables, FakeDbDelays delays )
         {
             base.Connection   = connection ?? throw new ArgumentNullException(nameof(connection));
             this.TestTables   = testTables;
-            this.ExecuteDelay = executeDelay;
-            this.ReadDelay    = readDelay;
+            this.Delays       = delays ?? throw new ArgumentNullException(nameof(delays));
 
             this.CreateReader = this.CreateFakeDbDataReader;
         }
@@ -49,8 +49,7 @@ namespace AsyncDataAdapter.Tests.FakeDb
         /// <summary>Used to prepopulate any <see cref="FakeDbDataReader"/> that's created.</summary>
         
         public List<TestTable> TestTables   { get; set; }
-        public TimeSpan?       ExecuteDelay { get; set; }
-        public TimeSpan?       ReadDelay    { get; set; }
+        public FakeDbDelays    Delays       { get; set; }
         public AsyncMode       AsyncMode    { get; set; }
 
         private FakeDbDataReader CreateFakeDbDataReader( FakeDbCommand cmd )
@@ -127,9 +126,9 @@ namespace AsyncDataAdapter.Tests.FakeDb
         {
             if( this.AsyncMode.AllowOld() )
             {
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    Thread.Sleep( this.ExecuteDelay.Value );
+                    Thread.Sleep( this.Delays.Execute.Value );
                 }
 
                 return this.CreateReader( this );
@@ -144,9 +143,9 @@ namespace AsyncDataAdapter.Tests.FakeDb
         {
             if( this.AsyncMode.AllowOld() )
             {
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    Thread.Sleep( this.ExecuteDelay.Value );
+                    Thread.Sleep( this.Delays.Execute.Value );
                 }
 
                 return this.GetNonQueryResultRowCount();
@@ -161,9 +160,9 @@ namespace AsyncDataAdapter.Tests.FakeDb
         {
             if( this.AsyncMode.AllowOld() )
             {
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    Thread.Sleep( this.ExecuteDelay.Value );
+                    Thread.Sleep( this.Delays.Execute.Value );
                 }
 
                 return this.GetScalarQueryResult();
@@ -182,27 +181,27 @@ namespace AsyncDataAdapter.Tests.FakeDb
         {
             if( this.AsyncMode.HasFlag( AsyncMode.AwaitAsync ) )
             {
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    await Task.Delay( 20 ).ConfigureAwait(false);
+                    await Task.Delay( this.Delays.Execute.Value ).ConfigureAwait(false);
                 }
 
                 return this.CreateReader( this );
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    Thread.Sleep( this.ExecuteDelay.Value );
+                    Thread.Sleep( this.Delays.Execute.Value );
                 }
 
                 return this.CreateReader( this );
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    Thread.Sleep( this.ExecuteDelay.Value );
+                    Thread.Sleep( this.Delays.Execute.Value );
                 }
 
                 return await base.ExecuteDbDataReaderAsync( behavior, cancellationToken );
@@ -211,9 +210,9 @@ namespace AsyncDataAdapter.Tests.FakeDb
             {
                 await Task.Yield();
 
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    await Task.Delay( 20 ).ConfigureAwait(false);
+                    await Task.Delay( this.Delays.Execute.Value ).ConfigureAwait(false);
                 }
 
                 return await Task.Run( () => this.CreateReader( this ) );
@@ -228,27 +227,27 @@ namespace AsyncDataAdapter.Tests.FakeDb
         {
             if( this.AsyncMode.HasFlag( AsyncMode.AwaitAsync ) )
             {
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    await Task.Delay( 20 ).ConfigureAwait(false);
+                    await Task.Delay( this.Delays.Execute.Value ).ConfigureAwait(false);
                 }
 
                 return this.GetNonQueryResultRowCount();
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    Thread.Sleep( this.ExecuteDelay.Value );
+                    Thread.Sleep( this.Delays.Execute.Value );
                 }
 
                 return this.GetNonQueryResultRowCount();
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    Thread.Sleep( this.ExecuteDelay.Value );
+                    Thread.Sleep( this.Delays.Execute.Value );
                 }
 
                 return await base.ExecuteNonQueryAsync( cancellationToken );
@@ -257,9 +256,9 @@ namespace AsyncDataAdapter.Tests.FakeDb
             {
                 await Task.Yield();
 
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    await Task.Delay( 20 ).ConfigureAwait(false);
+                    await Task.Delay( this.Delays.Execute.Value ).ConfigureAwait(false);
                 }
 
                 return await Task.Run( () => this.GetNonQueryResultRowCount() );
@@ -274,27 +273,27 @@ namespace AsyncDataAdapter.Tests.FakeDb
         {
             if( this.AsyncMode.HasFlag( AsyncMode.AwaitAsync ) )
             {
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    await Task.Delay( 20 ).ConfigureAwait(false);
+                    await Task.Delay( this.Delays.Execute.Value ).ConfigureAwait(false);
                 }
 
                 return this.GetScalarQueryResult();
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BlockAsync ) )
             {
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    Thread.Sleep( this.ExecuteDelay.Value );
+                    Thread.Sleep( this.Delays.Execute.Value );
                 }
 
                 return this.GetScalarQueryResult();
             }
             else if( this.AsyncMode.HasFlag( AsyncMode.BaseAsync ) )
             {
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    Thread.Sleep( this.ExecuteDelay.Value );
+                    Thread.Sleep( this.Delays.Execute.Value );
                 }
 
                 return await base.ExecuteScalarAsync( cancellationToken );
@@ -303,9 +302,9 @@ namespace AsyncDataAdapter.Tests.FakeDb
             {
                 await Task.Yield();
 
-                if( this.ExecuteDelay.HasValue )
+                if( this.Delays.Execute.HasValue )
                 {
-                    await Task.Delay( 20 ).ConfigureAwait(false);
+                    await Task.Delay( this.Delays.Execute.Value ).ConfigureAwait(false);
                 }
 
                 return await Task.Run( () => this.GetScalarQueryResult() );
