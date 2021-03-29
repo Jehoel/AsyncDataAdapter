@@ -118,14 +118,36 @@ namespace AsyncDataAdapter
             // user must Close/Dispose of the dataReader
             AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dataReader, useProviderSpecificDataReader: this.ReturnProviderSpecificTypes );
 
-            return this.FillFromReaderAsync( dataSet, null, srcTable, readerHandler, startRecord, maxRecords, null, null, cancellationToken );
+            return this.FillFromReaderAsync(
+                dataset            : dataSet,
+                datatable          : null,
+                srcTable           : srcTable,
+                dataReader         : readerHandler,
+                startRecord        : startRecord,
+                maxRecords         : maxRecords,
+                parentChapterColumn: null,
+                parentChapterValue : null,
+                cancellationToken  : cancellationToken
+            );
         }
 
         //
 
         internal Task<Int32> FillFromReaderAsync( DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int startRecord, int maxRecords, DataColumn parentChapterColumn, object parentChapterValue, CancellationToken cancellationToken )
         {
-	        return AsyncDataReaderMethods.FillFromReaderAsync( onFillError: null, adapter: this, dataset, datatable, srcTable, dataReader, startRecord, maxRecords: maxRecords, parentChapterColumn, parentChapterValue, cancellationToken );
+	        return AsyncDataReaderMethods.FillFromReaderAsync(
+                onFillError        : null,
+                adapter            : this,
+                dataset            : dataset,
+                datatable          : datatable,
+                srcTable           : srcTable,
+                dataReader         : dataReader,
+                startRecord        : startRecord,
+                maxRecords         : maxRecords,
+                parentChapterColumn: parentChapterColumn,
+                parentChapterValue : parentChapterValue,
+                cancellationToken  : cancellationToken
+            );
         }
 
         private AdaSchemaMapping FillMapping(DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int schemaCount, DataColumn parentChapterColumn, object parentChapterValue)
