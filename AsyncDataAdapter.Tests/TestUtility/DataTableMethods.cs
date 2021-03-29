@@ -6,6 +6,8 @@ using System.Text;
 
 using Shouldly;
 using System.Text.RegularExpressions;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 
 namespace AsyncDataAdapter.Tests
 {
@@ -47,7 +49,7 @@ namespace AsyncDataAdapter.Tests
             return counts;
         }
 
-        public static Boolean DataSetEquals( DataSet left, DataSet right )
+        public static Boolean DataSetEquals( DataSet left, DataSet right, out String differences )
         {
             _ = left .ShouldNotBeNull();
             _ = right.ShouldNotBeNull();
@@ -57,35 +59,45 @@ namespace AsyncDataAdapter.Tests
 
             left.Tables.Count.ShouldBe( right.Tables.Count );
 
-            for( Int32 t = 0; t < left.Tables.Count; t++ )
+            for( Int32 tableIdx = 0; tableIdx < left.Tables.Count; tableIdx++ )
             {
-                DataTable lt = left .Tables[t];
-                DataTable rt = right.Tables[t];
+                DataTable lt = left .Tables[tableIdx];
+                DataTable rt = right.Tables[tableIdx];
 
-                Boolean eq = DataTableEquals( lt, rt );
-                if( !eq ) return false;
+                Boolean tablesSame = DataTableEquals( lt, rt, out Int32? differentRowIndex );
+                if( !tablesSame )
+                {
+                    differences = String.Format( CultureInfo.CurrentCulture, "First difference found in table {0:D}, at row {1:D}", tableIdx, differentRowIndex );
+                    return false;
+                }
             }
 
+            differences = null;
             return true;
         }
 
-        public static Boolean DataTablesEquals( DataTable[] left, DataTable[] right )
+        public static Boolean DataTablesEquals( DataTable[] left, DataTable[] right, out String differences )
         {
             _ = left .ShouldNotBeNull();
             _ = right.ShouldNotBeNull();
 
             left.Length.ShouldBe( right.Length );
 
-            for( Int32 i = 0; i < left.Length; i++ )
+            for( Int32 tableIdx = 0; tableIdx < left.Length; tableIdx++ )
             {
-                Boolean teq = DataTableEquals( left[i], right[i] );
-                if( !teq ) return false;
+                Boolean tablesSame = DataTableEquals( left[tableIdx], right[tableIdx], out Int32? differentRowIndex );
+                if( !tablesSame )
+                {
+                    differences = String.Format( CultureInfo.CurrentCulture, "First difference found in table {0:D}, at row {1:D}", tableIdx, differentRowIndex );
+                    return false;
+                }
             }
 
+             differences = null;
             return true;
         }
 
-        public static Boolean DataTableEquals( DataTable left, DataTable right )
+        public static Boolean DataTableEquals( DataTable left, DataTable right, out Int32? differentRowIndex )
         {
             _ = left .ShouldNotBeNull();
             _ = right.ShouldNotBeNull();
@@ -110,10 +122,15 @@ namespace AsyncDataAdapter.Tests
                     Object rightValue = rightRow[x];
 
                     Boolean eq = CellsEquals( leftValue, rightValue );
-                    if( !eq ) return false;
+                    if( !eq )
+                    {
+                        differentRowIndex = y;
+                        return false;
+                    }
                 }
             }
 
+            differentRowIndex = null;
             return true;
         }
 

@@ -53,9 +53,9 @@ namespace AsyncDataAdapter.Tests.Big3
 
         protected override void AssertResult(DataTable[] dbSynchronous, DataTable[] dbProxied, DataTable[] dbProxiedAsync, DataTable[] dbBatchingProxiedAsync)
         {
-            DataTableMethods.DataTablesEquals( dbSynchronous, dbProxied ).ShouldBeTrue();
-            DataTableMethods.DataTablesEquals( dbSynchronous, dbProxiedAsync ).ShouldBeTrue();
-            DataTableMethods.DataTablesEquals( dbSynchronous, dbBatchingProxiedAsync ).ShouldBeTrue();
+            DataTableMethods.DataTablesEquals( dbSynchronous, dbProxied             , out String diffs1 ).ShouldBeTrue( customMessage: diffs1 );
+            DataTableMethods.DataTablesEquals( dbSynchronous, dbProxiedAsync        , out String diffs2 ).ShouldBeTrue( customMessage: diffs2 );
+            DataTableMethods.DataTablesEquals( dbSynchronous, dbBatchingProxiedAsync, out String diffs3 ).ShouldBeTrue( customMessage: diffs3 );
         }
     }
 }

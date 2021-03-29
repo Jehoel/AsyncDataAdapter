@@ -62,7 +62,7 @@ namespace AsyncDataAdapter.Tests
             }
 
             // Assert equality:
-            DataTableMethods.DataSetEquals( dataSetFromProxy, dataSetFromReal ).ShouldBeTrue();
+            DataTableMethods.DataSetEquals( dataSetFromProxy, dataSetFromReal, out String diffs ).ShouldBeTrue( customMessage: diffs );
         }
 
         [Test]
@@ -109,7 +109,7 @@ namespace AsyncDataAdapter.Tests
             }
 
             // Assert equality:
-            DataTableMethods.DataSetEquals( schemaFromProxy, schemaFromReal ).ShouldBeTrue();
+            DataTableMethods.DataSetEquals( schemaFromProxy, schemaFromReal, out String diffs ).ShouldBeTrue( customMessage: diffs );
         }
 
         [Test]
@@ -186,7 +186,7 @@ namespace AsyncDataAdapter.Tests
             }
 
             // Assert equality:
-            DataTableMethods.DataSetEquals( dataSetFromProxy, dataSetFromReal ).ShouldBeTrue();
+            DataTableMethods.DataSetEquals( dataSetFromProxy, dataSetFromReal, out String diffs ).ShouldBeTrue( customMessage: diffs );
         }
     }
 }
