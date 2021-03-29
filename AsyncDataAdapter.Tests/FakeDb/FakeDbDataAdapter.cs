@@ -10,7 +10,7 @@ using AsyncDataAdapter.Internal;
 namespace AsyncDataAdapter.Tests.FakeDb
 {
     /// <summary>NOTE: This <see cref="DbDataReader"/> does not implement <see cref="IBatchingAdapter"/>. For that, see <see cref="BatchingFakeDbDataAdapter"/>.</summary>
-    public class FakeDbDataAdapter : DbDataAdapter
+    public class FakeDbDataAdapter : DbDataAdapter, IFullDbDataAdapter
     {
         // TODO: Override every, single, method - and add call-counts.
 
