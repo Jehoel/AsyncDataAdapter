@@ -1,6 +1,8 @@
 using System;
-using System.Data;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Shouldly;
@@ -9,44 +11,105 @@ using AsyncDataAdapter.Tests.FakeDb;
 
 namespace AsyncDataAdapter.Tests.Big3
 {
-    using U1Pair = ValueTuple<DataSet,Int32>; // ( DataSet ds, Int32 rows )
+    using U1Pair = ValueTuple<DataSet,Dictionary<String,Int32>,Int32>;
 
     public class Update1Test : SingleMethodTest<U1Pair>
     {
         protected override U1Pair RunDbDataAdapterSynchronous(List<TestTable> randomDataSource, FakeDbDataAdapter adapter)
         {
-            DataSet dataSet = new DataSet();
+            using( FakeDbCommandBuilder cmdBuilder = adapter.CreateCommandBuilder() )
+            {
+                DataSet dataSet = new DataSet();
 
-            Int32 rows = adapter.Update1( dataSet );
+                // `.Fill` returns the number of rows in the first table, not any subsequent tables. Yes, that's silly.
+                Int32 rowsInFirstTable = adapter.Fill( dataSet );
+                rowsInFirstTable.ShouldBe( 40 );
 
-            return ( dataSet, rows );
+                //
+                Dictionary<String,Int32> rowsModified = DataTableMethods.MutateDataSet( dataSet );
+
+                //
+                adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+
+                Int32 updatedRows = adapter.Update1( dataSet ); // updatedRows... in first table only?
+//              updatedRows.ShouldBe( rowsModified );
+
+                return ( dataSet, rowsModified, updatedRows );
+            }
         }
 
         protected override U1Pair RunProxiedDbDataAdapter(List<TestTable> randomDataSource, FakeProxiedDbDataAdapter adapter)
         {
-            DataSet dataSet = new DataSet();
+            using( FakeDbCommandBuilder cmdBuilder = new FakeDbCommandBuilder( adapter ) )
+            {
+                DataSet dataSet = new DataSet();
 
-            Int32 rows = adapter.Update1( dataSet );
+                Int32 rowsInFirstTable = adapter.Fill( dataSet );
+                rowsInFirstTable.ShouldBe( 40 );
 
-            return ( dataSet, rows );
+                //
+                Dictionary<String,Int32> rowsModified = DataTableMethods.MutateDataSet( dataSet );
+
+                //
+                adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+
+                Int32 updatedRows = adapter.Update1( dataSet ); // updatedRows... in first table only?
+//              updatedRows.ShouldBe( rowsModified );
+
+                return ( dataSet, rowsModified, updatedRows );
+            }
         }
 
         protected override async Task<U1Pair> RunProxiedDbDataAdapterAsync(List<TestTable> randomDataSource, FakeProxiedDbDataAdapter adapter)
         {
-            DataSet dataSet = new DataSet();
+            using( DbCommandBuilder cmdBuilder = await adapter.CreateCommandBuilderAsync().ConfigureAwait(false) )
+            {
+                DataSet dataSet = new DataSet();
 
-            Int32 rows = await adapter.Update1Async( dataSet );
+                Int32 rowsInFirstTable = await adapter.FillAsync( dataSet );
+                rowsInFirstTable.ShouldBe( 40 );
 
-            return ( dataSet, rows );
+                //
+                Dictionary<String,Int32> rowsModified = DataTableMethods.MutateDataSet( dataSet );
+
+                //
+                adapter.UpdateCommand = (FakeDbCommand)cmdBuilder.GetUpdateCommand();
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+
+                //
+
+                Int32 updatedRows = await adapter.Update1Async( dataSet ); // updatedRows... in first table only?
+//              updatedRows.ShouldBe( rowsModified );
+
+                return ( dataSet, rowsModified, updatedRows );
+            }
         }
 
         protected override async Task<U1Pair> RunBatchingProxiedDbDataAdapterAsync(List<TestTable> randomDataSource, BatchingFakeProxiedDbDataAdapter adapter)
         {
-            DataSet dataSet = new DataSet();
+            using( DbCommandBuilder cmdBuilder = await adapter.CreateCommandBuilderAsync().ConfigureAwait(false) )
+            {
+                DataSet dataSet = new DataSet();
 
-            Int32 rows = await adapter.Update1Async( dataSet );
+                Int32 rowsInFirstTable = await adapter.FillAsync( dataSet );
+                rowsInFirstTable.ShouldBe( 40 );
 
-            return ( dataSet, rows );
+                //
+                Dictionary<String,Int32> rowsModified = DataTableMethods.MutateDataSet( dataSet );
+
+                //
+                adapter.UpdateCommand = (FakeDbCommand)cmdBuilder.GetUpdateCommand();
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( cmd, rowsModified );
+
+                //
+
+                Int32 updatedRows = await adapter.Update1Async( dataSet ); // updatedRows... in first table only?
+//              updatedRows.ShouldBe( rowsModified );
+
+                return ( dataSet, rowsModified, updatedRows );
+            }
         }
 
         protected override void AssertResult( U1Pair dbSynchronous, U1Pair dbProxied, U1Pair dbProxiedAsync, U1Pair dbBatchingProxiedAsync )

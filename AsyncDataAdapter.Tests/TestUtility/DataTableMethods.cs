@@ -22,31 +22,46 @@ namespace AsyncDataAdapter.Tests
 
             foreach( DataTable table in dataSet.Tables )
             {
-                Int32 rows = Math.Min( 30, table.Rows   .Count );
-                Int32 cols = Math.Min( 30, table.Columns.Count );
-                Int32 max  = Math.Min( rows, cols );
-
-                for( Int32 i = 1; i < max; i++ ) // Don't modify column 0, that's the PK column.
-                {
-                    DataRow row = table.Rows[i];
-
-                    Boolean rowIsModified = false;
-
-                    if( !row.IsNull( i ) )
-                    {
-                        row[ i ] = DBNull.Value;
-                        rowIsModified = true;
-                    }
-
-                    if( rowIsModified )
-                    {
-                        Int32 current = counts.TryGetValue( table.TableName, out Int32 count ) ? count : 0;
-                        counts[ table.TableName ] = current + 1;
-                    }
-                }
+                MutateDataTable( table, counts );
             }
 
             return counts;
+        }
+
+        /// <summary>Returns the number of rows that were modified in each table (keyed by <see cref="DataTable.TableName"/>).</summary>
+        public static Dictionary<String,Int32> MutateDataTable( DataTable table )
+        {
+            Dictionary<String,Int32> counts = new Dictionary<string, int>();
+
+            MutateDataTable( table, counts );
+
+            return counts;
+        }
+
+        private static void MutateDataTable( DataTable table, Dictionary<String,Int32> counts )
+        {
+            Int32 rows = Math.Min( 30, table.Rows   .Count );
+            Int32 cols = Math.Min( 30, table.Columns.Count );
+            Int32 max  = Math.Min( rows, cols );
+
+            for( Int32 i = 1; i < max; i++ ) // Don't modify column 0, that's the PK column.
+            {
+                DataRow row = table.Rows[i];
+
+                Boolean rowIsModified = false;
+
+                if( !row.IsNull( i ) )
+                {
+                    row[ i ] = DBNull.Value;
+                    rowIsModified = true;
+                }
+
+                if( rowIsModified )
+                {
+                    Int32 current = counts.TryGetValue( table.TableName, out Int32 count ) ? count : 0;
+                    counts[ table.TableName ] = current + 1;
+                }
+            }
         }
 
         public static Boolean DataSetEquals( DataSet left, DataSet right, out String differences )

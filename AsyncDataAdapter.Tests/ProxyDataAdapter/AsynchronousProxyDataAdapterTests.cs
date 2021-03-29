@@ -16,9 +16,6 @@ namespace AsyncDataAdapter.Tests
     /// <summary>These tests demonstrate that <see cref="ProxyDbDataAdapter{TDbDataAdapter, TDbConnection, TDbCommand, TDbDataReader}"/>'s async methods are truly async with no calls into synchronous code-paths.</summary>
     public class AsynchronousProxyDataAdapterTests
     {
-        #warning TODO: Test every overload of Fill, FillSchema, and Update!
-        // TODO: Test every overload of Fill, FillSchema, and Update!
-
         [Test]
         public async Task Proxy_FillAsync_should_work_identically_to_DbDataReader_Fill()
         {

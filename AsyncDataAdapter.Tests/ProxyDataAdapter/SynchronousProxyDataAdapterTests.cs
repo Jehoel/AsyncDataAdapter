@@ -18,9 +18,6 @@ namespace AsyncDataAdapter.Tests
     /// <summary>These tests demonstrate that <see cref="ProxyDbDataAdapter{TDbDataAdapter, TDbConnection, TDbCommand, TDbDataReader}"/> forwards all synchronous calls to the underlying <see cref="DbDataAdapter"/>.</summary>
     public class SynchronousProxyDataAdapterTests
     {
-        #warning TODO: Test every overload of Fill, FillSchema, and Update!
-        // TODO: Test every overload of Fill, FillSchema, and Update!
-
         [Test]
         public void Proxy_Fill_should_work_identically_to_DbDataReader_Fill()
         {
