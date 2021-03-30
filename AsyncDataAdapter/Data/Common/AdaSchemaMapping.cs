@@ -11,26 +11,34 @@ namespace AsyncDataAdapter.Internal
 {
     public sealed class AdaSchemaMapping
     {
-        /// <summary>DataColumns match in length and name order as the DataReader, no chapters</summary>
-        private const int MapExactMatch = 0;
+        enum MappingMode
+        {
+            Undefined            = -1,
 
-        /// <summary>DataColumns has different length, but correct name order as the DataReader, no chapters</summary>
-        private const int MapDifferentSize = 1;
+            /// <summary>DataColumns match in length and name order as the DataReader, no chapters</summary>
+            MapExactMatch        =  0,
 
-        /// <summary>DataColumns may have different length, but a differant name ordering as the DataReader, no chapters</summary>
-        private const int MapReorderedValues = 2;
+            /// <summary>DataColumns has different length, but correct name order as the DataReader, no chapters</summary>
+            MapDifferentSize     =  1,
 
-        /// <summary>DataColumns may have different length, but correct name order as the DataReader, with chapters</summary>
-        private const int MapChapters = 3;
+            /// <summary>DataColumns may have different length, but a differant name ordering as the DataReader, no chapters</summary>
+            MapReorderedValues   =  2,
 
-        /// <summary>DataColumns may have different length, but a differant name ordering as the DataReader, with chapters</summary>
-        private const int MapChaptersReordered = 4;
+            /// <summary>DataColumns may have different length, but correct name order as the DataReader, with chapters</summary>
+            MapChapters          =  3,
 
-        /// <summary>map xml string data to DataColumn with DataType=typeof(SqlXml)</summary>
-        private const int SqlXml = 1;
+            /// <summary>DataColumns may have different length, but a different name ordering as the DataReader, with chapters</summary>
+            MapChaptersReordered =  4
+        }
 
-        /// <summary>map xml string data to DataColumn with DataType=typeof(XmlDocument)</summary>
-        private const int XmlDocument = 2;
+        enum XmlMapMode
+        {
+            /// <summary>map xml string data to DataColumn with DataType=typeof(SqlXml)</summary>
+            SqlXml = 1,
+
+            /// <summary>map xml string data to DataColumn with DataType=typeof(XmlDocument)</summary>
+            XmlDocument = 2
+        }
 
         /// <summary>the current dataset, may be null if we are only filling a DataTable</summary>
         private readonly DataSet   dataSet;
@@ -56,10 +64,10 @@ namespace AsyncDataAdapter.Internal
         private bool[] chapterMap;
 
         /// <summary>map which value in <see cref="readerDataValues"/> to convert to a Xml datatype, (SqlXml/XmlDocument)</summary>
-        private int[] xmlMap;
+        private XmlMapMode[] xmlMap;
 
-        private int mappedMode; // modes as described as above
-        private int mappedLength;
+        private MappingMode mappedMode; // modes as described as above
+        private int         mappedLength;
 
         private readonly LoadOption loadOption;
 
@@ -389,7 +397,7 @@ namespace AsyncDataAdapter.Internal
                             {
                                 switch (this.xmlMap[i])
                                 {
-                                    case SqlXml:
+                                    case XmlMapMode.SqlXml:
                                         // map strongly typed SqlString.Null to SqlXml.Null
                                         this.readerDataValues[i] = System.Data.SqlTypes.SqlXml.Null;
                                         break;
@@ -403,13 +411,13 @@ namespace AsyncDataAdapter.Internal
                         {
                             switch (this.xmlMap[i])
                             {
-                                case SqlXml: // turn string into a SqlXml value for DataColumn
+                                case XmlMapMode.SqlXml: // turn string into a SqlXml value for DataColumn
                                     System.Xml.XmlReaderSettings settings = new System.Xml.XmlReaderSettings();
                                     settings.ConformanceLevel = System.Xml.ConformanceLevel.Fragment;
                                     System.Xml.XmlReader reader = System.Xml.XmlReader.Create(new System.IO.StringReader(xml), settings, (string)null);
                                     this.readerDataValues[i] = new System.Data.SqlTypes.SqlXml(reader);
                                     break;
-                                case XmlDocument: // turn string into XmlDocument value for DataColumn
+                                case XmlMapMode.XmlDocument: // turn string into XmlDocument value for DataColumn
                                     System.Xml.XmlDocument document = new System.Xml.XmlDocument();
                                     document.LoadXml(xml);
                                     this.readerDataValues[i] = document;
@@ -424,23 +432,23 @@ namespace AsyncDataAdapter.Internal
             switch (this.mappedMode)
             {
                 default:
-                case MapExactMatch:
+                case MappingMode.MapExactMatch:
                     Debug.Assert(0 == this.mappedMode, "incorrect mappedMode");
                     Debug.Assert((null == this.chapterMap) && (null == this.indexMap) && (null == this.mappedDataValues), "incorrect MappedValues");
                     return this.readerDataValues;  // from reader to dataset
-                case MapDifferentSize:
+                case MappingMode.MapDifferentSize:
                     Debug.Assert((null == this.chapterMap) && (null == this.indexMap) && (null != this.mappedDataValues), "incorrect MappedValues");
                     this.MappedValues();
                     break;
-                case MapReorderedValues:
+                case MappingMode.MapReorderedValues:
                     Debug.Assert((null == this.chapterMap) && (null != this.indexMap) && (null != this.mappedDataValues), "incorrect MappedValues");
                     this.MappedIndex();
                     break;
-                case MapChapters:
+                case MappingMode.MapChapters:
                     Debug.Assert((null != this.chapterMap) && (null == this.indexMap) && (null != this.mappedDataValues), "incorrect MappedValues");
                     this.MappedChapter();
                     break;
-                case MapChaptersReordered:
+                case MappingMode.MapChaptersReordered:
                     Debug.Assert((null != this.chapterMap) && (null != this.indexMap) && (null != this.mappedDataValues), "incorrect MappedValues");
                     this.MappedChapterIndex();
                     break;
@@ -692,18 +700,18 @@ namespace AsyncDataAdapter.Internal
                     {
                         if (null == this.xmlMap)
                         { // map to DataColumn with DataType=typeof(SqlXml)
-                            this.xmlMap = new int[count];
+                            this.xmlMap = new XmlMapMode[count];
                         }
-                        this.xmlMap[i] = SqlXml; // track its xml data
+                        this.xmlMap[i] = XmlMapMode.SqlXml; // track its xml data
                     }
                     else if (typeof(System.Xml.XmlReader).IsAssignableFrom(fieldType))
                     {
                         fieldType = typeof(String); // map to DataColumn with DataType=typeof(string)
                         if (null == this.xmlMap)
                         {
-                            this.xmlMap = new int[count];
+                            this.xmlMap = new XmlMapMode[count];
                         }
-                        this.xmlMap[i] = XmlDocument; // track its xml data
+                        this.xmlMap[i] = XmlMapMode.XmlDocument; // track its xml data
                     }
 
                     DataColumn dataColumn;
@@ -729,23 +737,20 @@ namespace AsyncDataAdapter.Internal
                     {
                         if (typeof(System.Data.SqlTypes.SqlXml) == dataColumn.DataType)
                         {
-                            this.xmlMap[i] = SqlXml;
+                            this.xmlMap[i] = XmlMapMode.SqlXml;
                         }
                         else if (typeof(System.Xml.XmlDocument) == dataColumn.DataType)
                         {
-                            this.xmlMap[i] = XmlDocument;
+                            this.xmlMap[i] = XmlMapMode.XmlDocument;
                         }
                         else
                         {
                             this.xmlMap[i] = 0; // datacolumn is not a specific Xml dataType, i.e. string
 
-                            int total = 0;
-                            for (int x = 0; x < this.xmlMap.Length; ++x)
+                            int xmlMapAny = Array.FindIndex( this.xmlMap, x => x != 0 );
+                            if( xmlMapAny == -1 )
                             {
-                                total += this.xmlMap[x];
-                            }
-                            if (0 == total)
-                            { // not mapping to a specific Xml datatype, get rid of the map
+                                // not mapping to a specific Xml datatype, get rid of the map
                                 this.xmlMap = null;
                             }
                         }
@@ -822,7 +827,7 @@ namespace AsyncDataAdapter.Internal
                     else
                     {
                         // debug only, but for retail debug ability
-                        this.mappedMode = -1;
+                        this.mappedMode = MappingMode.Undefined;
                     }
                 }
                 else
@@ -928,18 +933,18 @@ namespace AsyncDataAdapter.Internal
                     {
                         if (null == this.xmlMap)
                         {
-                            this.xmlMap = new int[schemaRows.Length];
+                            this.xmlMap = new XmlMapMode[schemaRows.Length];
                         }
-                        this.xmlMap[sortedIndex] = SqlXml;
+                        this.xmlMap[sortedIndex] = XmlMapMode.SqlXml;
                     }
                     else if (typeof(System.Xml.XmlReader).IsAssignableFrom(fieldType))
                     {
                         fieldType = typeof(String);
                         if (null == this.xmlMap)
                         {
-                            this.xmlMap = new int[schemaRows.Length];
+                            this.xmlMap = new XmlMapMode[schemaRows.Length];
                         }
-                        this.xmlMap[sortedIndex] = XmlDocument;
+                        this.xmlMap[sortedIndex] = XmlMapMode.XmlDocument;
                     }
 
                     DataColumn dataColumn = null;
@@ -980,23 +985,20 @@ namespace AsyncDataAdapter.Internal
                     {
                         if (typeof(System.Data.SqlTypes.SqlXml) == dataColumn.DataType)
                         {
-                            this.xmlMap[sortedIndex] = SqlXml;
+                            this.xmlMap[sortedIndex] = XmlMapMode.SqlXml;
                         }
                         else if (typeof(System.Xml.XmlDocument) == dataColumn.DataType)
                         {
-                            this.xmlMap[sortedIndex] = XmlDocument;
+                            this.xmlMap[sortedIndex] = XmlMapMode.XmlDocument;
                         }
                         else
                         {
                             this.xmlMap[sortedIndex] = 0; // datacolumn is not a specific Xml dataType, i.e. string
 
-                            int total = 0;
-                            for (int x = 0; x < this.xmlMap.Length; ++x)
+                            int xmlMapAny = Array.FindIndex( this.xmlMap, x => x != 0 );
+                            if( xmlMapAny == -1 )
                             {
-                                total += this.xmlMap[x];
-                            }
-                            if (0 == total)
-                            { // not mapping to a specific Xml datatype, get rid of the map
+                                // not mapping to a specific Xml datatype, get rid of the map
                                 this.xmlMap = null;
                             }
                         }
@@ -1251,7 +1253,7 @@ namespace AsyncDataAdapter.Internal
                     else
                     {
                         // debug only, but for retail debug ability
-                        this.mappedMode = -1;
+                        this.mappedMode = MappingMode.Undefined;
                     }
                 }
                 else
@@ -1371,26 +1373,27 @@ namespace AsyncDataAdapter.Internal
                     if (hasChapters)
                     {
 
-                        this.mappedMode = MapChapters;
+                        this.mappedMode = MappingMode.MapChapters;
                         this.mappedLength = count;
                     }
                     else
                     {
-                        this.mappedMode = MapDifferentSize;
+                        this.mappedMode = MappingMode.MapDifferentSize;
                         this.mappedLength = Math.Min(count, mappingCount);
                     }
                 }
                 else
                 {
-                    this.mappedMode = MapExactMatch; /* _mappedLength doesn't matter */
+                    this.mappedMode = MappingMode.MapExactMatch; /* _mappedLength doesn't matter */
                 }
             }
             else
             {
                 this.mappedDataValues = new object[columnCollection.Count];
-                this.mappedMode = ((null == this.chapterMap) ? MapReorderedValues : MapChaptersReordered);
+                this.mappedMode = ((null == this.chapterMap) ? MappingMode.MapReorderedValues : MappingMode.MapChaptersReordered);
                 this.mappedLength = count;
             }
+
             if (null != chapterColumn)
             { // value from parent tracked into child table
                 this.mappedDataValues[chapterColumn.Ordinal] = chapterValue;

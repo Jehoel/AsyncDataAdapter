@@ -32,6 +32,7 @@ namespace AsyncDataAdapter.Internal
                     enforceContraints = commonDataSet.EnforceConstraints;
                     commonDataSet.EnforceConstraints = false;
                 }
+
                 for (int i = 0; i < dataTables.Length; ++i)
                 {
                     Debug.Assert(null != dataTables[i], "null DataTable Fill");
@@ -107,18 +108,9 @@ namespace AsyncDataAdapter.Internal
                 AdaSchemaMapping mapping = FillMapping( onFillError, adapter, dataset, datatable, srcTable, dataReader, schemaCount, parentChapterColumn, parentChapterValue );
                 schemaCount++; // don't increment if no SchemaTable ( a non-row returning result )
 
-                if (null == mapping)
-                {
-                    continue; // loop to next result
-                }
-                if (null == mapping.DataValues)
-                {
-                    continue; // loop to next result
-                }
-                if (null == mapping.DataTable)
-                {
-                    continue; // loop to next result
-                }
+                if (null == mapping) continue; // loop to next result
+                if (null == mapping.DataValues) continue; // loop to next result
+                if (null == mapping.DataTable) continue; // loop to next result
 
                 mapping.DataTable.BeginLoadData();
 
@@ -145,6 +137,7 @@ namespace AsyncDataAdapter.Internal
                 {
                     mapping.DataTable.EndLoadData();
                 }
+
                 if (null != datatable)
                 {
                     break; // do not read remaining results in single DataTable case
