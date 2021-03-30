@@ -19,7 +19,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Jehoel/AsyncDataAdapter/</PackageProjectUrl>
     <Copyright>Microsoft Corporation, Vladimir Kloz &lt;vladimir.kloz@gmail.com&gt;; Jeremy Kruer; Dai Rees;</Copyright>
-    <Version>4.0.0</Version>
+    <Version>5.0.0</Version>
     <Authors>Vladimir Kloz; Jeremy Kruer; Dai Rees;</Authors>
     <Company />
     <Description>Jehoel.AsyncDataAdapter builds on Vladimir Kloz' original AsyncDataAdapter package, with support for .NET Standard 2.0, and numerous other improvements. The original implementation is based on Microsoft's MIT-licensed implementation of DataReader, DbDataReader, and SqlDataReader.</Description>
@@ -30,7 +30,8 @@
 3.0 -https://github.com/Jehoel/AsyncDataAdapter/
 
 3.0 - Completed async support: uses `ConfigureAwait(false)` internally, ensuring no synchronous operations are invoked. Code clean-up. Renaming types with an `Ada` prefix to avoid conflicts with original System.Data types. Project and output NuGet package now targets .NET Standard 2.0 and Microsoft.Data.SqlClient instead of .NET Framework.
-4.0.0 - Major reworking: the main async DbDataAdapter (ProxyDbDataAdapter) now derives from DbDataAdapter and fully support both synchronous and asynchronous Fill, FillAsync, FillSchema, FillSchemaAsync, Update, and UpdateSync with overloads for all async equivalents - and implements support for different ADO.NET providers in their own projects. Phew!</PackageReleaseNotes>
+4.0.0 - Major reworking: the main async DbDataAdapter (ProxyDbDataAdapter) now derives from DbDataAdapter and fully support both synchronous and asynchronous Fill, FillAsync, FillSchema, FillSchemaAsync, Update, and UpdateSync with overloads for all async equivalents - and implements support for different ADO.NET providers in their own projects. Phew!
+5.0.0 - Removing root package dependency on Microsoft.Data.SqlCLient which was meant to have been removed in 4.0.0.</PackageReleaseNotes>
     <!-- END NuGet -->
     
   </PropertyGroup>
@@ -50,10 +51,6 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>ReflectedMethods.tt</DependentUpon>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="2.1.2" />
   </ItemGroup>
 
   <ItemGroup>
