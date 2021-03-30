@@ -7,7 +7,7 @@ using AsyncDataAdapter.Internal;
 namespace AsyncDataAdapter
 {
     /// <summary>The purpose of this type is just to add strongly-typed GetCommand wrapper methods.</summary>
-    public abstract class DbCommandBuilder<TDbCommand> : DbCommandBuilder
+    public abstract class DbCommandBuilder<TDbCommand> : DbCommandBuilder, IDbCommandBuilder
         where TDbCommand : DbCommand
     {
         protected DbCommandBuilder()
@@ -24,7 +24,7 @@ namespace AsyncDataAdapter
     }
 
     /// <summary>Extends <see cref="DbCommandBuilder"/> with support for asynchronous operations by pre-emptively asynchronously loading data to avoid unexpected synchronous database IO calls</summary>
-    public sealed class ProxyDbCommandBuilder</*TDbCommandBuilder,*/TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> : DbCommandBuilder<TDbCommand>
+    public sealed class ProxyDbCommandBuilder</*TDbCommandBuilder,*/TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> : DbCommandBuilder<TDbCommand>, IAsyncDbCommandBuilder
 //      where TDbCommandBuilder: DbCommandBuilder
         where TDbDataAdapter   : DbDataAdapter
 //      where TDbDataAdapter   : ProxyDbDataAdapter<>
@@ -54,6 +54,8 @@ namespace AsyncDataAdapter
         public DbCommandBuilder Subject { get; }
 
         public new ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> DataAdapter { get; }
+
+        IAsyncDbDataAdapter IAsyncDbCommandBuilder.DataAdapter => this.DataAdapter;
 
         /// <summary>This method is called by <see cref="DbCommandBuilder"/>'s non-virtual <c>BuildCache</c> method. This overrided implementation returns a known DataTable loaded beforehand to avoid non-async IO.</summary>
         protected override DataTable GetSchemaTable(DbCommand sourceCommand)

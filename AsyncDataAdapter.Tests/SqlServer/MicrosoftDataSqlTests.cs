@@ -8,7 +8,7 @@ using Microsoft.Data.SqlClient;
 
 namespace AsyncDataAdapter.Tests.SqlServer
 {
-    public class MicrosoftDataSqlTests : BaseSqlDataAdapterTest<SqlConnection,SqlCommand,SqlDataAdapter,MSqlAsyncDbDataAdapter>
+    public class MicrosoftDataSqlTests : BaseSqlDataAdapterTest<SqlConnection,SqlCommand,SqlDataAdapter,MSSqlAsyncDbDataAdapter>
     {
         protected override SqlConnection CreateConnection( String connectionString )
         {
@@ -25,9 +25,9 @@ namespace AsyncDataAdapter.Tests.SqlServer
             return new SqlDataAdapter( cmd );
         }
 
-        protected override MSqlAsyncDbDataAdapter CreateAsyncDbAdapter( SqlCommand cmd )
+        protected override MSSqlAsyncDbDataAdapter CreateAsyncDbAdapter( SqlCommand cmd )
         {
-            return new MSqlAsyncDbDataAdapter( cmd );
+            return new MSSqlAsyncDbDataAdapter( cmd );
         }
     }
 }

@@ -54,4 +54,18 @@ namespace AsyncDataAdapter
             return new SqlCommandBuilder( this.Subject );
         }
     }
+
+    public static class SqlClientExtensions
+    {
+        /// <summary>Creates a new <see cref="SqlAsyncDbDataAdapter"/> using <paramref name="selectCommand"/> (the <c><see langword="this"/></c> extension method subject) as the <see cref="DbDataAdapter.SelectCommand"/>. Note that the <paramref name="selectCommand"/>'s <see cref="SqlCommand.Connection"/> property MUST be non-null. The connection does not need to be in an Open state yet, however.</summary>
+        /// <param name="selectCommand">Required. Cannot be null. Must have a valid non-null <see cref="SqlCommand.Connection"/> set.</param>
+        public static SqlAsyncDbDataAdapter CreateAsyncAdapter( this SqlCommand selectCommand )
+        {
+            if (selectCommand is null) throw new ArgumentNullException(nameof(selectCommand));
+            
+            if( selectCommand.Connection is null ) throw new ArgumentException( message: "The Connection property must be set.", paramName: nameof(selectCommand) );
+
+            return new SqlAsyncDbDataAdapter( selectCommand );
+        }
+    }
 }
