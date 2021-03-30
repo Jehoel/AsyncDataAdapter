@@ -63,11 +63,6 @@ namespace AsyncDataAdapter.Tests.FakeDb
             return reader;
         }
 
-        private FakeDbDataReader CreateFakeDbDataReader()
-        {
-            return this.CreateFakeDbDataReader( cmd: this );
-        }
-
         public Func<FakeDbCommand,DbDataReader> CreateReader { get; set; }
 
         #endregion

@@ -23,8 +23,8 @@ namespace AsyncDataAdapter.Internal
             }
         }
 
-        protected readonly DbDataReader _dataReader;
-        protected int _fieldCount;
+        protected readonly DbDataReader dataReader;
+        protected int fieldCount;
 
         protected AdaDataReaderContainer(DbDataReader dataReader)
         {
@@ -42,9 +42,9 @@ namespace AsyncDataAdapter.Internal
 
         internal string GetName(int ordinal)
         {
-            string fieldName = _dataReader.GetName(ordinal);
+            string fieldName = this.dataReader.GetName(ordinal);
             Debug.Assert(null != fieldName, "null GetName");
-            return ((null != fieldName) ? fieldName : "");
+            return fieldName ?? "";
         }
         internal DataTable GetSchemaTable()
         {

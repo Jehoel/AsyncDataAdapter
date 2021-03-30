@@ -32,19 +32,19 @@ namespace AsyncDataAdapter
         where TDbCommand       : DbCommand
         where TDbDataReader    : DbDataReader
     {
-        private readonly ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> adaper;
+//      private readonly ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> adaper;
         private readonly DataTable selectCommandResultsSchema;
 
         public ProxyDbCommandBuilder(
 //          TDbCommandBuilder subject,
             DbCommandBuilder subject,
-            ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> proxyDataAdapter,
+//          ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> proxyDataAdapter,
             DataTable selectCommandResultsSchema
         )
             : base()
         {
             this.Subject                    = subject                    ?? throw new ArgumentNullException(nameof(subject));
-            this.adaper                     = proxyDataAdapter           ?? throw new ArgumentNullException(nameof(proxyDataAdapter));
+//          this.adaper                     = proxyDataAdapter           ?? throw new ArgumentNullException(nameof(proxyDataAdapter));
             this.selectCommandResultsSchema = selectCommandResultsSchema ?? throw new ArgumentNullException(nameof(selectCommandResultsSchema));
 
             base.DataAdapter = this.Subject.DataAdapter;

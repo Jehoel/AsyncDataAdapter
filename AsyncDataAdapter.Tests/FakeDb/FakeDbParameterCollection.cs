@@ -28,7 +28,7 @@ namespace AsyncDataAdapter.Tests.FakeDb
         {
             foreach( Object obj in values )
             {
-                this.Add( obj );
+                _ = this.Add( obj );
             }
         }
 

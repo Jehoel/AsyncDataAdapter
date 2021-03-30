@@ -336,7 +336,7 @@ namespace AsyncDataAdapter.Internal
                         }
                         for (int i = 0; i < batchCommands.Length; ++i)
                         {
-                            batchCommands[i] = default(BatchCommandInfo);
+                            batchCommands[i] = default;
                         }
                         commandCount = 0;
                     } // foreach DataRow

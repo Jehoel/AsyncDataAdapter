@@ -9,10 +9,10 @@ namespace AsyncDataAdapter.Internal
     public sealed class AdaDbSchemaRow
     {
         internal const string SchemaMappingUnsortedIndex = "SchemaMapping Unsorted Index";
-        AdaDbSchemaTable schemaTable;
-        DataRow dataRow;
+        private readonly AdaDbSchemaTable schemaTable;
+        private readonly DataRow dataRow;
 
-        static internal AdaDbSchemaRow[] GetSortedSchemaRows(DataTable dataTable, bool returnProviderSpecificTypes)
+        internal static AdaDbSchemaRow[] GetSortedSchemaRows(DataTable dataTable, bool returnProviderSpecificTypes)
         { // MDAC 60609
             DataColumn sortindex = dataTable.Columns[SchemaMappingUnsortedIndex];
             if (null == sortindex)

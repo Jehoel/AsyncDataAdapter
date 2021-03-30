@@ -63,13 +63,13 @@ namespace AsyncDataAdapter
             return (DataTable)table;
         }
 
-        /// <summary>Returns either <see cref="DataTable"/> (when <paramref name="datatable"/> is set) or <see cref="DataTable[]"/> (when <paramref name="dataset"/> is set).</summary>
+        /// <summary>Returns either <see cref="DataTable"/> (when <paramref name="datatable"/> is set) or <see cref="DataTable"/>[] (when <paramref name="dataset"/> is set).</summary>
         private async Task<Object> FillSchemaInternalAsync( DataSet dataset, DataTable datatable, SchemaType schemaType, TDbCommand command, string srcTable, CommandBehavior behavior, CancellationToken cancellationToken )
         {
             TDbConnection   connection    = GetConnection( command );
 		    ConnectionState originalState = ConnectionState.Open;
 
-            behavior = CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo;
+            behavior = behavior | CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo;
 
             try
             {
