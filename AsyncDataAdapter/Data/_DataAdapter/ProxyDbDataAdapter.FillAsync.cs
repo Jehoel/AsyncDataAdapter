@@ -32,7 +32,7 @@ namespace AsyncDataAdapter
 
         #endregion
 
-        protected virtual Task<Int32> FillAsync(DataSet dataSet, int startRecord, int maxRecords, string srcTable, TDbCommand command, CommandBehavior behavior, CancellationToken cancellationToken )
+        protected override Task<Int32> FillAsync(DataSet dataSet, int startRecord, int maxRecords, string srcTable, TDbCommand command, CommandBehavior behavior, CancellationToken cancellationToken )
         {
 		    if (dataSet == null) throw ADP.FillRequires("dataSet");
 		    if (startRecord < 0) throw ADP.InvalidStartRecord("startRecord", startRecord);
@@ -43,7 +43,7 @@ namespace AsyncDataAdapter
 		    return this.FillInternalAsync( dataSet, datatables: null, startRecord: startRecord, maxRecords: maxRecords, srcTable, command, behavior, cancellationToken );
         }
 
-        protected virtual Task<Int32> FillAsync( DataTable[] dataTables, int startRecord, int maxRecords, TDbCommand command, CommandBehavior behavior, CancellationToken cancellationToken )
+        protected override Task<Int32> FillAsync( DataTable[] dataTables, int startRecord, int maxRecords, TDbCommand command, CommandBehavior behavior, CancellationToken cancellationToken )
         {
             if (dataTables == null || dataTables.Length == 0 || dataTables[0] == null) throw ADP.FillRequires("dataTable");
 		    if (startRecord < 0) throw ADP.InvalidStartRecord("startRecord", startRecord);
@@ -156,31 +156,5 @@ namespace AsyncDataAdapter
 
             return AsyncDataReaderMethods.FillMapping( onFillError, this, dataset, datatable, srcTable, dataReader, schemaCount, parentChapterColumn, parentChapterValue );
         }
-
-        #region Non-virtual entrypoints
-
-        public Task<int> FillAsync(DataSet dataSet, string srcTable, CancellationToken cancellationToken = default)
-        {
-            return this.FillAsync( dataSet: dataSet, startRecord: 0, maxRecords: 0, srcTable: srcTable, command: this.SelectCommand, behavior: this.FillCommandBehavior, cancellationToken: cancellationToken );
-        }
-
-        public Task<int> FillAsync(DataSet dataSet, int startRecord, int maxRecords, string srcTable, CancellationToken cancellationToken = default)
-        {
-            return this.FillAsync( dataSet: dataSet, startRecord: startRecord, maxRecords: maxRecords, srcTable: srcTable, command: this.SelectCommand, behavior: this.FillCommandBehavior, cancellationToken: cancellationToken );
-        }
-
-        public Task<int> FillAsync(DataTable dataTable, CancellationToken cancellationToken = default)
-        {
-            DataTable[] dataTables = new DataTable[1] { dataTable };
-
-            return this.FillAsync( dataTables, startRecord: 0, maxRecords: 0, command: this.SelectCommand, behavior: this.FillCommandBehavior, cancellationToken: cancellationToken );
-        }
-
-        public Task<int> FillAsync(int startRecord, int maxRecords, DataTable[] dataTables, CancellationToken cancellationToken = default)
-        {
-            return this.FillAsync( dataTables, startRecord: startRecord, maxRecords: maxRecords, command: this.SelectCommand, behavior: this.FillCommandBehavior, cancellationToken: cancellationToken );
-        }
-
-        #endregion
     }
 }

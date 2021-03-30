@@ -8,7 +8,10 @@ using System.Threading.Tasks;
 
 namespace AsyncDataAdapter
 {
-    public abstract partial class ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> : /*ProxyDataAdapter*/ DbDataAdapter /*, IDbDataAdapter*/
+    public abstract partial class ProxyDbDataAdapter<TDbDataAdapter,TDbConnection,TDbCommand,TDbDataReader> :
+        AsyncDbDataAdapter<TDbCommand>,
+        IAsyncDbDataAdapter
+
         where TDbDataAdapter : DbDataAdapter
         where TDbConnection  : DbConnection
         where TDbCommand     : DbCommand
@@ -28,15 +31,10 @@ namespace AsyncDataAdapter
             this.Subject         = subject;
             this.BatchingAdapter = batchingAdapter;
 
-            base.SelectCommand   = subject.SelectCommand;
-            base.InsertCommand   = subject.InsertCommand;
-            base.DeleteCommand   = subject.DeleteCommand;
-            base.UpdateCommand   = subject.UpdateCommand;
-
-//          if( this.selectCommandSetByCtor != null ) this.SelectCommand = this.selectCommandSetByCtor;
-//          if( this.insertCommandSetByCtor != null ) this.InsertCommand = this.insertCommandSetByCtor;
-//          if( this.deleteCommandSetByCtor != null ) this.DeleteCommand = this.deleteCommandSetByCtor;
-//          if( this.updateCommandSetByCtor != null ) this.UpdateCommand = this.updateCommandSetByCtor;
+            this.SetDbDataAdapter_SelectCommand( subject.SelectCommand );
+            this.SetDbDataAdapter_InsertCommand( subject.InsertCommand );
+            this.SetDbDataAdapter_UpdateCommand( subject.UpdateCommand );
+            this.SetDbDataAdapter_DeleteCommand( subject.DeleteCommand );
 
             this.Subject.FillError += this.OnSubjectFillError;
         }
@@ -63,7 +61,41 @@ namespace AsyncDataAdapter
             // https://stackoverflow.com/questions/15337469/debugging-unit-tests-that-fail-due-to-a-stackoverflow-exception
         }
 
-        public new TDbCommand SelectCommand
+        #region IDbDataAdapter shenanigans
+
+        // `DbDataAdapter.set_SelectCommand` calls into its vtable for `IDbDataAdapter.set_SelectCommand` which it also implements and stores in its own field.
+
+        protected void SetDbDataAdapter_SelectCommand( DbCommand cmd )
+        {
+            DbDataAdapter baseSelf = this;
+            IDbDataAdapter baseSelfAsInterface = baseSelf;
+            baseSelfAsInterface.SelectCommand = cmd;
+        }
+
+        protected void SetDbDataAdapter_InsertCommand( DbCommand cmd )
+        {
+            DbDataAdapter baseSelf = this;
+            IDbDataAdapter baseSelfAsInterface = baseSelf;
+            baseSelfAsInterface.InsertCommand = cmd;
+        }
+
+        protected void SetDbDataAdapter_UpdateCommand( DbCommand cmd )
+        {
+            DbDataAdapter baseSelf = this;
+            IDbDataAdapter baseSelfAsInterface = baseSelf;
+            baseSelfAsInterface.UpdateCommand = cmd;
+        }
+
+        protected void SetDbDataAdapter_DeleteCommand( DbCommand cmd )
+        {
+            DbDataAdapter baseSelf = this;
+            IDbDataAdapter baseSelfAsInterface = baseSelf;
+            baseSelfAsInterface.DeleteCommand = cmd;
+        }
+
+        #endregion
+
+        public override TDbCommand SelectCommand
         {
             get
             {
@@ -84,7 +116,7 @@ namespace AsyncDataAdapter
                 else
                 {
                     this.Subject.SelectCommand = value;
-                    base.SelectCommand = value; // `DbDataAdapter.set_SelectCommand` calls into its vtable for `IDbDataAdapter.set_SelectCommand` which it also implements and stores in its own field.
+                    this.SetDbDataAdapter_SelectCommand( value );
                 }
             }
         }
@@ -110,7 +142,7 @@ namespace AsyncDataAdapter
                 else
                 {
                     this.Subject.InsertCommand = value;
-                    base.InsertCommand = value;
+                    this.SetDbDataAdapter_InsertCommand( value );
                 }
             }
         }
@@ -136,7 +168,7 @@ namespace AsyncDataAdapter
                 else
                 {
                     this.Subject.DeleteCommand = value;
-                    base.DeleteCommand = value;
+                    this.SetDbDataAdapter_DeleteCommand( value );
                 }
             }
         }
@@ -162,7 +194,7 @@ namespace AsyncDataAdapter
                 else
                 {
                     this.Subject.UpdateCommand = value;
-                    base.UpdateCommand = value;
+                    this.SetDbDataAdapter_UpdateCommand( value );
                 }
             }
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,11 +9,28 @@ using Microsoft.Data.SqlClient;
 
 using NUnit.Framework;
 
-namespace AsyncDataAdapter.Tests
+namespace AsyncDataAdapter.Tests.SqlServer
 {
+    public static class Extensions
+    {
+        public static void AddParameter( this DbCommand cmd, String name, DbType dbType, Object value )
+        {
+            DbParameter p = cmd.CreateParameter();
+
+            p.ParameterName = name;
+            p.DbType        = dbType;
+            p.Value         = value;
+
+            _ = cmd.Parameters.Add( p );
+        }
+    }
+
     /// <remarks>Each individual test should take 9-15s to run.</summary>
-    [TestFixture]
-    public class SqlDataAdapterTest
+    public abstract class BaseSqlDataAdapterTest<TDbConnection,TDbCommand,TDbDataAdapter,TAsyncDbAdapter>
+        where TDbConnection   : DbConnection
+        where TDbCommand      : DbCommand
+        where TDbDataAdapter  : DbDataAdapter
+        where TAsyncDbAdapter : AsyncDbDataAdapter<TDbCommand>, IAsyncDbDataAdapter, IDisposable
     {
         private const Int32 COMMAND_TIMEOUT = 30; // `SqlCommand.CommandTimeou` is valued in seconds, not milliseconds!
 
@@ -20,11 +38,21 @@ namespace AsyncDataAdapter.Tests
         private static readonly Boolean _Enabled          = TestConfiguration.Instance.DatabaseTestsEnabled;
 
         #region Utility
-        private static async Task<SqlConnection> CreateOpenConnectionAsync( CancellationToken cancellationToken = default )
+        protected abstract TDbConnection CreateConnection( String connectionString );
+
+        protected abstract TDbCommand CreateCommand( TDbConnection connection );
+
+        protected abstract TDbDataAdapter CreateDbAdapter( TDbCommand cmd );
+
+        protected abstract TAsyncDbAdapter CreateAsyncDbAdapter( TDbCommand cmd );
+
+        //
+
+        private async Task<TDbConnection> CreateOpenConnectionAsync( CancellationToken cancellationToken = default )
         {
             if( !_Enabled ) Assert.Inconclusive( message: "Database tests are disabled." );
 
-            SqlConnection conn = new SqlConnection(_ConnectionString);
+            TDbConnection conn = this.CreateConnection( _ConnectionString );
             try
             {
                 await conn.OpenAsync(cancellationToken);
@@ -37,11 +65,11 @@ namespace AsyncDataAdapter.Tests
             }
         }
 
-        private static SqlConnection CreateOpenConnection()
+        private TDbConnection CreateOpenConnection()
         {
             if( !_Enabled ) Assert.Inconclusive( message: "Database tests are disabled." );
 
-            SqlConnection conn = new SqlConnection(_ConnectionString);
+            TDbConnection conn = this.CreateConnection( _ConnectionString );
             try
             {
                 conn.Open();
@@ -57,8 +85,8 @@ namespace AsyncDataAdapter.Tests
         [OneTimeSetUp]
         public async Task Setup()
         {
-            using (SqlConnection conn = await CreateOpenConnectionAsync())
-            using (SqlCommand cmd = conn.CreateCommand())
+            using (TDbConnection conn = await this.CreateOpenConnectionAsync())
+            using (TDbCommand cmd = this.CreateCommand(conn))
             {
                 cmd.CommandText = "dbo.ResetTab1";
                 cmd.CommandType = CommandType.StoredProcedure;
@@ -74,16 +102,16 @@ namespace AsyncDataAdapter.Tests
         [Test]
         public async Task FillAsyncDataTable()
         {
-            using (SqlConnection conn = await CreateOpenConnectionAsync())
-            using (var cmd = conn.CreateCommand())
+            using (TDbConnection conn = await this.CreateOpenConnectionAsync())
+            using (TDbCommand cmd = this.CreateCommand(conn))
             {
                 cmd.CommandText = "GetFast";
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+                cmd.AddParameter( "@Number", DbType.Int32, value: 100000 );
 
-                using (MSqlAsyncDbDataAdapter a = new MSqlAsyncDbDataAdapter( cmd ))
+                using (TAsyncDbAdapter a = this.CreateAsyncDbAdapter( cmd ))
                 {
-                    var dt = new DataTable();
+                    DataTable dt = new DataTable();
                     var r = await a.FillAsync(dt);
 
                     Assert.AreEqual(900000, r);
@@ -97,14 +125,14 @@ namespace AsyncDataAdapter.Tests
         [Test]
         public void FillDataTable()
         {
-            using (SqlConnection conn = CreateOpenConnection())
-            using (var cmd = conn.CreateCommand())
+            using (TDbConnection conn = this.CreateOpenConnection())
+            using (TDbCommand cmd = this.CreateCommand(conn))
             {
                 cmd.CommandText = "GetFast";
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+                cmd.AddParameter( "@Number", DbType.Int32, value: 100000 );
 
-                using (SqlDataAdapter a = new SqlDataAdapter(cmd))
+                using (TDbDataAdapter a = this.CreateDbAdapter( cmd ) )
                 {
                     var dt = new DataTable();
                     var r = a.Fill(dt);
@@ -124,14 +152,14 @@ namespace AsyncDataAdapter.Tests
         [Test]
         public async Task FillAsyncDataSet()
         {
-            using (SqlConnection conn = await CreateOpenConnectionAsync())
-            using (var cmd = conn.CreateCommand())
+            using (TDbConnection conn = await CreateOpenConnectionAsync())
+            using (TDbCommand cmd = this.CreateCommand(conn))
             {
                 cmd.CommandText = "GetFast";
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+                cmd.AddParameter( "@Number", DbType.Int32, value: 100000 );
 
-                using (MSqlAsyncDbDataAdapter a = new MSqlAsyncDbDataAdapter( cmd ) )
+                using (TAsyncDbAdapter a = this.CreateAsyncDbAdapter( cmd ) )
                 {
                     var ds = new DataSet();
                     var r = await a.FillAsync(ds);
@@ -150,14 +178,14 @@ namespace AsyncDataAdapter.Tests
         [Test]
         public void FillDataSet()
         {
-            using (SqlConnection conn = CreateOpenConnection())
-            using (var cmd = conn.CreateCommand())
+            using (TDbConnection conn = this.CreateOpenConnection())
+            using (TDbCommand cmd = this.CreateCommand(conn))
             {
                 cmd.CommandText = "GetFast";
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+                cmd.AddParameter( "@Number", DbType.Int32, value: 100000 );
 
-                using (SqlDataAdapter a = new SqlDataAdapter( cmd))
+                using (TDbDataAdapter a = this.CreateDbAdapter( cmd ))
                 {
                     var ds = new DataSet();
                     var r = a.Fill(ds);
@@ -181,17 +209,17 @@ namespace AsyncDataAdapter.Tests
         [Test]
         public async Task FillAsyncDataSetMulti()
         {
-            using (SqlConnection conn = await CreateOpenConnectionAsync())
-            using (var cmd = conn.CreateCommand())
+            using (TDbConnection conn = await this.CreateOpenConnectionAsync())
+            using (TDbCommand cmd = this.CreateCommand(conn))
             {
                 cmd.CommandText = "GetMulti";
                 cmd.CommandTimeout = COMMAND_TIMEOUT;
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Number1", SqlDbType.Int).Value = 100000;
-                cmd.Parameters.Add("@Number2", SqlDbType.Int).Value = 300000;
-                cmd.Parameters.Add("@Number3", SqlDbType.Int).Value = 500000;
+                cmd.AddParameter( "@Number1", DbType.Int32, value: 100000 );
+                cmd.AddParameter( "@Number2", DbType.Int32, value: 300000 );
+                cmd.AddParameter( "@Number3", DbType.Int32, value: 500000 );
 
-                using (MSqlAsyncDbDataAdapter a = new MSqlAsyncDbDataAdapter( cmd))
+                using (TAsyncDbAdapter a = this.CreateAsyncDbAdapter( cmd ) )
                 {
                     var ds = new DataSet();
 
@@ -226,17 +254,17 @@ namespace AsyncDataAdapter.Tests
         [Test]
         public void FillDataSetMulti()
         {
-            using (SqlConnection conn = CreateOpenConnection())
-            using (var cmd = conn.CreateCommand())
+            using (TDbConnection conn = this.CreateOpenConnection())
+            using (TDbCommand cmd = this.CreateCommand(conn))
             {
                 cmd.CommandText = "GetMulti";
                 cmd.CommandTimeout = COMMAND_TIMEOUT;
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Number1", SqlDbType.Int).Value = 100000;
-                cmd.Parameters.Add("@Number2", SqlDbType.Int).Value = 300000;
-                cmd.Parameters.Add("@Number3", SqlDbType.Int).Value = 500000;
+                cmd.AddParameter( "@Number1", DbType.Int32, value: 100000 );
+                cmd.AddParameter( "@Number2", DbType.Int32, value: 300000 );
+                cmd.AddParameter( "@Number3", DbType.Int32, value: 500000 );
 
-                using (SqlDataAdapter a = new SqlDataAdapter(cmd))
+                using (TDbDataAdapter a = this.CreateDbAdapter(cmd))
                 {
                     var ds = new DataSet();
 
