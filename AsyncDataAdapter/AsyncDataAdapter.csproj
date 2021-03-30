@@ -44,6 +44,11 @@
 
   <ItemGroup>
     <None Include="AsyncDataAdapter.snk" />
+    <None Include="Data\Reflection\ReflectedMethods.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ReflectedMethods.tt</DependentUpon>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
@@ -52,5 +57,24 @@
 
   <ItemGroup>
     <Folder Include="Properties\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Data\Reflection\ReflectedMethods.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ReflectedMethods.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Data\Reflection\ReflectedMethods.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ReflectedMethods.tt</DependentUpon>
+    </Compile>
   </ItemGroup>
 </Project>

@@ -30,93 +30,93 @@ namespace AsyncDataAdapter.Internal
             SchemaMappingUnsortedIndex,
         }
 
-        static readonly private string[] DBCOLUMN_NAME = new string[] {
-            SchemaTableColumn.ColumnName,
-            SchemaTableColumn.ColumnOrdinal,
-            SchemaTableColumn.ColumnSize,
+        private static readonly string[] DBCOLUMN_NAME = new string[] {
+            SchemaTableColumn        .ColumnName,
+            SchemaTableColumn        .ColumnOrdinal,
+            SchemaTableColumn        .ColumnSize,
             SchemaTableOptionalColumn.BaseServerName,
             SchemaTableOptionalColumn.BaseCatalogName,
-            SchemaTableColumn.BaseColumnName,
-            SchemaTableColumn.BaseSchemaName,
-            SchemaTableColumn.BaseTableName,
+            SchemaTableColumn        .BaseColumnName,
+            SchemaTableColumn        .BaseSchemaName,
+            SchemaTableColumn        .BaseTableName,
             SchemaTableOptionalColumn.IsAutoIncrement,
-            SchemaTableColumn.IsUnique,
-            SchemaTableColumn.IsKey,
+            SchemaTableColumn        .IsUnique,
+            SchemaTableColumn        .IsKey,
             SchemaTableOptionalColumn.IsRowVersion,
-            SchemaTableColumn.DataType,
+            SchemaTableColumn        .DataType,
             SchemaTableOptionalColumn.ProviderSpecificDataType,
-            SchemaTableColumn.AllowDBNull,
-            SchemaTableColumn.ProviderType,
-            SchemaTableColumn.IsExpression,
+            SchemaTableColumn        .AllowDBNull,
+            SchemaTableColumn        .ProviderType,
+            SchemaTableColumn        .IsExpression,
             SchemaTableOptionalColumn.IsHidden,
-            SchemaTableColumn.IsLong,
+            SchemaTableColumn        .IsLong,
             SchemaTableOptionalColumn.IsReadOnly,
-            AdaDbSchemaRow.SchemaMappingUnsortedIndex,
+            AdaDbSchemaRow           .SchemaMappingUnsortedIndex,
         };
 
-        internal DataTable dataTable;
-        private DataColumnCollection columns;
-        private DataColumn[] columnCache = new DataColumn[DBCOLUMN_NAME.Length];
-        private bool _returnProviderSpecificTypes;
+#pragma warning disable IDE0052 // Remove unread private members
+        private readonly DataTable            dataTable;
+#pragma warning restore
+        private readonly DataColumnCollection columns;
+        private readonly DataColumn[]         columnCache = new DataColumn[DBCOLUMN_NAME.Length];
+        private readonly bool                 returnProviderSpecificTypes;
 
         internal AdaDbSchemaTable(DataTable dataTable, bool returnProviderSpecificTypes)
         {
             this.dataTable = dataTable;
-            this.columns = dataTable.Columns;
-            _returnProviderSpecificTypes = returnProviderSpecificTypes;
+            this.columns   = dataTable.Columns;
+            this.returnProviderSpecificTypes = returnProviderSpecificTypes;
         }
 
-        internal DataColumn ColumnName { get { return CachedDataColumn(ColumnEnum.ColumnName); } }
-        internal DataColumn Size { get { return CachedDataColumn(ColumnEnum.ColumnSize); } }
-        internal DataColumn BaseServerName { get { return CachedDataColumn(ColumnEnum.BaseServerName); } }
-        internal DataColumn BaseColumnName { get { return CachedDataColumn(ColumnEnum.BaseColumnName); } }
-        internal DataColumn BaseTableName { get { return CachedDataColumn(ColumnEnum.BaseTableName); } }
-        internal DataColumn BaseCatalogName { get { return CachedDataColumn(ColumnEnum.BaseCatalogName); } }
-        internal DataColumn BaseSchemaName { get { return CachedDataColumn(ColumnEnum.BaseSchemaName); } }
-        internal DataColumn IsAutoIncrement { get { return CachedDataColumn(ColumnEnum.IsAutoIncrement); } }
-        internal DataColumn IsUnique { get { return CachedDataColumn(ColumnEnum.IsUnique); } }
-        internal DataColumn IsKey { get { return CachedDataColumn(ColumnEnum.IsKey); } }
-        internal DataColumn IsRowVersion { get { return CachedDataColumn(ColumnEnum.IsRowVersion); } }
-
-        internal DataColumn AllowDBNull { get { return CachedDataColumn(ColumnEnum.AllowDBNull); } }
-        internal DataColumn IsExpression { get { return CachedDataColumn(ColumnEnum.IsExpression); } }
-        internal DataColumn IsHidden { get { return CachedDataColumn(ColumnEnum.IsHidden); } }
-        internal DataColumn IsLong { get { return CachedDataColumn(ColumnEnum.IsLong); } }
-        internal DataColumn IsReadOnly { get { return CachedDataColumn(ColumnEnum.IsReadOnly); } }
-
-        internal DataColumn UnsortedIndex { get { return CachedDataColumn(ColumnEnum.SchemaMappingUnsortedIndex); } }
+        internal DataColumn ColumnName      { get { return this.CachedDataColumn(ColumnEnum.ColumnName); } }
+        internal DataColumn Size            { get { return this.CachedDataColumn(ColumnEnum.ColumnSize); } }
+        internal DataColumn BaseServerName  { get { return this.CachedDataColumn(ColumnEnum.BaseServerName); } }
+        internal DataColumn BaseColumnName  { get { return this.CachedDataColumn(ColumnEnum.BaseColumnName); } }
+        internal DataColumn BaseTableName   { get { return this.CachedDataColumn(ColumnEnum.BaseTableName); } }
+        internal DataColumn BaseCatalogName { get { return this.CachedDataColumn(ColumnEnum.BaseCatalogName); } }
+        internal DataColumn BaseSchemaName  { get { return this.CachedDataColumn(ColumnEnum.BaseSchemaName); } }
+        internal DataColumn IsAutoIncrement { get { return this.CachedDataColumn(ColumnEnum.IsAutoIncrement); } }
+        internal DataColumn IsUnique        { get { return this.CachedDataColumn(ColumnEnum.IsUnique); } }
+        internal DataColumn IsKey           { get { return this.CachedDataColumn(ColumnEnum.IsKey); } }
+        internal DataColumn IsRowVersion    { get { return this.CachedDataColumn(ColumnEnum.IsRowVersion); } }
+        internal DataColumn AllowDBNull     { get { return this.CachedDataColumn(ColumnEnum.AllowDBNull); } }
+        internal DataColumn IsExpression    { get { return this.CachedDataColumn(ColumnEnum.IsExpression); } }
+        internal DataColumn IsHidden        { get { return this.CachedDataColumn(ColumnEnum.IsHidden); } }
+        internal DataColumn IsLong          { get { return this.CachedDataColumn(ColumnEnum.IsLong); } }
+        internal DataColumn IsReadOnly      { get { return this.CachedDataColumn(ColumnEnum.IsReadOnly); } }
+        internal DataColumn UnsortedIndex   { get { return this.CachedDataColumn(ColumnEnum.SchemaMappingUnsortedIndex); } }
 
         internal DataColumn DataType
         {
             get
             {
-                if (_returnProviderSpecificTypes)
+                if (this.returnProviderSpecificTypes)
                 {
-                    return CachedDataColumn(ColumnEnum.ProviderSpecificDataType, ColumnEnum.DataType);
+                    return this.CachedDataColumn(ColumnEnum.ProviderSpecificDataType, ColumnEnum.DataType);
                 }
-                return CachedDataColumn(ColumnEnum.DataType);
+                return this.CachedDataColumn(ColumnEnum.DataType);
             }
         }
 
         private DataColumn CachedDataColumn(ColumnEnum column)
         {
-            return CachedDataColumn(column, column);
+            return this.CachedDataColumn(column, column);
         }
 
         private DataColumn CachedDataColumn(ColumnEnum column, ColumnEnum column2)
         {
-            DataColumn dataColumn = columnCache[(int)column];
+            DataColumn dataColumn = this.columnCache[(int)column];
             if (null == dataColumn)
             {
-                int index = columns.IndexOf(DBCOLUMN_NAME[(int)column]);
+                int index = this.columns.IndexOf(DBCOLUMN_NAME[(int)column]);
                 if ((-1 == index) && (column != column2))
                 {
-                    index = columns.IndexOf(DBCOLUMN_NAME[(int)column2]);
+                    index = this.columns.IndexOf(DBCOLUMN_NAME[(int)column2]);
                 }
                 if (-1 != index)
                 {
-                    dataColumn = columns[index];
-                    columnCache[(int)column] = dataColumn;
+                    dataColumn = this.columns[index];
+                    this.columnCache[(int)column] = dataColumn;
                 }
             }
             return dataColumn;

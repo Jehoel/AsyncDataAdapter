@@ -9,10 +9,10 @@ namespace AsyncDataAdapter.Internal
     public sealed class AdaDbSchemaRow
     {
         internal const string SchemaMappingUnsortedIndex = "SchemaMapping Unsorted Index";
-        AdaDbSchemaTable schemaTable;
-        DataRow dataRow;
+        private readonly AdaDbSchemaTable schemaTable;
+        private readonly DataRow dataRow;
 
-        static internal AdaDbSchemaRow[] GetSortedSchemaRows(DataTable dataTable, bool returnProviderSpecificTypes)
+        internal static AdaDbSchemaRow[] GetSortedSchemaRows(DataTable dataTable, bool returnProviderSpecificTypes)
         { // MDAC 60609
             DataColumn sortindex = dataTable.Columns[SchemaMappingUnsortedIndex];
             if (null == sortindex)
@@ -52,8 +52,8 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                Debug.Assert(null != schemaTable.ColumnName, "no column ColumnName");
-                object value = dataRow[schemaTable.ColumnName, DataRowVersion.Default];
+                Debug.Assert(null != this.schemaTable.ColumnName, "no column ColumnName");
+                object value = this.dataRow[this.schemaTable.ColumnName, DataRowVersion.Default];
                 if (!Convert.IsDBNull(value))
                 {
                     return Convert.ToString(value, CultureInfo.InvariantCulture);
@@ -82,8 +82,8 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                Debug.Assert(null != schemaTable.Size, "no column Size");
-                object value = dataRow[schemaTable.Size, DataRowVersion.Default];
+                Debug.Assert(null != this.schemaTable.Size, "no column Size");
+                object value = this.dataRow[this.schemaTable.Size, DataRowVersion.Default];
                 if (!Convert.IsDBNull(value))
                 {
                     return Convert.ToInt32(value, CultureInfo.InvariantCulture);
@@ -100,9 +100,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.BaseColumnName)
+                if (null != this.schemaTable.BaseColumnName)
                 {
-                    object value = dataRow[schemaTable.BaseColumnName, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.BaseColumnName, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToString(value, CultureInfo.InvariantCulture);
@@ -120,9 +120,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.BaseServerName)
+                if (null != this.schemaTable.BaseServerName)
                 {
-                    object value = dataRow[schemaTable.BaseServerName, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.BaseServerName, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToString(value, CultureInfo.InvariantCulture);
@@ -141,9 +141,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.BaseCatalogName)
+                if (null != this.schemaTable.BaseCatalogName)
                 {
-                    object value = dataRow[schemaTable.BaseCatalogName, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.BaseCatalogName, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToString(value, CultureInfo.InvariantCulture);
@@ -161,9 +161,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.BaseSchemaName)
+                if (null != this.schemaTable.BaseSchemaName)
                 {
-                    object value = dataRow[schemaTable.BaseSchemaName, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.BaseSchemaName, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToString(value, CultureInfo.InvariantCulture);
@@ -181,9 +181,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.BaseTableName)
+                if (null != this.schemaTable.BaseTableName)
                 {
-                    object value = dataRow[schemaTable.BaseTableName, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.BaseTableName, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToString(value, CultureInfo.InvariantCulture);
@@ -201,9 +201,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.IsAutoIncrement)
+                if (null != this.schemaTable.IsAutoIncrement)
                 {
-                    object value = dataRow[schemaTable.IsAutoIncrement, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.IsAutoIncrement, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToBoolean(value, CultureInfo.InvariantCulture);
@@ -221,9 +221,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.IsUnique)
+                if (null != this.schemaTable.IsUnique)
                 {
-                    object value = dataRow[schemaTable.IsUnique, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.IsUnique, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToBoolean(value, CultureInfo.InvariantCulture);
@@ -241,9 +241,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.IsRowVersion)
+                if (null != this.schemaTable.IsRowVersion)
                 {
-                    object value = dataRow[schemaTable.IsRowVersion, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.IsRowVersion, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToBoolean(value, CultureInfo.InvariantCulture);
@@ -261,9 +261,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.IsKey)
+                if (null != this.schemaTable.IsKey)
                 {
-                    object value = dataRow[schemaTable.IsKey, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.IsKey, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToBoolean(value, CultureInfo.InvariantCulture);
@@ -298,9 +298,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.IsExpression)
+                if (null != this.schemaTable.IsExpression)
                 { // MDAC 62336
-                    object value = dataRow[schemaTable.IsExpression, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.IsExpression, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToBoolean(value, CultureInfo.InvariantCulture);
@@ -334,9 +334,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.IsHidden)
+                if (null != this.schemaTable.IsHidden)
                 { // MDAC 62336
-                    object value = dataRow[schemaTable.IsHidden, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.IsHidden, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToBoolean(value, CultureInfo.InvariantCulture);
@@ -354,9 +354,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.IsLong)
+                if (null != this.schemaTable.IsLong)
                 { // MDAC 62336
-                    object value = dataRow[schemaTable.IsLong, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.IsLong, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToBoolean(value, CultureInfo.InvariantCulture);
@@ -374,9 +374,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.IsReadOnly)
+                if (null != this.schemaTable.IsReadOnly)
                 { // MDAC 62336
-                    object value = dataRow[schemaTable.IsReadOnly, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.IsReadOnly, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToBoolean(value, CultureInfo.InvariantCulture);
@@ -394,9 +394,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.DataType)
+                if (null != this.schemaTable.DataType)
                 {
-                    object value = dataRow[schemaTable.DataType, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.DataType, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return (System.Type)value;
@@ -414,9 +414,9 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                if (null != schemaTable.AllowDBNull)
+                if (null != this.schemaTable.AllowDBNull)
                 {
-                    object value = dataRow[schemaTable.AllowDBNull, DataRowVersion.Default];
+                    object value = this.dataRow[this.schemaTable.AllowDBNull, DataRowVersion.Default];
                     if (!Convert.IsDBNull(value))
                     {
                         return Convert.ToBoolean(value, CultureInfo.InvariantCulture);
@@ -450,7 +450,7 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                return (Int32)dataRow[schemaTable.UnsortedIndex, DataRowVersion.Default];
+                return (Int32)this.dataRow[this.schemaTable.UnsortedIndex, DataRowVersion.Default];
             }
         }
     }

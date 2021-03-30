@@ -3,7 +3,7 @@ using System.IO;
 
 using Microsoft.Extensions.Configuration;
 
-namespace AsyncDataAdapter
+namespace AsyncDataAdapter.Tests
 {
     public class TestConfiguration
     {
@@ -22,7 +22,10 @@ namespace AsyncDataAdapter
                     .AddJsonFile( fileName )
                     .Build();
 
-                this.ConnectionString = config["ConnectionString"];
+                this.ConnectionString     = config["ConnectionString"];
+#pragma warning disable IDE0075 // Simplify conditional expression
+                this.DatabaseTestsEnabled = Boolean.TryParse( config["DatabaseTestsEnabed"], out Boolean b ) ? b : true;
+#pragma warning restore
             }
 
             if( string.IsNullOrWhiteSpace(this.ConnectionString) )
@@ -31,6 +34,7 @@ namespace AsyncDataAdapter
             }
         }
 
+        public Boolean DatabaseTestsEnabled { get; }
         public String ConnectionString { get; }
 
         /* Sample appconfig json (note the '\' is escaped!):
