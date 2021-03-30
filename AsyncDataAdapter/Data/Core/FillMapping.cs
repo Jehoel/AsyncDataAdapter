@@ -13,31 +13,17 @@ namespace AsyncDataAdapter.Internal
     {
         public static AdaSchemaMapping FillMapping( Action<Exception, DataTable, Object[]> onFillError, IAdaSchemaMappingAdapter adapter, DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int schemaCount, DataColumn parentChapterColumn, object parentChapterValue )
         {
-            AdaSchemaMapping mapping = null;
-            if (onFillError != null)
+            try
             {
-                try
-                {
-                    // only try-catch if a FillErrorEventHandler is registered so that
-                    // in the default case we get the full callstack from users
-                    mapping = FillMappingInternal( adapter, dataset, datatable, srcTable, dataReader, schemaCount, parentChapterColumn, parentChapterValue );
-                }
-                catch (Exception ex)
-                {
-                    if (!ADP.IsCatchableExceptionType(ex))
-                    {
-                        throw;
-                    }
-
-                    onFillError( ex, null, null );
-                }
+                // only catch if a FillErrorEventHandler is registered so that in the default case we get the full callstack from users
+                AdaSchemaMapping mapping = FillMappingInternal( adapter, dataset, datatable, srcTable, dataReader, schemaCount, parentChapterColumn, parentChapterValue );
+                return mapping;
             }
-            else
+            catch (Exception ex) when(onFillError != null && ADP.IsCatchableExceptionType(ex))
             {
-                mapping = FillMappingInternal( adapter, dataset, datatable, srcTable, dataReader, schemaCount, parentChapterColumn, parentChapterValue );
+                onFillError( ex, null, null );
+                return null;
             }
-
-            return mapping;
         }
 
         public static AdaSchemaMapping FillMappingInternal( IAdaSchemaMappingAdapter adapter, DataSet dataset, DataTable datatable, string srcTable, AdaDataReaderContainer dataReader, int schemaCount, DataColumn parentChapterColumn, object parentChapterValue )
@@ -60,6 +46,7 @@ namespace AsyncDataAdapter.Internal
             {
                 return srcTable; //[index];
             }
+
             return srcTable + index.ToString(CultureInfo.InvariantCulture);
         }
     }

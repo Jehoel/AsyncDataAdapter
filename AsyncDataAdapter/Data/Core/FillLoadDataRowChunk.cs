@@ -30,28 +30,14 @@ namespace AsyncDataAdapter.Internal
             {
                 while ((rowsAddedToDataSet < maxRecords) && await dataReader.ReadAsync( cancellationToken ).ConfigureAwait(false))
                 {
-                    if (onFillError != null)
+                    try
                     {
-                        try
-                        {
-                            await mapping.LoadDataRowWithClearAsync( cancellationToken ).ConfigureAwait(false);
-                            rowsAddedToDataSet++;
-                        }
-                        catch (Exception e)
-                        {
-                            // 
-                            if (!ADP.IsCatchableExceptionType(e))
-                            {
-                                throw;
-                            }
-
-                            onFillError(e, mapping.DataTable, mapping.DataValues);
-                        }
-                    }
-                    else
-                    {
-                        await mapping.LoadDataRowAsync( cancellationToken ).ConfigureAwait(false);
+                        await mapping.LoadDataRowWithClearAsync( cancellationToken ).ConfigureAwait(false);
                         rowsAddedToDataSet++;
+                    }
+                    catch (Exception e) when(onFillError != null && ADP.IsCatchableExceptionType(e))
+                    {
+                        onFillError(e, mapping.DataTable, mapping.DataValues);
                     }
                 }
                 // skip remaining rows of the first resultset
@@ -67,38 +53,21 @@ namespace AsyncDataAdapter.Internal
         {
             int rowsAddedToDataSet = 0;
             AdaDataReaderContainer dataReader = mapping.DataReader;
-            if ( onFillError != null )
-            {
-                while (await dataReader.ReadAsync( cancellationToken ).ConfigureAwait(false))
-                { // read remaining rows of first and subsequent resultsets
-                    try
-                    {
-                        // only try-catch if a FillErrorEventHandler is registered so that
-                        // in the default case we get the full callstack from users
-                        await mapping.LoadDataRowWithClearAsync( cancellationToken ).ConfigureAwait(false);
-                        rowsAddedToDataSet++;
-                    }
-                    catch (Exception e)
-                    {
-                        // 
-                        if (!ADP.IsCatchableExceptionType(e))
-                        {
-                            throw;
-                        }
-
-                        onFillError(e, mapping.DataTable, mapping.DataValues);
-                    }
-                }
-            }
-            else
-            {
-                while (await dataReader.ReadAsync( cancellationToken ).ConfigureAwait(false))
+            while (await dataReader.ReadAsync( cancellationToken ).ConfigureAwait(false))
+            { // read remaining rows of first and subsequent resultsets
+                try
                 {
-                    // read remaining rows of first and subsequent resultset
-                    await mapping.LoadDataRowAsync( cancellationToken ).ConfigureAwait(false);
+                    // only try-catch if a FillErrorEventHandler is registered so that
+                    // in the default case we get the full callstack from users
+                    await mapping.LoadDataRowWithClearAsync( cancellationToken ).ConfigureAwait(false);
                     rowsAddedToDataSet++;
                 }
+                catch (Exception e) when (onFillError != null && ADP.IsCatchableExceptionType(e))
+                {
+                    onFillError(e, mapping.DataTable, mapping.DataValues);
+                }
             }
+
             return rowsAddedToDataSet;
         }
     }

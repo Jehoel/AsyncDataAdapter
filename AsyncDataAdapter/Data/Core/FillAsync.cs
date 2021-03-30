@@ -70,7 +70,7 @@ namespace AsyncDataAdapter.Internal
                     }
                     // user must Close/Dispose of the dataReader
                     // user will have to call NextResult to access remaining results
-                    int count = await FillFromReaderAsync( onFillError, adapter, null, dataTables[i], null, readerHandler, startRecord, maxRecords, null, null, cancellationToken ).ConfigureAwait(false);
+                    int count = await FillFromReaderAsync( onFillError, adapter, dataset: null, datatable: dataTables[i], srcTable: null, readerHandler, startRecord, maxRecords, null, null, cancellationToken ).ConfigureAwait(false);
                     if (0 == i)
                     {
                         result = count;
@@ -157,33 +157,17 @@ namespace AsyncDataAdapter.Internal
 
         public static async Task<bool> FillNextResultAsync( Action<Exception, DataTable, Object[]> onFillError, AdaDataReaderContainer dataReader, CancellationToken cancellationToken )
         {
-            bool result = true;
-            if ( onFillError != null )
+            try
             {
-                try
-                {
-                    // only try-catch if a FillErrorEventHandler is registered so that
-                    // in the default case we get the full callstack from users
-                    result = await dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    if (!ADP.IsCatchableExceptionType(ex))
-                    {
-                        throw;
-                    }
-
-                    onFillError.Invoke( ex, null, null );
-                }
+                // only catch if a FillErrorEventHandler is registered so that in the default case we get the full callstack from users
+                bool result = await dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false);
+                return result;
             }
-            else
+            catch (Exception ex) when (onFillError != null && ADP.IsCatchableExceptionType(ex))
             {
-                result = await dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false);
+                onFillError.Invoke( ex, null, null );
+                return true; // hmm, why return true when it fails?
             }
-
-            return result;
         }
-
-        
     }
 }
