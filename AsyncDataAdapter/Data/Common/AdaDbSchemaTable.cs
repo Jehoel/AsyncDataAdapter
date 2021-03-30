@@ -56,7 +56,7 @@ namespace AsyncDataAdapter.Internal
 
 #pragma warning disable IDE0052 // Remove unread private members
         private readonly DataTable            dataTable;
-#pragma warning restore IDE0052
+#pragma warning restore
         private readonly DataColumnCollection columns;
         private readonly DataColumn[]         columnCache = new DataColumn[DBCOLUMN_NAME.Length];
         private readonly bool                 returnProviderSpecificTypes;

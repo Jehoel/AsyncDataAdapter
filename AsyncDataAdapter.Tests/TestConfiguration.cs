@@ -23,7 +23,9 @@ namespace AsyncDataAdapter.Tests
                     .Build();
 
                 this.ConnectionString     = config["ConnectionString"];
+#pragma warning disable IDE0075 // Simplify conditional expression
                 this.DatabaseTestsEnabled = Boolean.TryParse( config["DatabaseTestsEnabed"], out Boolean b ) ? b : true;
+#pragma warning restore
             }
 
             if( string.IsNullOrWhiteSpace(this.ConnectionString) )

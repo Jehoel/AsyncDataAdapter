@@ -11,7 +11,7 @@ namespace AsyncDataAdapter.Internal
 {
     public sealed class AdaSchemaMapping
     {
-        enum MappingMode
+        private enum MappingMode
         {
             Undefined            = -1,
 
@@ -31,7 +31,7 @@ namespace AsyncDataAdapter.Internal
             MapChaptersReordered =  4
         }
 
-        enum XmlMapMode
+        private enum XmlMapMode
         {
             /// <summary>map xml string data to DataColumn with DataType=typeof(SqlXml)</summary>
             SqlXml = 1,
@@ -576,7 +576,7 @@ namespace AsyncDataAdapter.Internal
 
                     AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dbDataReader, this.dataReader.ReturnProviderSpecificTypes );
 
-                    var fillFromReaderResult = await this.adapter.FillFromReaderAsync( this.dataSet, null, chapterTableName, readerHandler, 0, 0, parentChapterColumn, parentChapterValue, cancellationToken ).ConfigureAwait(false);
+                    int fillFromReaderResult = await this.adapter.FillFromReaderAsync( this.dataSet, null, chapterTableName, readerHandler, 0, 0, parentChapterColumn, parentChapterValue, cancellationToken ).ConfigureAwait(false);
                     return fillFromReaderResult;
                 }
                 else
