@@ -16,15 +16,11 @@ The implementation is based on source code provided by Microsoft on GitHub.
   * .NET Core 3.1 for the `AsyncDataAdapter.Test` project.
     * Currently uses NUnit 3.x, but I'd like to move-over to xUnit.
 
-* Branches:
-  * The `DotNetSource` branch contains the original Microsoft .NET sources.
-    * There was originally an intention to keep this project's `AsyncDataReader` in-sync with the upstream .NET Framework and .NET Core `System.Data.DataReader` and `System.Data.Common.DbDataReader`, but I decided that was probably a waste of time. The orignal source is kept-around for reference.
-
 * Future development goals:
-  * I'd like to move-away from `AdaDataAdapter` and `AdaDbDataAdapter` being completely new implementations.
-  * I did have an earlier version I wrote myself (not published) where the original `System.Data.Common.DbDataAdapter` was used as the base-class.
-    * This way the new async functionality was purely additive, and the synchronous API was still available.
   * I also want to get Appveyor working with this fork.
+  * The `Update` and `UpdateAsync` methods need working test-cases.
+  * Internally the project uses reflection to workaround some rather unfortunate design-decisions in the original `DbDataAdapter` and `DbCommandBuilder` classes - so these features may fail in some future update to .NET. Also they use `MethodInfo.Invoke` which can be improved by using Dynamic-Methods (i.e. IL-generation).
+    * It would be a good idea to replace direct calls to reflected methods to interfaces that allow consumers to provide their own methods, e.g. to work-around any breaking changes to reflection in future builds of .NET, and so on.
 
 * Advisory: this project will likely be short-lived because Microsoft will eventually implement async support in their `DbDataAdapter` and subclasses, likely before .NET 7 around 2023.
 
