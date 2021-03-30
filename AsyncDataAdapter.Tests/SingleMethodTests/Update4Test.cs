@@ -30,7 +30,7 @@ namespace AsyncDataAdapter.Tests.Big3
 
                 //
                 adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataSet, cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetUpdateStatementNonQueryResultRowCountValue( expectedTableName: "TODO", adapter, dataSet, cmd, rowsModified );
 
                 Int32 updatedRows = adapter.Update4( dataSet, srcTable: "RandomDataTable_2" );
 //              updatedRows.ShouldBe( rowsModified );
@@ -54,7 +54,7 @@ namespace AsyncDataAdapter.Tests.Big3
 
                 //
                 adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataSet, cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetUpdateStatementNonQueryResultRowCountValue( expectedTableName: "TODO", adapter, dataSet, cmd, rowsModified );
 
                 Int32 updatedRows = adapter.Update4( dataSet, srcTable: "RandomDataTable_2" );
 //              updatedRows.ShouldBe( rowsModified );
@@ -78,7 +78,7 @@ namespace AsyncDataAdapter.Tests.Big3
 
                 //
                 adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataSet, cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetUpdateStatementNonQueryResultRowCountValue( expectedTableName: "TODO", adapter, dataSet, cmd, rowsModified );
 
                 Int32 updatedRows = await adapter.Update4Async( dataSet, srcTable: "RandomDataTable_2" );
 //              updatedRows.ShouldBe( rowsModified );
@@ -102,7 +102,7 @@ namespace AsyncDataAdapter.Tests.Big3
 
                 //
                 adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataSet, cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetUpdateStatementNonQueryResultRowCountValue( expectedTableName: "TODO", adapter, dataSet, cmd, rowsModified );
 
                 Int32 updatedRows = await adapter.Update4Async( dataSet, srcTable: "RandomDataTable_2" );
 //              updatedRows.ShouldBe( rowsModified );

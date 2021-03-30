@@ -116,6 +116,8 @@ namespace AsyncDataAdapter.Tests
         {
             List<TestTable> randomDataSource = RandomDataGenerator.CreateRandomTables( seed: 1234, tableCount: 5, /*allowZeroRowsInTablesByIdx: */ 1, 3 );
 
+            // TODO: Multiple table UPDATE support is... complicated: https://stackoverflow.com/questions/16218856/how-to-update-two-tables-with-one-dataset
+
             // Part 1: Use proxy
             DataSet dataSetFromProxy;
             {
@@ -139,7 +141,7 @@ namespace AsyncDataAdapter.Tests
 
                         //
                         adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                        adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataSetFromProxy, cmd, rowsModified );
+                        adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetUpdateStatementNonQueryResultRowCountValue( expectedTableName: "TODO", adapter, dataSetFromProxy, cmd, rowsModified );
 
                         Int32 updatedRows = adapter.Update( dataSetFromProxy ); // updatedRows... in first table only?
 //                      updatedRows.ShouldBe( rowsModified );
@@ -170,7 +172,7 @@ namespace AsyncDataAdapter.Tests
 
                         //
                         adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                        adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataSetFromReal, cmd, rowsModified );
+                        adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetUpdateStatementNonQueryResultRowCountValue( expectedTableName: "TODO", adapter, dataSetFromReal, cmd, rowsModified );
 
                         Int32 updatedRows = adapter.Update( dataSetFromReal ); // updatedRows... in first table only?
 //                      updatedRows.ShouldBe( rowsModified );

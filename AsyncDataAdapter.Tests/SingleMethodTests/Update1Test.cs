@@ -33,9 +33,11 @@ namespace AsyncDataAdapter.Tests.Big3
                 //
                 Dictionary<String,Int32> rowsModified = DataTableMethods.MutateDataSet( dataSet );
 
+                List<(String tableName, String command)> executedCommands = new List<(string tableName, string command)>();
+
                 //
                 adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataSet, cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetUpdateStatementNonQueryResultRowCountValue( expectedTableName: "TODO", adapter, dataSet, cmd, rowsModified, executedCommands );
 
                 Int32 updatedRows = adapter.Update1( dataSet ); // updatedRows... in first table only?
 //              updatedRows.ShouldBe( rowsModified );
@@ -56,9 +58,11 @@ namespace AsyncDataAdapter.Tests.Big3
                 //
                 Dictionary<String,Int32> rowsModified = DataTableMethods.MutateDataSet( dataSet );
 
+                List<(String tableName, String command)> executedCommands = new List<(string tableName, string command)>();
+
                 //
                 adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataSet, cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetUpdateStatementNonQueryResultRowCountValue( expectedTableName: "TODO", adapter, dataSet, cmd, rowsModified, executedCommands );
 
                 Int32 updatedRows = adapter.Update1( dataSet ); // updatedRows... in first table only?
 //              updatedRows.ShouldBe( rowsModified );
@@ -79,9 +83,11 @@ namespace AsyncDataAdapter.Tests.Big3
                 //
                 Dictionary<String,Int32> rowsModified = DataTableMethods.MutateDataSet( dataSet );
 
+                List<(String tableName, String command)> executedCommands = new List<(string tableName, string command)>();
+
                 //
                 adapter.UpdateCommand = (FakeDbCommand)cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataSet, cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetUpdateStatementNonQueryResultRowCountValue( expectedTableName: "TODO", adapter, dataSet, cmd, rowsModified, executedCommands );
 
                 //
 
@@ -104,9 +110,11 @@ namespace AsyncDataAdapter.Tests.Big3
                 //
                 Dictionary<String,Int32> rowsModified = DataTableMethods.MutateDataSet( dataSet );
 
+                List<(String tableName, String command)> executedCommands = new List<(string tableName, string command)>();
+
                 //
                 adapter.UpdateCommand = (FakeDbCommand)cmdBuilder.GetUpdateCommand();
-                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetNonQueryResultRowCountValue( adapter, dataSet, cmd, rowsModified );
+                adapter.UpdateCommand.NonQueryResultRowCountValue = ( cmd ) => DataTableMethods.GetUpdateStatementNonQueryResultRowCountValue( expectedTableName: "TODO", adapter, dataSet, cmd, rowsModified, executedCommands );
 
                 //
 

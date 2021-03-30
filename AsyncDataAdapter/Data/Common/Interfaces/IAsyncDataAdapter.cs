@@ -13,6 +13,7 @@ namespace AsyncDataAdapter
         Task<DataTable[]> FillSchemaAsync( DataSet dataSet, SchemaType schemaType, CancellationToken cancellationToken = default );
     }
 
+    /// <summary>Extends <see cref="IDbDataAdapter"/> with support for async methods for read-only data adapter operations.</summary>
     public interface IAsyncDbDataAdapter : IAsyncDataAdapter, IDbDataAdapter
     {
     }
@@ -23,7 +24,7 @@ namespace AsyncDataAdapter
         Task<Int32> UpdateAsync( DataSet dataSet, CancellationToken cancellationToken = default );
     }
 
-    /// <summary>Intersection-type of <see cref="IUpdatingAsyncDataAdapter"/> and <see cref="IDbDataAdapter"/> (because <see cref="IAsyncDataAdapter"/> does not extend <see cref="IDbDataAdapter"/>).</summary>
+    /// <summary>Extends <see cref="IDbDataAdapter"/> with support for <see cref="IUpdatingAsyncDataAdapter.UpdateAsync(DataSet, CancellationToken)"/>.</summary>
     public interface IUpdatingAsyncDbDataAdapter : IUpdatingAsyncDataAdapter, IDbDataAdapter
     {
     }

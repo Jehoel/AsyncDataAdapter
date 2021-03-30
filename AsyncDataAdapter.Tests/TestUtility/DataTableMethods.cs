@@ -191,7 +191,7 @@ namespace AsyncDataAdapter.Tests
             return false;
         }
 
-        public static Int32 GetNonQueryResultRowCountValue( DbDataAdapter adapter, DataTables data, FakeDb.FakeDbCommand cmd, Dictionary<String,Int32> rowsModified )
+        public static Int32 GetUpdateStatementNonQueryResultRowCountValue( String expectedTableName, DbDataAdapter adapter, DataTables data, FakeDb.FakeDbCommand cmd, Dictionary<String,Int32> rowsModified, List<(String tableName, String command)> log = null )
         {
             // Special-case for UpdateCommands from DbDataAdapter and DbCommandBuilder:
             // If the query looks like this:
@@ -253,17 +253,30 @@ namespace AsyncDataAdapter.Tests
 
             if( IsUpdateStatement( commandText, out String tableName, out String predicate ) )
             {
-                if( rowsModified.TryGetValue( tableName, out Int32 tableCountRowsModified ) )
-                {
-                    // By-design, DbDataAdapter executes an UPDATE query *for each row* (though it may batch them, they're still conceptually separate DbCommand instances)
-                    // So this should always be 1...
+                log?.Add( ( tableName, commandText ) );
 
+                // By-design, DbDataAdapter executes an UPDATE query *for each row* (though it may batch them, they're still conceptually separate DbCommand instances)
+                // So this should always be 1...
+
+                if( expectedTableName != tableName )
+                {
+                    String msg = String.Format( CultureInfo.CurrentCulture, "Expected the DbDataAdapter.UpdateCommand to UPDATE the {0} table, but encountered table name {1} instead.", expectedTableName, tableName );
+                    throw new InvalidOperationException( msg );
+                }
+
+                // If the query has "[PK] = " in its predicate then it's only going to update a single row.
+                if( predicate.IndexOf( "[PK] = ", StringComparison.Ordinal ) > -1 )
+                {
                     return 1;
                 }
                 else
                 {
-                    throw new InvalidOperationException( "Unexpected table name: " + tableName );
+                    throw new InvalidOperationException( "Expected the DbDataAdapter.UpdateCommand to target a specific row by PK, but the PK predicate was not found in the WHERE clause." );
                 }
+            }
+            else
+            {
+                log?.Add( ( "(Unknown)", commandText ) );
             }
 
             //
