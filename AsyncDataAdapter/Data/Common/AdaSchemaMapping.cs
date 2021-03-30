@@ -67,58 +67,58 @@ namespace AsyncDataAdapter.Internal
             Debug.Assert(null != dataset || null != datatable, "SchemaMapping - null dataSet");
             Debug.Assert(SchemaType.Mapped == schemaType || SchemaType.Source == schemaType, "SetupSchema - invalid schemaType");
 
-            _dataSet = dataset;     // setting DataSet implies chapters are supported
-            _dataTable = datatable; // setting only DataTable, not DataSet implies chapters are not supported
-            _adapter = adapter;
-            _dataReader = dataReader;
+            this._dataSet = dataset;     // setting DataSet implies chapters are supported
+            this._dataTable = datatable; // setting only DataTable, not DataSet implies chapters are not supported
+            this._adapter = adapter;
+            this._dataReader = dataReader;
 
             if (keyInfo)
             {
-                _schemaTable = dataReader.GetSchemaTable();
+                this._schemaTable = dataReader.GetSchemaTable();
             }
 
             if (adapter.FillLoadOption != 0)
             {
-                _loadOption = adapter.FillLoadOption;
+                this._loadOption = adapter.FillLoadOption;
             }
             else if (adapter.AcceptChangesDuringFill)
             {
-                _loadOption = (LoadOption)4; // true
+                this._loadOption = (LoadOption)4; // true
             }
             else
             {
-                _loadOption = (LoadOption)5; //false
+                this._loadOption = (LoadOption)5; //false
             }
 
             MissingMappingAction mappingAction;
             MissingSchemaAction schemaAction;
             if (SchemaType.Mapped == schemaType)
             {
-                mappingAction = _adapter.MissingMappingAction;
-                schemaAction = _adapter.MissingSchemaAction;
+                mappingAction = this._adapter.MissingMappingAction;
+                schemaAction = this._adapter.MissingSchemaAction;
                 if (!string.IsNullOrEmpty(sourceTableName))
                 { // MDAC 66034
-                    _tableMapping = _adapter.GetTableMappingBySchemaAction(sourceTableName, sourceTableName, mappingAction);
+                    this._tableMapping = this._adapter.GetTableMappingBySchemaAction(sourceTableName, sourceTableName, mappingAction);
                 }
-                else if (null != _dataTable)
+                else if (null != this._dataTable)
                 {
-                    int index = _adapter.IndexOfDataSetTable(_dataTable.TableName);
+                    int index = this._adapter.IndexOfDataSetTable(this._dataTable.TableName);
                     if (-1 != index)
                     {
-                        _tableMapping = _adapter.TableMappings[index];
+                        this._tableMapping = this._adapter.TableMappings[index];
                     }
                     else
                     {
                         switch (mappingAction)
                         {
                             case MissingMappingAction.Passthrough:
-                                _tableMapping = new DataTableMapping(_dataTable.TableName, _dataTable.TableName);
+                                this._tableMapping = new DataTableMapping(this._dataTable.TableName, this._dataTable.TableName);
                                 break;
                             case MissingMappingAction.Ignore:
-                                _tableMapping = null;
+                                this._tableMapping = null;
                                 break;
                             case MissingMappingAction.Error:
-                                throw ADP.MissingTableMappingDestination(_dataTable.TableName);
+                                throw ADP.MissingTableMappingDestination(this._dataTable.TableName);
                             default:
                                 throw ADP.InvalidMissingMappingAction(mappingAction);
                         }
@@ -131,18 +131,18 @@ namespace AsyncDataAdapter.Internal
                 schemaAction = MissingSchemaAction.Add;
                 if (!string.IsNullOrEmpty(sourceTableName))
                 { // MDAC 66034
-                    _tableMapping = DataTableMappingCollection.GetTableMappingBySchemaAction(null, sourceTableName, sourceTableName, mappingAction);
+                    this._tableMapping = DataTableMappingCollection.GetTableMappingBySchemaAction(null, sourceTableName, sourceTableName, mappingAction);
                 }
-                else if (null != _dataTable)
+                else if (null != this._dataTable)
                 {
-                    int index = _adapter.IndexOfDataSetTable(_dataTable.TableName); // MDAC 66034
+                    int index = this._adapter.IndexOfDataSetTable(this._dataTable.TableName); // MDAC 66034
                     if (-1 != index)
                     {
-                        _tableMapping = _adapter.TableMappings[index];
+                        this._tableMapping = this._adapter.TableMappings[index];
                     }
                     else
                     {
-                        _tableMapping = new DataTableMapping(_dataTable.TableName, _dataTable.TableName);
+                        this._tableMapping = new DataTableMapping(this._dataTable.TableName, this._dataTable.TableName);
                     }
                 }
             }
@@ -151,23 +151,23 @@ namespace AsyncDataAdapter.Internal
                 throw ADP.InvalidSchemaType(schemaType);
             }
 
-            if (null != _tableMapping)
+            if (null != this._tableMapping)
             {
-                if (null == _dataTable)
+                if (null == this._dataTable)
                 {
-                    _dataTable = _tableMapping.GetDataTableBySchemaAction(_dataSet, schemaAction);
+                    this._dataTable = this._tableMapping.GetDataTableBySchemaAction(this._dataSet, schemaAction);
                 }
-                if (null != _dataTable)
+                if (null != this._dataTable)
                 {
-                    _fieldNames = GenerateFieldNames(dataReader);
+                    this._fieldNames = GenerateFieldNames(dataReader);
 
-                    if (null == _schemaTable)
+                    if (null == this._schemaTable)
                     {
-                        _readerDataValues = SetupSchemaWithoutKeyInfo(mappingAction, schemaAction, gettingData, parentChapterColumn, parentChapterValue);
+                        this._readerDataValues = this.SetupSchemaWithoutKeyInfo(mappingAction, schemaAction, gettingData, parentChapterColumn, parentChapterValue);
                     }
                     else
                     {
-                        _readerDataValues = SetupSchemaWithKeyInfo(mappingAction, schemaAction, gettingData, parentChapterColumn, parentChapterValue);
+                        this._readerDataValues = this.SetupSchemaWithKeyInfo(mappingAction, schemaAction, gettingData, parentChapterColumn, parentChapterValue);
                     }
                 }
                 // else (null == _dataTable) which means ignore (mapped to nothing)
@@ -178,7 +178,7 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                return _dataReader;
+                return this._dataReader;
             }
         }
 
@@ -186,7 +186,7 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                return _dataTable;
+                return this._dataTable;
             }
         }
 
@@ -194,16 +194,16 @@ namespace AsyncDataAdapter.Internal
         {
             get
             {
-                return _readerDataValues;
+                return this._readerDataValues;
             }
         }
 
         internal void ApplyToDataRow(DataRow dataRow)
         {
             DataColumnCollection columns = dataRow.Table.Columns;
-            _dataReader.GetValues(_readerDataValues);
+            this._dataReader.GetValues(this._readerDataValues);
 
-            object[] mapped = GetMappedValues();
+            object[] mapped = this.GetMappedValues();
             bool[] readOnly = new bool[mapped.Length];
             for (int i = 0; i < readOnly.Length; ++i)
             {
@@ -245,26 +245,26 @@ namespace AsyncDataAdapter.Internal
             }
             finally
             { // FreeDataRowChapters
-                if (null != _chapterMap)
+                if (null != this._chapterMap)
                 {
-                    FreeDataRowChapters();
+                    this.FreeDataRowChapters();
                 }
             }
         }
 
         private void MappedChapterIndex()
         { // mode 4
-            int length = _mappedLength;
+            int length = this._mappedLength;
 
             for (int i = 0; i < length; i++)
             {
-                int k = _indexMap[i];
+                int k = this._indexMap[i];
                 if (0 <= k)
                 {
-                    _mappedDataValues[k] = _readerDataValues[i]; // from reader to dataset
-                    if (_chapterMap[i])
+                    this._mappedDataValues[k] = this._readerDataValues[i]; // from reader to dataset
+                    if (this._chapterMap[i])
                     {
-                        _mappedDataValues[k] = null; // InvalidCast from DataReader to AutoIncrement DataColumn
+                        this._mappedDataValues[k] = null; // InvalidCast from DataReader to AutoIncrement DataColumn
                     }
                 }
             }
@@ -272,89 +272,88 @@ namespace AsyncDataAdapter.Internal
 
         private void MappedChapter()
         { // mode 3
-            int length = _mappedLength;
+            int length = this._mappedLength;
 
             for (int i = 0; i < length; i++)
             {
-                _mappedDataValues[i] = _readerDataValues[i]; // from reader to dataset
-                if (_chapterMap[i])
+                this._mappedDataValues[i] = this._readerDataValues[i]; // from reader to dataset
+                if (this._chapterMap[i])
                 {
-                    _mappedDataValues[i] = null; // InvalidCast from DataReader to AutoIncrement DataColumn
+                    this._mappedDataValues[i] = null; // InvalidCast from DataReader to AutoIncrement DataColumn
                 }
             }
         }
 
         private void MappedIndex()
         { // mode 2
-            Debug.Assert(_mappedLength == _indexMap.Length, "incorrect precomputed length");
+            Debug.Assert(this._mappedLength == this._indexMap.Length, "incorrect precomputed length");
 
-            int length = _mappedLength;
+            int length = this._mappedLength;
             for (int i = 0; i < length; i++)
             {
-                int k = _indexMap[i];
+                int k = this._indexMap[i];
                 if (0 <= k)
                 {
-                    _mappedDataValues[k] = _readerDataValues[i]; // from reader to dataset
+                    this._mappedDataValues[k] = this._readerDataValues[i]; // from reader to dataset
                 }
             }
         }
 
         private void MappedValues()
         { // mode 1
-            Debug.Assert(_mappedLength == Math.Min(_readerDataValues.Length, _mappedDataValues.Length), "incorrect precomputed length");
+            Debug.Assert(this._mappedLength == Math.Min(this._readerDataValues.Length, this._mappedDataValues.Length), "incorrect precomputed length");
 
-            int length = _mappedLength;
+            int length = this._mappedLength;
             for (int i = 0; i < length; ++i)
             {
-                _mappedDataValues[i] = _readerDataValues[i]; // from reader to dataset
+                this._mappedDataValues[i] = this._readerDataValues[i]; // from reader to dataset
             };
         }
 
         private object[] GetMappedValues()
         { // mode 0
-            if (null != _xmlMap)
+            if (null != this._xmlMap)
             {
-                for (int i = 0; i < _xmlMap.Length; ++i)
+                for (int i = 0; i < this._xmlMap.Length; ++i)
                 {
-                    if (0 != _xmlMap[i])
+                    if (0 != this._xmlMap[i])
                     {
                         // get the string/SqlString xml value
-                        string xml = _readerDataValues[i] as string;
-                        if ((null == xml) && (_readerDataValues[i] is System.Data.SqlTypes.SqlString))
+                        string xml = this._readerDataValues[i] as string;
+                        if( xml is null && this._readerDataValues[i] is System.Data.SqlTypes.SqlString sqlString )
                         {
-                            System.Data.SqlTypes.SqlString x = (System.Data.SqlTypes.SqlString)_readerDataValues[i];
-                            if (!x.IsNull)
+                            if (!sqlString.IsNull)
                             {
-                                xml = x.Value;
+                                xml = sqlString.Value;
                             }
                             else
                             {
-                                switch (_xmlMap[i])
+                                switch (this._xmlMap[i])
                                 {
                                     case SqlXml:
                                         // map strongly typed SqlString.Null to SqlXml.Null
-                                        _readerDataValues[i] = System.Data.SqlTypes.SqlXml.Null;
+                                        this._readerDataValues[i] = System.Data.SqlTypes.SqlXml.Null;
                                         break;
                                     default:
-                                        _readerDataValues[i] = DBNull.Value;
+                                        this._readerDataValues[i] = DBNull.Value;
                                         break;
                                 }
                             }
                         }
                         if (null != xml)
                         {
-                            switch (_xmlMap[i])
+                            switch (this._xmlMap[i])
                             {
                                 case SqlXml: // turn string into a SqlXml value for DataColumn
                                     System.Xml.XmlReaderSettings settings = new System.Xml.XmlReaderSettings();
                                     settings.ConformanceLevel = System.Xml.ConformanceLevel.Fragment;
                                     System.Xml.XmlReader reader = System.Xml.XmlReader.Create(new System.IO.StringReader(xml), settings, (string)null);
-                                    _readerDataValues[i] = new System.Data.SqlTypes.SqlXml(reader);
+                                    this._readerDataValues[i] = new System.Data.SqlTypes.SqlXml(reader);
                                     break;
                                 case XmlDocument: // turn string into XmlDocument value for DataColumn
                                     System.Xml.XmlDocument document = new System.Xml.XmlDocument();
                                     document.LoadXml(xml);
-                                    _readerDataValues[i] = document;
+                                    this._readerDataValues[i] = document;
                                     break;
                             }
                             // default: let value fallthrough to DataSet which may fail with ArgumentException
@@ -363,31 +362,31 @@ namespace AsyncDataAdapter.Internal
                 }
             }
 
-            switch (_mappedMode)
+            switch (this._mappedMode)
             {
                 default:
                 case MapExactMatch:
-                    Debug.Assert(0 == _mappedMode, "incorrect mappedMode");
-                    Debug.Assert((null == _chapterMap) && (null == _indexMap) && (null == _mappedDataValues), "incorrect MappedValues");
-                    return _readerDataValues;  // from reader to dataset
+                    Debug.Assert(0 == this._mappedMode, "incorrect mappedMode");
+                    Debug.Assert((null == this._chapterMap) && (null == this._indexMap) && (null == this._mappedDataValues), "incorrect MappedValues");
+                    return this._readerDataValues;  // from reader to dataset
                 case MapDifferentSize:
-                    Debug.Assert((null == _chapterMap) && (null == _indexMap) && (null != _mappedDataValues), "incorrect MappedValues");
-                    MappedValues();
+                    Debug.Assert((null == this._chapterMap) && (null == this._indexMap) && (null != this._mappedDataValues), "incorrect MappedValues");
+                    this.MappedValues();
                     break;
                 case MapReorderedValues:
-                    Debug.Assert((null == _chapterMap) && (null != _indexMap) && (null != _mappedDataValues), "incorrect MappedValues");
-                    MappedIndex();
+                    Debug.Assert((null == this._chapterMap) && (null != this._indexMap) && (null != this._mappedDataValues), "incorrect MappedValues");
+                    this.MappedIndex();
                     break;
                 case MapChapters:
-                    Debug.Assert((null != _chapterMap) && (null == _indexMap) && (null != _mappedDataValues), "incorrect MappedValues");
-                    MappedChapter();
+                    Debug.Assert((null != this._chapterMap) && (null == this._indexMap) && (null != this._mappedDataValues), "incorrect MappedValues");
+                    this.MappedChapter();
                     break;
                 case MapChaptersReordered:
-                    Debug.Assert((null != _chapterMap) && (null != _indexMap) && (null != _mappedDataValues), "incorrect MappedValues");
-                    MappedChapterIndex();
+                    Debug.Assert((null != this._chapterMap) && (null != this._indexMap) && (null != this._mappedDataValues), "incorrect MappedValues");
+                    this.MappedChapterIndex();
                     break;
             }
-            return _mappedDataValues;
+            return this._mappedDataValues;
         }
 
         internal async Task LoadDataRowWithClearAsync( CancellationToken cancellationToken )
@@ -405,7 +404,7 @@ namespace AsyncDataAdapter.Internal
         {
             try
             {
-                _ = this._dataReader.GetValues( _readerDataValues );
+                _ = this._dataReader.GetValues(this._readerDataValues );
                 object[] mapped = this.GetMappedValues();
 
                 DataRow dataRow;
@@ -414,7 +413,7 @@ namespace AsyncDataAdapter.Internal
                     case LoadOption.OverwriteChanges:
                     case LoadOption.PreserveChanges:
                     case LoadOption.Upsert:
-                        dataRow = this._dataTable.LoadDataRow(mapped, _loadOption);
+                        dataRow = this._dataTable.LoadDataRow(mapped, this._loadOption);
                         break;
                     case (LoadOption)4: // true
                         dataRow = this._dataTable.LoadDataRow(mapped, true);
@@ -429,28 +428,28 @@ namespace AsyncDataAdapter.Internal
 
                 if ((null != this._chapterMap) && (null != this._dataSet))
                 {
-                    await LoadDataRowChaptersAsync( dataRow, cancellationToken ).ConfigureAwait(false); // MDAC 70772
+                    await this.LoadDataRowChaptersAsync( dataRow, cancellationToken ).ConfigureAwait(false); // MDAC 70772
                 }
             }
             finally
             {
-                if (null != _chapterMap)
+                if (null != this._chapterMap)
                 {
-                    FreeDataRowChapters(); // MDAC 71900
+                    this.FreeDataRowChapters(); // MDAC 71900
                 }
             }
         }
 
         private void FreeDataRowChapters()
         {
-            for (int i = 0; i < _chapterMap.Length; ++i)
+            for (int i = 0; i < this._chapterMap.Length; ++i)
             {
-                if (_chapterMap[i])
+                if (this._chapterMap[i])
                 {
-                    IDisposable disposable = (_readerDataValues[i] as IDisposable);
+                    IDisposable disposable = (this._readerDataValues[i] as IDisposable);
                     if (null != disposable)
                     {
-                        _readerDataValues[i] = null;
+                        this._readerDataValues[i] = null;
                         disposable.Dispose();
                     }
                 }
@@ -461,15 +460,15 @@ namespace AsyncDataAdapter.Internal
         {
             int datarowadded = 0;
 
-            int rowLength = _chapterMap.Length;
+            int rowLength = this._chapterMap.Length;
             for (int i = 0; i < rowLength; ++i)
             {
-                if (_chapterMap[i])
+                if (this._chapterMap[i])
                 {
-                    object readerValue = _readerDataValues[i];
+                    object readerValue = this._readerDataValues[i];
                     if ((null != readerValue) && !Convert.IsDBNull(readerValue))
                     {
-                        _readerDataValues[i] = null;
+                        this._readerDataValues[i] = null;
 
                         if( readerValue is IDataReader nestedDataReader )
                         {
@@ -490,27 +489,27 @@ namespace AsyncDataAdapter.Internal
                 if( nestedDataReader.IsClosed ) return 0;
                 if( nestedDataReader is DbDataReader dbDataReader )
                 {
-                    Debug.Assert(null != _dataSet, "if chapters, then Fill(DataSet,...) not Fill(DataTable,...)");
+                    Debug.Assert(null != this._dataSet, "if chapters, then Fill(DataSet,...) not Fill(DataTable,...)");
 
                     object parentChapterValue;
                     DataColumn parentChapterColumn;
-                    if (null == _indexMap)
+                    if (null == this._indexMap)
                     {
-                        parentChapterColumn = _dataTable.Columns[i];
+                        parentChapterColumn = this._dataTable.Columns[i];
                         parentChapterValue = dataRow[parentChapterColumn];
                     }
                     else
                     {
-                        parentChapterColumn = _dataTable.Columns[_indexMap[i]];
+                        parentChapterColumn = this._dataTable.Columns[this._indexMap[i]];
                         parentChapterValue = dataRow[parentChapterColumn];
                     }
 
                     // correct on Fill, not FillFromReader
-                    string chapterTableName = _tableMapping.SourceTable + _fieldNames[i]; // MDAC 70908
+                    string chapterTableName = this._tableMapping.SourceTable + this._fieldNames[i]; // MDAC 70908
 
                     AdaDataReaderContainer readerHandler = AdaDataReaderContainer.Create( dbDataReader, this._dataReader.ReturnProviderSpecificTypes );
 
-                    var fillFromReaderResult = await _adapter.FillFromReaderAsync( _dataSet, null, chapterTableName, readerHandler, 0, 0, parentChapterColumn, parentChapterValue, cancellationToken ).ConfigureAwait(false);
+                    var fillFromReaderResult = await this._adapter.FillFromReaderAsync( this._dataSet, null, chapterTableName, readerHandler, 0, 0, parentChapterColumn, parentChapterValue, cancellationToken ).ConfigureAwait(false);
                     return fillFromReaderResult;
                 }
                 else
@@ -520,7 +519,7 @@ namespace AsyncDataAdapter.Internal
             }
         }
 
-        private int[] CreateIndexMap(int count, int index)
+        private static int[] CreateIndexMap(int count, int index)
         {
             int[] values = new int[count];
             for (int i = 0; i < index; ++i)
@@ -541,7 +540,7 @@ namespace AsyncDataAdapter.Internal
             return fieldNames;
         }
 
-        private DataColumn[] ResizeColumnArray(DataColumn[] rgcol, int len)
+        private static DataColumn[] ResizeColumnArray(DataColumn[] rgcol, int len)
         {
             Debug.Assert(rgcol != null, "invalid call to ResizeArray");
             Debug.Assert(len <= rgcol.Length, "invalid len passed to ResizeArray");
@@ -550,7 +549,7 @@ namespace AsyncDataAdapter.Internal
             return tmp;
         }
 
-        private void AddItemToAllowRollback(ref List<object> items, object value)
+        private static void AddItemToAllowRollback(ref List<object> items, object value)
         {
             if (null == items)
             {
@@ -559,7 +558,7 @@ namespace AsyncDataAdapter.Internal
             items.Add(value);
         }
 
-        private void RollbackAddedItems(List<object> items)
+        private static void RollbackAddedItems(List<object> items)
         {
             if (null != items)
             {
@@ -598,22 +597,22 @@ namespace AsyncDataAdapter.Internal
             bool[] chapterIndexMap = null;
 
             int mappingCount = 0;
-            int count = _dataReader.FieldCount;
+            int count = this._dataReader.FieldCount;
 
             object[] dataValues = null;
             List<object> addedItems = null;
             try
             {
-                DataColumnCollection columnCollection = _dataTable.Columns;
+                DataColumnCollection columnCollection = this._dataTable.Columns;
                 columnCollection.EnsureAdditionalCapacity_(count + (chapterValue != null ? 1 : 0));
                 // We can always just create column if there are no existing column or column mappings, and the mapping action is passthrough
-                bool alwaysCreateColumns = ((_dataTable.Columns.Count == 0) && ((_tableMapping.ColumnMappings == null) || (_tableMapping.ColumnMappings.Count == 0)) && (mappingAction == MissingMappingAction.Passthrough));
+                bool alwaysCreateColumns = ((this._dataTable.Columns.Count == 0) && ((this._tableMapping.ColumnMappings == null) || (this._tableMapping.ColumnMappings.Count == 0)) && (mappingAction == MissingMappingAction.Passthrough));
 
                 for (int i = 0; i < count; ++i)
                 {
 
                     bool ischapter = false;
-                    Type fieldType = _dataReader.GetFieldType(i);
+                    Type fieldType = this._dataReader.GetFieldType(i);
 
                     if (null == fieldType)
                     {
@@ -632,30 +631,30 @@ namespace AsyncDataAdapter.Internal
                     }
                     else if (typeof(System.Data.SqlTypes.SqlXml).IsAssignableFrom(fieldType))
                     {
-                        if (null == _xmlMap)
+                        if (null == this._xmlMap)
                         { // map to DataColumn with DataType=typeof(SqlXml)
-                            _xmlMap = new int[count];
+                            this._xmlMap = new int[count];
                         }
-                        _xmlMap[i] = SqlXml; // track its xml data
+                        this._xmlMap[i] = SqlXml; // track its xml data
                     }
                     else if (typeof(System.Xml.XmlReader).IsAssignableFrom(fieldType))
                     {
                         fieldType = typeof(String); // map to DataColumn with DataType=typeof(string)
-                        if (null == _xmlMap)
+                        if (null == this._xmlMap)
                         {
-                            _xmlMap = new int[count];
+                            this._xmlMap = new int[count];
                         }
-                        _xmlMap[i] = XmlDocument; // track its xml data
+                        this._xmlMap[i] = XmlDocument; // track its xml data
                     }
 
                     DataColumn dataColumn;
                     if (alwaysCreateColumns)
                     {
-                        dataColumn = DataColumnReflection.CreateDataColumnBySchemaAction_(_fieldNames[i], _fieldNames[i], _dataTable, fieldType, schemaAction);
+                        dataColumn = DataColumnReflection.CreateDataColumnBySchemaAction_(this._fieldNames[i], this._fieldNames[i], this._dataTable, fieldType, schemaAction);
                     }
                     else
                     {
-                        dataColumn = _tableMapping.GetDataColumn(_fieldNames[i], fieldType, _dataTable, mappingAction, schemaAction);
+                        dataColumn = this._tableMapping.GetDataColumn(this._fieldNames[i], fieldType, this._dataTable, mappingAction, schemaAction);
                     }
 
                     if (null == dataColumn)
@@ -667,28 +666,28 @@ namespace AsyncDataAdapter.Internal
                         columnIndexMap[i] = -1;
                         continue; // null means ignore (mapped to nothing)
                     }
-                    else if ((null != _xmlMap) && (0 != _xmlMap[i]))
+                    else if ((null != this._xmlMap) && (0 != this._xmlMap[i]))
                     {
                         if (typeof(System.Data.SqlTypes.SqlXml) == dataColumn.DataType)
                         {
-                            _xmlMap[i] = SqlXml;
+                            this._xmlMap[i] = SqlXml;
                         }
                         else if (typeof(System.Xml.XmlDocument) == dataColumn.DataType)
                         {
-                            _xmlMap[i] = XmlDocument;
+                            this._xmlMap[i] = XmlDocument;
                         }
                         else
                         {
-                            _xmlMap[i] = 0; // datacolumn is not a specific Xml dataType, i.e. string
+                            this._xmlMap[i] = 0; // datacolumn is not a specific Xml dataType, i.e. string
 
                             int total = 0;
-                            for (int x = 0; x < _xmlMap.Length; ++x)
+                            for (int x = 0; x < this._xmlMap.Length; ++x)
                             {
-                                total += _xmlMap[x];
+                                total += this._xmlMap[x];
                             }
                             if (0 == total)
                             { // not mapping to a specific Xml datatype, get rid of the map
-                                _xmlMap = null;
+                                this._xmlMap = null;
                             }
                         }
                     }
@@ -729,7 +728,7 @@ namespace AsyncDataAdapter.Internal
                 { // add the extra column in the child table
                     Type fieldType = chapterValue.GetType();
 
-                    chapterColumn = _tableMapping.GetDataColumn(_tableMapping.SourceTable, fieldType, _dataTable, mappingAction, schemaAction);
+                    chapterColumn = this._tableMapping.GetDataColumn(this._tableMapping.SourceTable, fieldType, this._dataTable, mappingAction, schemaAction);
                     if (null != chapterColumn)
                     {
 
@@ -745,36 +744,36 @@ namespace AsyncDataAdapter.Internal
 
                 if (0 < mappingCount)
                 {
-                    if ((null != _dataSet) && (null == _dataTable.DataSet))
+                    if ((null != this._dataSet) && (null == this._dataTable.DataSet))
                     {
                         // Allowed to throw exception if DataTable is from wrong DataSet
-                        AddItemToAllowRollback(ref addedItems, _dataTable);
-                        _dataSet.Tables.Add(_dataTable);
+                        AddItemToAllowRollback(ref addedItems, this._dataTable);
+                        this._dataSet.Tables.Add(this._dataTable);
                     }
                     if (gettingData)
                     {
                         if (null == columnCollection)
                         {
-                            columnCollection = _dataTable.Columns;
+                            columnCollection = this._dataTable.Columns;
                         }
-                        _indexMap = columnIndexMap;
-                        _chapterMap = chapterIndexMap;
-                        dataValues = SetupMapping(count, columnCollection, chapterColumn, chapterValue);
+                        this._indexMap = columnIndexMap;
+                        this._chapterMap = chapterIndexMap;
+                        dataValues = this.SetupMapping(count, columnCollection, chapterColumn, chapterValue);
                     }
                     else
                     {
                         // debug only, but for retail debug ability
-                        _mappedMode = -1;
+                        this._mappedMode = -1;
                     }
                 }
                 else
                 {
-                    _dataTable = null;
+                    this._dataTable = null;
                 }
 
                 if (addDataRelation)
                 {
-                    AddRelation(parentChapterColumn, chapterColumn);
+                    this.AddRelation(parentChapterColumn, chapterColumn);
                 }
 
             }
@@ -793,20 +792,20 @@ namespace AsyncDataAdapter.Internal
         private object[] SetupSchemaWithKeyInfo(MissingMappingAction mappingAction, MissingSchemaAction schemaAction, bool gettingData, DataColumn parentChapterColumn, object chapterValue)
         {
             // must sort rows from schema table by ordinal because Jet is sorted by coumn name
-            AdaDbSchemaRow[] schemaRows = AdaDbSchemaRow.GetSortedSchemaRows(_schemaTable, _dataReader.ReturnProviderSpecificTypes); // MDAC 60609
+            AdaDbSchemaRow[] schemaRows = AdaDbSchemaRow.GetSortedSchemaRows(this._schemaTable, this._dataReader.ReturnProviderSpecificTypes); // MDAC 60609
             Debug.Assert(null != schemaRows, "SchemaSetup - null DbSchemaRow[]");
-            Debug.Assert(_dataReader.FieldCount <= schemaRows.Length, "unexpected fewer rows in Schema than FieldCount");
+            Debug.Assert(this._dataReader.FieldCount <= schemaRows.Length, "unexpected fewer rows in Schema than FieldCount");
 
             if (0 == schemaRows.Length)
             {
-                _dataTable = null;
+                this._dataTable = null;
                 return (object[])null;
             }
 
             // Everett behavior, always add a primary key if a primary key didn't exist before
             // Whidbey behavior, same as Everett unless using LoadOption then add primary key only if no columns previously existed
-            bool addPrimaryKeys = (((0 == _dataTable.PrimaryKey.Length) && ((4 <= (int)_loadOption) || (0 == _dataTable.Rows.Count)))
-                                    || (0 == _dataTable.Columns.Count)); // MDAC 67033
+            bool addPrimaryKeys = (((0 == this._dataTable.PrimaryKey.Length) && ((4 <= (int)this._loadOption) || (0 == this._dataTable.Rows.Count)))
+                                    || (0 == this._dataTable.Columns.Count)); // MDAC 67033
 
             DataColumn[] keys = null;
             int keyCount = 0;
@@ -825,7 +824,7 @@ namespace AsyncDataAdapter.Internal
 
             object[] dataValues = null;
             List<object> addedItems = null;
-            DataColumnCollection columnCollection = _dataTable.Columns;
+            DataColumnCollection columnCollection = this._dataTable.Columns;
             try
             {
                 for (int sortedIndex = 0; sortedIndex < schemaRows.Length; ++sortedIndex)
@@ -838,7 +837,7 @@ namespace AsyncDataAdapter.Internal
                     Type fieldType = schemaRow.DataType;
                     if (null == fieldType)
                     {
-                        fieldType = _dataReader.GetFieldType(sortedIndex);
+                        fieldType = this._dataReader.GetFieldType(sortedIndex);
                     }
                     if (null == fieldType)
                     {
@@ -857,26 +856,26 @@ namespace AsyncDataAdapter.Internal
                     }
                     else if (typeof(System.Data.SqlTypes.SqlXml).IsAssignableFrom(fieldType))
                     {
-                        if (null == _xmlMap)
+                        if (null == this._xmlMap)
                         {
-                            _xmlMap = new int[schemaRows.Length];
+                            this._xmlMap = new int[schemaRows.Length];
                         }
-                        _xmlMap[sortedIndex] = SqlXml;
+                        this._xmlMap[sortedIndex] = SqlXml;
                     }
                     else if (typeof(System.Xml.XmlReader).IsAssignableFrom(fieldType))
                     {
                         fieldType = typeof(String);
-                        if (null == _xmlMap)
+                        if (null == this._xmlMap)
                         {
-                            _xmlMap = new int[schemaRows.Length];
+                            this._xmlMap = new int[schemaRows.Length];
                         }
-                        _xmlMap[sortedIndex] = XmlDocument;
+                        this._xmlMap[sortedIndex] = XmlDocument;
                     }
 
                     DataColumn dataColumn = null;
                     if (!schemaRow.IsHidden)
                     {
-                        dataColumn = _tableMapping.GetDataColumn(_fieldNames[sortedIndex], fieldType, _dataTable, mappingAction, schemaAction);
+                        dataColumn = this._tableMapping.GetDataColumn(this._fieldNames[sortedIndex], fieldType, this._dataTable, mappingAction, schemaAction);
                     }
 
                     string basetable = /*schemaRow.BaseServerName+schemaRow.BaseCatalogName+schemaRow.BaseSchemaName+*/ schemaRow.BaseTableName;
@@ -907,28 +906,28 @@ namespace AsyncDataAdapter.Internal
                         }
                         continue; // null means ignore (mapped to nothing)
                     }
-                    else if ((null != _xmlMap) && (0 != _xmlMap[sortedIndex]))
+                    else if ((null != this._xmlMap) && (0 != this._xmlMap[sortedIndex]))
                     {
                         if (typeof(System.Data.SqlTypes.SqlXml) == dataColumn.DataType)
                         {
-                            _xmlMap[sortedIndex] = SqlXml;
+                            this._xmlMap[sortedIndex] = SqlXml;
                         }
                         else if (typeof(System.Xml.XmlDocument) == dataColumn.DataType)
                         {
-                            _xmlMap[sortedIndex] = XmlDocument;
+                            this._xmlMap[sortedIndex] = XmlDocument;
                         }
                         else
                         {
-                            _xmlMap[sortedIndex] = 0; // datacolumn is not a specific Xml dataType, i.e. string
+                            this._xmlMap[sortedIndex] = 0; // datacolumn is not a specific Xml dataType, i.e. string
 
                             int total = 0;
-                            for (int x = 0; x < _xmlMap.Length; ++x)
+                            for (int x = 0; x < this._xmlMap.Length; ++x)
                             {
-                                total += _xmlMap[x];
+                                total += this._xmlMap[x];
                             }
                             if (0 == total)
                             { // not mapping to a specific Xml datatype, get rid of the map
-                                _xmlMap = null;
+                                this._xmlMap = null;
                             }
                         }
                     }
@@ -974,7 +973,7 @@ namespace AsyncDataAdapter.Internal
                                 }
                             }
                         }
-                        if (4 <= (int)_loadOption)
+                        if (4 <= (int)this._loadOption)
                         {
                             if (schemaRow.IsAutoIncrement && DataColumnReflection.IsAutoIncrementType_(fieldType))
                             {
@@ -1032,7 +1031,7 @@ namespace AsyncDataAdapter.Internal
                     }
                     if (null == dataColumn.Table)
                     {
-                        if (4 > (int)_loadOption)
+                        if (4 > (int)this._loadOption)
                         {
                             AddAdditionalProperties(dataColumn, schemaRow.DataRow);
                         }
@@ -1094,7 +1093,7 @@ namespace AsyncDataAdapter.Internal
                 if (null != chapterValue)
                 { // add the extra column in the child table
                     Type fieldType = chapterValue.GetType();
-                    chapterColumn = _tableMapping.GetDataColumn(_tableMapping.SourceTable, fieldType, _dataTable, mappingAction, schemaAction);
+                    chapterColumn = this._tableMapping.GetDataColumn(this._tableMapping.SourceTable, fieldType, this._dataTable, mappingAction, schemaAction);
                     if (null != chapterColumn)
                     {
 
@@ -1114,10 +1113,10 @@ namespace AsyncDataAdapter.Internal
 
                 if (0 < mappingCount)
                 {
-                    if ((null != _dataSet) && null == _dataTable.DataSet)
+                    if ((null != this._dataSet) && null == this._dataTable.DataSet)
                     {
-                        AddItemToAllowRollback(ref addedItems, _dataTable);
-                        _dataSet.Tables.Add(_dataTable);
+                        AddItemToAllowRollback(ref addedItems, this._dataTable);
+                        this._dataSet.Tables.Add(this._dataTable);
                     }
                     // setup the key
                     if (addPrimaryKeys && (null != keys))
@@ -1136,12 +1135,12 @@ namespace AsyncDataAdapter.Internal
                                 Debug.WriteLine("SetupSchema: set_PrimaryKey");
                             }
 #endif
-                            _dataTable.PrimaryKey = keys;
+                            this._dataTable.PrimaryKey = keys;
                         }
                         else
                         {
                             UniqueConstraint unique = new UniqueConstraint("", keys);
-                            ConstraintCollection constraints = _dataTable.Constraints;
+                            ConstraintCollection constraints = this._dataTable.Constraints;
                             int constraintCount = constraints.Count;
                             for (int i = 0; i < constraintCount; ++i)
                             {
@@ -1169,29 +1168,29 @@ namespace AsyncDataAdapter.Internal
                             }
                         }
                     }
-                    if (!commonFromMultiTable && !string.IsNullOrEmpty(commonBaseTable) && string.IsNullOrEmpty(_dataTable.TableName))
+                    if (!commonFromMultiTable && !string.IsNullOrEmpty(commonBaseTable) && string.IsNullOrEmpty(this._dataTable.TableName))
                     {
-                        _dataTable.TableName = commonBaseTable;
+                        this._dataTable.TableName = commonBaseTable;
                     }
                     if (gettingData)
                     {
-                        _indexMap = columnIndexMap;
-                        _chapterMap = chapterIndexMap;
-                        dataValues = SetupMapping(schemaRows.Length, columnCollection, chapterColumn, chapterValue);
+                        this._indexMap = columnIndexMap;
+                        this._chapterMap = chapterIndexMap;
+                        dataValues = this.SetupMapping(schemaRows.Length, columnCollection, chapterColumn, chapterValue);
                     }
                     else
                     {
                         // debug only, but for retail debug ability
-                        _mappedMode = -1;
+                        this._mappedMode = -1;
                     }
                 }
                 else
                 {
-                    _dataTable = null;
+                    this._dataTable = null;
                 }
                 if (addDataRelation)
                 {
-                    AddRelation(parentChapterColumn, chapterColumn);
+                    this.AddRelation(parentChapterColumn, chapterColumn);
                 }
             }
             catch (Exception e)
@@ -1205,7 +1204,7 @@ namespace AsyncDataAdapter.Internal
             return dataValues;
         }
 
-        private void AddAdditionalProperties(DataColumn targetColumn, DataRow schemaRow)
+        private static void AddAdditionalProperties(DataColumn targetColumn, DataRow schemaRow)
         {
             DataColumnCollection columns = schemaRow.Table.Columns;
             DataColumn column;
@@ -1269,7 +1268,7 @@ namespace AsyncDataAdapter.Internal
 
         private void AddRelation(DataColumn parentChapterColumn, DataColumn chapterColumn)
         { // MDAC 71613
-            if (null != _dataSet)
+            if (null != this._dataSet)
             {
                 string name = /*parentChapterColumn.ColumnName + "_" +*/ chapterColumn.ColumnName; // MDAC 72815
 
@@ -1277,7 +1276,7 @@ namespace AsyncDataAdapter.Internal
 
                 int index = 1;
                 string tmp = name;
-                DataRelationCollection relations = _dataSet.Relations;
+                DataRelationCollection relations = this._dataSet.Relations;
                 while (-1 != relations.IndexOf(tmp))
                 {
                     tmp = name + index;
@@ -1292,39 +1291,39 @@ namespace AsyncDataAdapter.Internal
         {
             object[] dataValues = new object[count];
 
-            if (null == _indexMap)
+            if (null == this._indexMap)
             {
                 int mappingCount = columnCollection.Count;
-                bool hasChapters = (null != _chapterMap);
+                bool hasChapters = (null != this._chapterMap);
                 if ((count != mappingCount) || hasChapters)
                 {
-                    _mappedDataValues = new object[mappingCount];
+                    this._mappedDataValues = new object[mappingCount];
                     if (hasChapters)
                     {
 
-                        _mappedMode = MapChapters;
-                        _mappedLength = count;
+                        this._mappedMode = MapChapters;
+                        this._mappedLength = count;
                     }
                     else
                     {
-                        _mappedMode = MapDifferentSize;
-                        _mappedLength = Math.Min(count, mappingCount);
+                        this._mappedMode = MapDifferentSize;
+                        this._mappedLength = Math.Min(count, mappingCount);
                     }
                 }
                 else
                 {
-                    _mappedMode = MapExactMatch; /* _mappedLength doesn't matter */
+                    this._mappedMode = MapExactMatch; /* _mappedLength doesn't matter */
                 }
             }
             else
             {
-                _mappedDataValues = new object[columnCollection.Count];
-                _mappedMode = ((null == _chapterMap) ? MapReorderedValues : MapChaptersReordered);
-                _mappedLength = count;
+                this._mappedDataValues = new object[columnCollection.Count];
+                this._mappedMode = ((null == this._chapterMap) ? MapReorderedValues : MapChaptersReordered);
+                this._mappedLength = count;
             }
             if (null != chapterColumn)
             { // value from parent tracked into child table
-                _mappedDataValues[chapterColumn.Ordinal] = chapterValue;
+                this._mappedDataValues[chapterColumn.Ordinal] = chapterValue;
             }
             return dataValues;
         }

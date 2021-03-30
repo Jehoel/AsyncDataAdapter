@@ -28,10 +28,10 @@ namespace AsyncDataAdapter.Internal
 
         protected AdaDataReaderContainer(DbDataReader dataReader)
         {
-            this._dataReader = dataReader ?? throw new ArgumentNullException(nameof(dataReader));
+            this.dataReader = dataReader ?? throw new ArgumentNullException(nameof(dataReader));
         }
 
-        internal int FieldCount => this._fieldCount;
+        internal int FieldCount => this.fieldCount;
 
         internal abstract bool ReturnProviderSpecificTypes { get; }
         protected abstract int VisibleFieldCount { get; }
@@ -48,15 +48,15 @@ namespace AsyncDataAdapter.Internal
         }
         internal DataTable GetSchemaTable()
         {
-            return _dataReader.GetSchemaTable();
+            return this.dataReader.GetSchemaTable();
         }
 
         internal async Task<bool> NextResultAsync( CancellationToken cancellationToken )
         {
-            this._fieldCount = 0;
-            if (await this._dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false))
+            this.fieldCount = 0;
+            if (await this.dataReader.NextResultAsync( cancellationToken ).ConfigureAwait(false))
             {
-                this._fieldCount = this.VisibleFieldCount;
+                this.fieldCount = this.VisibleFieldCount;
                 return true;
             }
             return false;
@@ -64,93 +64,94 @@ namespace AsyncDataAdapter.Internal
 
         internal Task<bool> ReadAsync( CancellationToken cancellationToken )
         {
-            return this._dataReader.ReadAsync( cancellationToken );
+            return this.dataReader.ReadAsync( cancellationToken );
+        }
+    }
+
+    /// <summary>Will return values using the ADO.NET provider type. For example: with <c>System.Data.SqlClient</c> a <see cref="DbType.Double"/> value (<c>float</c> in T-SQL) will be returned as <see cref="System.Data.SqlTypes.SqlDouble"/> instead of as a <see cref="Double"/> value.</summary>
+    public sealed class ProviderSpecificDataReader : AdaDataReaderContainer
+    {
+        private readonly DbDataReader providerSpecificDataReader;
+
+        internal ProviderSpecificDataReader( DbDataReader dbDataReader )
+            : base( dbDataReader )
+        {
+            Debug.Assert(null != dbDataReader, "null dbDataReader");
+            this.providerSpecificDataReader = dbDataReader;
+            this.fieldCount = this.VisibleFieldCount;
         }
 
-        /// <summary>Will return values as, for example, <see cref="System.Data.SqlTypes.SqlDouble"/> instead of <see cref="System.Double"/>.</summary>
-        private sealed class ProviderSpecificDataReader : AdaDataReaderContainer
+        internal override bool ReturnProviderSpecificTypes
         {
-            private DbDataReader _providerSpecificDataReader;
-
-            internal ProviderSpecificDataReader( DbDataReader dbDataReader )
-                : base( dbDataReader )
+            get
             {
-                Debug.Assert(null != dbDataReader, "null dbDataReader");
-                _providerSpecificDataReader = dbDataReader;
-                _fieldCount = this.VisibleFieldCount;
+                return true;
             }
-
-            internal override bool ReturnProviderSpecificTypes
+        }
+        protected override int VisibleFieldCount
+        {
+            get
             {
-                get
-                {
-                    return true;
-                }
-            }
-            protected override int VisibleFieldCount
-            {
-                get
-                {
-                    int fieldCount = _providerSpecificDataReader.VisibleFieldCount;
-                    Debug.Assert(0 <= fieldCount, "negative FieldCount");
-                    return ((0 <= fieldCount) ? fieldCount : 0);
-                }
-            }
-
-            internal override Type GetFieldType(int ordinal)
-            {
-                Type fieldType = _providerSpecificDataReader.GetProviderSpecificFieldType(ordinal);
-                Debug.Assert(null != fieldType, "null FieldType");
-                return fieldType;
-            }
-            internal override object GetValue(int ordinal)
-            {
-                return _providerSpecificDataReader.GetProviderSpecificValue(ordinal);
-            }
-            internal override int GetValues(object[] values)
-            {
-                return _providerSpecificDataReader.GetProviderSpecificValues(values);
+                int fieldCount = this.providerSpecificDataReader.VisibleFieldCount;
+                Debug.Assert(0 <= fieldCount, "negative FieldCount");
+                return ((0 <= fieldCount) ? fieldCount : 0);
             }
         }
 
-        /// <summary>Will return values as, for example, <see cref="System.Double"/> instead of <see cref="System.Data.SqlTypes.SqlDouble"/>.</summary>
-        private sealed class CommonLanguageSubsetDataReader : AdaDataReaderContainer
+        internal override Type GetFieldType(int ordinal)
         {
-            internal CommonLanguageSubsetDataReader(DbDataReader dbDataReader)
-                : base(dbDataReader)
-            {
-                _fieldCount = this.VisibleFieldCount;
-            }
+            Type fieldType = this.providerSpecificDataReader.GetProviderSpecificFieldType(ordinal);
+            Debug.Assert(null != fieldType, "null FieldType");
+            return fieldType;
+        }
+        internal override object GetValue(int ordinal)
+        {
+            return this.providerSpecificDataReader.GetProviderSpecificValue(ordinal);
+        }
+        internal override int GetValues(object[] values)
+        {
+            return this.providerSpecificDataReader.GetProviderSpecificValues(values);
+        }
+    }
 
-            internal override bool ReturnProviderSpecificTypes
-            {
-                get
-                {
-                    return false;
-                }
-            }
-            protected override int VisibleFieldCount
-            {
-                get
-                {
-                    int fieldCount = _dataReader.FieldCount;
-                    Debug.Assert(0 <= fieldCount, "negative FieldCount");
-                    return ((0 <= fieldCount) ? fieldCount : 0);
-                }
-            }
+    /// <summary>Will return values as, for example, <see cref="System.Double"/> instead of <see cref="System.Data.SqlTypes.SqlDouble"/>.</summary>
+    /// <summary>Will return values using CLS types instead of any ADO.NET provider-specific types. For example: with <c>System.Data.SqlClient</c> a <see cref="DbType.Double"/> value (<c>float</c> in T-SQL) will be returned as <see cref="Double"/>  value and NOT as a <see cref="System.Data.SqlTypes.SqlDouble"/>  value.</summary>
+    public sealed class CommonLanguageSubsetDataReader : AdaDataReaderContainer
+    {
+        internal CommonLanguageSubsetDataReader(DbDataReader dbDataReader)
+            : base(dbDataReader)
+        {
+            this.fieldCount = this.VisibleFieldCount;
+        }
 
-            internal override Type GetFieldType(int ordinal)
+        internal override bool ReturnProviderSpecificTypes
+        {
+            get
             {
-                return _dataReader.GetFieldType(ordinal);
+                return false;
             }
-            internal override object GetValue(int ordinal)
+        }
+        protected override int VisibleFieldCount
+        {
+            get
             {
-                return _dataReader.GetValue(ordinal);
+                int fieldCount = this.dataReader.FieldCount;
+                Debug.Assert(0 <= fieldCount, "negative FieldCount");
+                return ((0 <= fieldCount) ? fieldCount : 0);
             }
-            internal override int GetValues(object[] values)
-            {
-                return _dataReader.GetValues(values);
-            }
+        }
+
+        internal override Type GetFieldType(int ordinal)
+        {
+            return this.dataReader.GetFieldType(ordinal);
+        }
+        internal override object GetValue(int ordinal)
+        {
+            return this.dataReader.GetValue(ordinal);
+        }
+        internal override int GetValues(object[] values)
+        {
+            return this.dataReader.GetValues(values);
         }
     }
 }

@@ -30,7 +30,7 @@ namespace AsyncDataAdapter
 			    return Array.Empty<DataTable>();
 		    }
 
-		    CommandBehavior fillCommandBehavior = FillCommandBehavior;
+		    CommandBehavior fillCommandBehavior = this.FillCommandBehavior;
 
 		    return await this.FillSchemaAsync( dataSet, schemaType, selectCommand, DbDataAdapter.DefaultSourceTableName, fillCommandBehavior, cancellationToken ).ConfigureAwait(false);
         }
