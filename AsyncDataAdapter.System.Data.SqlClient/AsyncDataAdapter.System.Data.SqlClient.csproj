@@ -19,12 +19,12 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Jehoel/AsyncDataAdapter/</PackageProjectUrl>
     <Copyright>Microsoft Corporation, Vladimir Kloz &lt;vladimir.kloz@gmail.com&gt;; Jeremy Kruer; Dai Rees;</Copyright>
-    <Version>3.0.0</Version>
+    <Version>4.0.0</Version>
     <Authors>Vladimir Kloz; Jeremy Kruer; Dai Rees;</Authors>
     <Company />
     <Description>Jehoel.AsyncDataAdapter builds on Vladimir Kloz' original AsyncDataAdapter package, with support for .NET Standard 2.0, and numerous other improvements. The original implementation is based on Microsoft's MIT-licensed implementation of DataReader, DbDataReader, and SqlDataReader.</Description>
     <PackageTags>DataAdapter DbDataAdapter SqlDataAdapter AsyncDataAdapter AdaDataAdapter AsyncSqlDataAdapter SqlAsyncDataAdapter FillAsync FillSchemaAsync UpdateAsync</PackageTags>
-    <PackageReleaseNotes></PackageReleaseNotes>
+    <PackageReleaseNotes>4.0.0 - Initial release.</PackageReleaseNotes>
     <!-- END NuGet -->
     
   </PropertyGroup>
