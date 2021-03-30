@@ -1,6 +1,6 @@
 # AsyncDataAdapter
 
-Implementation of asynchronous methods on SqlDataAdapter (support for async/await).
+Implementation of asynchronous methods for ADO.NET
 
 The implementation is based on source code provided by Microsoft on GitHub.
 
@@ -30,7 +30,13 @@ The implementation is based on source code provided by Microsoft on GitHub.
 
 ## Nuget package
 
-#### Version 3.0+
+#### Version 4.0
+
+* [https://www.nuget.org/packages/Jehoel.AsyncDataAdapter/](https://www.nuget.org/packages/Jehoel.AsyncDataAdapter/)
+* [https://www.nuget.org/packages/Jehoel.AsyncDataAdapter.System.Data.SqlClient/](https://www.nuget.org/packages/Jehoel.AsyncDataAdapter.System.Data.SqlClient/)
+* [https://www.nuget.org/packages/Jehoel.AsyncDataAdapter.Microsoft.Data.SqlClient/](https://www.nuget.org/packages/Jehoel.AsyncDataAdapter.Microsoft.Data.SqlClient/)
+
+#### Version 3.0
 
 [https://www.nuget.org/packages/Jehoel.AsyncDataAdapter/](https://www.nuget.org/packages/Jehoel.AsyncDataAdapter/)
 
@@ -40,34 +46,29 @@ The implementation is based on source code provided by Microsoft on GitHub.
 
 ## Usage
 
-* `IDataAdapter2`
-  * This interface extends `IDataAdapter` with `Task<Int32> FillAsync( DataSet, CancellationToken )`.
-* `IDataAdapter3`
-  * This interface extends `IDataAdapter2` with `Task<Int32> UpdateAsync( DataSet, CancellationToken )`.
-* `AsyncDataAdapter.AdaDataAdapter`
-  * `public abstract class AdaDataAdapter : IDataAdapter3`
-  * This is a reimplementation of `System.Data.DataAdapter` that currently _only_ supports Async operations.
-    * i.e. do not use this type as a drop-in replacement for existing code.
-  * The non-async (synchronous, blocking) methods `Fill`, `FillSchema`, and `Update` are not yet implemented and will throw `NotImplementedException`.
-* `AsyncDataAdapter.AdaDbDataAdapter`
-  * `public abstract class AdaDbDataAdapter : AdaDataAdapter`
-  * This is a reimplementation of `System.Data.DbDataAdapter` that currently _only_ supports Async operations.
-    * i.e. do not use this type as a drop-in replacement for existing code.
-  * The non-async (synchronous, blocking) methods `Fill`, `FillSchema`, and `Update` are not yet implemented and will throw `NotImplementedException`.
-  * The difference between `AdaDataAdapter` and `AdaDbDataAdapter` is like the difference between `DataAdapter` and `DbDataAdapter`:
-    * ...which is to say it's _complicated_. But in short (and far as I know)...
-      * the original design of ADO.NET had `DataAdapter` to support the broadest kinds of data-sources, including non-relational-database sources, such as in-memory object collections.
-      * while `DbDataAdapter` derives from `DataAdapter` to add common functionality needed to support two-way data movement (with `Fill` to retrieve data, and `Update` to push data) so that RDMBS-specific implementations like `SqlDataAdapter` and `OracleDataAdapter` don't need to reimplement the entire functionality of a `DataAdapter`.
-      * Of course, the past 20+ years of .NET development experience shows that almost everyone subclasses `DbDataAdapter` even when it isn't necessary.
+You can use the asynchronous methods using either the provider-specific concrete subclasses (such as `SqlAsyncDbDataAdapter`, for `System.Data.SqlClient`; and `MSSqlAsyncDbDataAdapter` for `Microsoft.Data.SqlClient`) - or via the interfaces `IAsyncDataAdapter`, `IAsyncDbDataAdapter`, `IUpdatingAsyncDataAdapter`, and `IUpdatingAsyncDbDataAdapter`.
 
-* `AdaSqlDataAdapter`
-  * This is the only concrete (non-`abstract`) `DataReader` type in the library - so generally speaking, this is the only type you need to concern yourself with.
+### Provider-specific subclasses
 
-* There is no `AsyncOleDbDataAdapter` or `AsyncOdbcDataAdapter` because the lower-level OLE-DB and ODBC do not expose an async-friendly interface.
-  * Indeed, if you look at what happens when you use `OleDbCommand.ExecuteReaderAsync` or `OdbcCommand.ExecuteNonQueryAsync` they're just thin-wrappers over _fake async_ methods (that either block the thread, or run the method in the background in the thread pool).#
-    * Because of this, there is no async support for OLE-DB and ODBC. Pull-requests that implement an async DataReader with _fake async_ will not be accepted.
+* `SqlAsyncDbDataAdapter`
+  * You will need to add a dependency to the `Jehoel.AsyncDataAdapter.System.Data.SqlClient` NuGet package.
+* `MSSqlAsyncDbDataAdapter`
+  * You will need to add a dependency to the `Jehoel.AsyncDataAdapter.Microsoft.Data.SqlClient` NuGet package.
+* There is no `AsyncDbDataAdapter` class for `System.Data.OleDb` nor `System.Data.Odbc` because the lower-level OLE-DB and ODBC APIs do not expose an async-capable interface (at least, as far as I know).
+  * While the base class `System.Data.Common.DbDataReader` does have a `RaedAsync` method, it's a _fake-async_ event: Indeed, if you look at what happens when you use `OleDbCommand.ExecuteReaderAsync` or `OdbcCommand.ExecuteNonQueryAsync` they're just thin-wrappers over _fake async_ methods (that either block the thread, or run the method in the background in the thread pool).#
+    * Because of this, there is no async support for OLE-DB and ODBC in this library. Pull-requests that implement an async DataReader with _fake async_ will not be accepted.
 
-### Sample usage for FillAsync with DataTable and CancellationTokenSource
+### Interfaces
+
+* `IAsyncDataAdapter` and `IAsyncDbDataAdapter`
+* These interfaces extend `IDataAdapter` and `IDbDataAdapter` respectively with these new methods:
+    * `Task<Int32> FillAsync( DataSet, CancellationToken )`
+    * `Task<DataTable[]> FillSchemaAsync( DataSet dataSet, SchemaType schemaType, CancellationToken cancellationToken )`.
+* `IUpdatingAsyncDataAdapter` and `IUpdatingAsyncDbDataAdapter`
+* These interfaces extend `IAsyncDataAdapter` and `IAsyncDbDataAdapter` respectively with this method:
+    * `Task<Int32> UpdateAsync( DataSet dataSet, CancellationToken cancellationToken );`
+
+### Sample usage for `FillAsync(DataTable)` and CancellationTokenSource
 
 ```csharp
 using (CancellationTokenSource cts = new CancellationTokenSource( TimeSpan.FromSeconds(15) ))
@@ -75,13 +76,13 @@ using (SqlConnection conn = new SqlConnection( this.connectionString ))
 {
     await conn.OpenAsync( cts.Token );
 
-    using (SqlCommand c = conn.CreateCommand())
+    using (SqlCommand cmd = conn.CreateCommand())
     {
-        c.CommandText = "GetFast";
-        c.CommandType = CommandType.StoredProcedure;
-        c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+        cmd.CommandText = "dbo.GetFast";
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-        using(AdaSqlDataAdapter a = new AdaSqlDataAdapter(c))
+        using(SqlAsyncDbDataAdapter adapter = cmd.CreateAsyncAdapter()) // `CreateAsyncAdapter` is an extension method.
         {
             DataTable singleTable = new DataTable();
             Int32 rows = await a.FillAsync(singleTable, cts.Token );
@@ -91,7 +92,7 @@ using (SqlConnection conn = new SqlConnection( this.connectionString ))
 }
 ```
 
-### Sample usage for DataSet
+### Sample usage for `FillAsync(DataSet)`, without any CancellationToken
 
 ```csharp
 using (SqlConnection conn = new SqlConnection( this.connectionString ))
@@ -104,7 +105,7 @@ using (SqlConnection conn = new SqlConnection( this.connectionString ))
         c.CommandType = CommandType.StoredProcedure;
         c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
 
-        using(AdaSqlDataAdapter a = new AdaSqlDataAdapter(c))
+        using(SqlAsyncDbDataAdapter adapter = cmd.CreateAsyncAdapter())
         {
             DataSet ds = new DataSet();
             Int32 rows = await a.FillAsync(ds);
@@ -112,4 +113,37 @@ using (SqlConnection conn = new SqlConnection( this.connectionString ))
         }
     }
 }
+
+### Sample usage for `UpdateAsync(DataSet)`, without any CancellationToken
+
+```csharp
+using (SqlConnection conn = new SqlConnection( this.connectionString ))
+using (SqlCommand selectCmd = conn.CreateCommand())
+{
+    c.CommandText = "GetFast";
+    c.CommandType = CommandType.StoredProcedure;
+    c.Parameters.Add("@Number", SqlDbType.Int).Value = 100000;
+
+    using(MSSqlAsyncDbDataAdapter adapter = cmd.CreateAsyncAdapter())
+    using(IAsyncDbCommandBuilder cmdBuilder = await adapter.CreateCommandBuilderAsync().ConfigureAwait(false) )
+    {
+        DataSet dataSet = new DataSet();
+        _ = await a.FillAsync( dataSet );
+        
+        adapter.UpdateCommand = cmdBuilder.GetUpdateCommand();
+        
+        _ = await adapter.UpdateAsync( dataSet );
+    }
+}
+}
 ```
+
+## Regarding `Update` and `UpdateAsync`
+
+* This new library does support `DbDataAdapter.Update` and `UpdateAsync` with test coverage for all overloads.
+  * This library also includes an async `DbCommandBuilder` base class.
+    * This `DbCommandBuilder` class is necessary because the current base `DbCommandBuilder` in ADO.NET makes synchronous database calls to populate its internal schema cache.
+* The `UpdateAsync` methods should all work _in principle_ however I am not currently able to test them adequately.
+  * Indeed, the tests for `Update` and `UpdateAsync` currently fail because I honestly have no idea how to thoroughly and correctly test how `Update` and `UpdateAsync` work with respect to different Table Mappings and multi-table (`DataSet` and `DataTable[]`) updates.
+  * There is a dearth of documentation available about this functionality, which is unfortunate, but understandable, given that Entity Framework has fully replaced the need for `DbDataAdapter` in my opinion.
+* If you're looking for `UpdateAsync` support, then please see
