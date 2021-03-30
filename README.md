@@ -109,6 +109,7 @@ using (SqlConnection conn = new SqlConnection( this.connectionString ))
         }
     }
 }
+```
 
 ### Sample usage for `UpdateAsync(DataSet)`, without any CancellationToken
 
